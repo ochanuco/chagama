@@ -108,6 +108,25 @@ class StageTest(unittest.TestCase):
         self.assertLess(contrast(tilted, *base), 0.8 * contrast(upright, *base))
 
 
+class LayeredBlurTest(unittest.TestCase):
+    def test_a_near_out_of_focus_object_spreads_over_the_sharp_scene_behind(self):
+        linear = np.full((60, 80, 3), 0.1, np.float32)
+        depth = np.zeros((60, 80), np.float32)
+        linear[:, :40] = 1.0
+        depth[:, :40] = 1.0
+        blurred = photo_stage.layered_blur(linear, depth, focus_depth=0.0, scale=10.0)
+        self.assertGreater(blurred[30, 43, 0], 0.2)
+        np.testing.assert_allclose(blurred[30, 70], (0.1, 0.1, 0.1), atol=1e-4)
+
+    def test_a_far_out_of_focus_scene_stays_behind_a_sharp_near_object(self):
+        linear = np.full((60, 80, 3), 0.1, np.float32)
+        depth = np.ones((60, 80), np.float32)
+        linear[:, 40:] = 1.0
+        depth[:, 40:] = 0.0
+        blurred = photo_stage.layered_blur(linear, depth, focus_depth=1.0, scale=10.0)
+        np.testing.assert_allclose(blurred[30, 36], (0.1, 0.1, 0.1), atol=1e-4)
+
+
 class BokehTest(unittest.TestCase):
     def test_out_of_focus_highlights_open_into_bright_discs(self):
         photo = np.full((H, W, 3), 15.0, np.float32)
