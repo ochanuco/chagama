@@ -47,6 +47,14 @@ class CardTest(unittest.TestCase):
         self.assertEqual(rows.max(), H - 1)
         self.assertAlmostEqual((cols.min() + cols.max()) / 2, W / 2, delta=1.5)
 
+    def test_a_base_below_the_frame_crops_the_feet(self):
+        figure, outline = layers()
+        card = photo_stage.card(figure, outline)
+        placed = photo_stage.place_card(card, (W, H), (0.5, 1.3), 1.0)
+        rows, _ = np.nonzero(placed[..., 3] > 0.5)
+        self.assertEqual(rows.max(), H - 1)
+        self.assertEqual(rows.min(), round(1.3 * H) - H)
+
     def test_an_empty_delivery_is_refused(self):
         empty = np.zeros((10, 10, 4), np.float32)
         with self.assertRaisesRegex(ValueError, "figure"):

@@ -287,7 +287,7 @@ class YukariPhotoStage:
             "outline": ("IMAGE",),
             "outline_mask": ("MASK",),
             "place_x": fraction(0.5),
-            "place_y": fraction(0.95),
+            "place_y": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.5, "step": 0.001}),
             "height": ("FLOAT", {"default": 0.7, "min": 0.05, "max": 1.5, "step": 0.01}),
             "stand": (["base", "point"], {"default": "base"}),
             "stand_x": fraction(0.5),
