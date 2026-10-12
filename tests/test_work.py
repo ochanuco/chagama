@@ -580,7 +580,7 @@ class ExecuteTest(unittest.TestCase):
             self.assertEqual(result["resolved_options"], {
                 "photo": "pic-1", "place": [0.5, 0.95], "height": 0.7,
                 "stand_at": [0.8, 0.4], "nearer": 0.0, "focus": "subject",
-                "f_number": 2.8, "tilt": 0.0})
+                "f_number": 2.8, "tilt": 0.0, "bokeh": 0.0})
             generation_id, photo_services, kwargs = calls[0]
             self.assertEqual((generation_id, photo_services), ("gen-1", "photo-services"))
             self.assertEqual((kwargs["photo_id"], kwargs["request_id"]), ("pic-1", "req-9"))

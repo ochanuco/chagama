@@ -12,7 +12,7 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
                 place: tuple[float, float], height: float,
                 stand_at: tuple[float, float] | None, nearer: float,
                 focus: tuple[float, float] | str, f_number: float,
-                tilt: float = 0.0) -> dict:
+                tilt: float = 0.0, bokeh: float = 0.0) -> dict:
     """The photo graph over the uploaded photo and layer images.
 
     The photo's depth is the uploaded `depth_image`, or is built from the
@@ -52,7 +52,7 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
         "stand_x": stand[0], "stand_y": stand[1], "nearer": nearer,
         "focus": "subject" if focus == "subject" else "point",
         "focus_x": point[0], "focus_y": point[1], "f_number": f_number,
-        "tilt": tilt}}
+        "tilt": tilt, "bokeh": bokeh}}
     save = allocate()
     graph[save] = {"class_type": "SaveImage", "inputs": {
         "images": [stage_id, 0], "filename_prefix": prefix + STAGED_SUFFIX}}
