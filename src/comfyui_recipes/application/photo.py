@@ -54,20 +54,20 @@ def _request_parameters(generation_id: str, photo_id: str, *,
                         place: tuple[float, float], height: float,
                         stand_at: tuple[float, float] | None, nearer: float,
                         focus: tuple[float, float] | str, f_number: float,
-                        tilt: float) -> dict:
+                        tilt: float, bokeh: float) -> dict:
     return {"kind": "photo", "base_generation": generation_id, "photo": photo_id,
             "place": list(place), "height": height,
             "stand_at": list(stand_at) if stand_at is not None else None,
             "nearer": nearer,
             "focus": focus if isinstance(focus, str) else list(focus),
-            "f_number": f_number, "tilt": tilt}
+            "f_number": f_number, "tilt": tilt, "bokeh": bokeh}
 
 
 def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
           place: tuple[float, float], height: float,
           stand_at: tuple[float, float] | None, nearer: float,
           focus: tuple[float, float] | str, f_number: float, tilt: float = 0.0,
-          key_prefix: str | None = None, request_id: str | None = None,
+          bokeh: float = 0.0, key_prefix: str | None = None, request_id: str | None = None,
           context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "photo", key_prefix)
     if state_path:
@@ -98,7 +98,7 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
     graph = services.photo_graph(
         photo_image, layers["layer-figure"], layers["layer-outline"], prefix,
         depth_image=depth_image, place=place, height=height, stand_at=stand_at,
-        nearer=nearer, focus=focus, f_number=f_number, tilt=tilt)
+        nearer=nearer, focus=focus, f_number=f_number, tilt=tilt, bokeh=bokeh)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -135,7 +135,7 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
             "parameters": _request_parameters(
                 generation_id, photo_id, place=place, height=height,
                 stand_at=stand_at, nearer=nearer, focus=focus, f_number=f_number,
-                tilt=tilt),
+                tilt=tilt, bokeh=bokeh),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [
                 {"source_generation_id": generation_id, "purpose": "rebuild",

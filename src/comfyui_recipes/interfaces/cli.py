@@ -177,6 +177,8 @@ def _photo_options_from_args(args) -> dict:
         options["f_number"] = args.f_number
     if args.tilt is not None:
         options["tilt"] = args.tilt
+    if args.bokeh is not None:
+        options["bokeh"] = args.bokeh
     return options
 
 
@@ -412,6 +414,10 @@ def parser() -> argparse.ArgumentParser:
         "--tilt", type=float, default=None,
         help="lean the card: its top this much farther than its base, -1..1 "
              "(default 0); focus on the face to blur the body")
+    photo_parser.add_argument(
+        "--bokeh", type=float, default=None,
+        help="open the photo's out-of-focus highlights into bright discs, 0..1 "
+             "(default 0)")
     photo_parser.add_argument(
         "--f-number", type=float, default=None,
         help=f"{DOF_F_NUMBER['min']}..{DOF_F_NUMBER['max']} "

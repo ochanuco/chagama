@@ -553,6 +553,8 @@ PHOTO_NEARER = {"min": 0.0, "max": 1.0, "default": 0.0}
 # How much farther the card's top is than its base (negative: nearer), so a
 # focus on the face blurs the body below it.
 PHOTO_TILT = {"min": -1.0, "max": 1.0, "default": 0.0}
+# How strongly the photo's out-of-focus highlights open into bright discs.
+PHOTO_BOKEH = {"min": 0.0, "max": 1.0, "default": 0.0}
 
 
 class Light(NamedTuple):
