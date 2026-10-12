@@ -192,6 +192,7 @@ def make_services(directory: Path, management, *, heartbeats=None,
                                 if masked_redraw_services is not None
                                 else "masked-redraw-services"),
         dof_services="dof-services",
+        lens_services="lens-services",
         git_metadata=lambda: {"branch": branch},
         worker_id="test-worker",
         emit=(emit or (lambda message: None)),
@@ -230,6 +231,7 @@ def make_hub_services(directory: Path, *, hub=None, progress_feed=None,
         repair_services="repair-services",
         masked_redraw_services="masked-redraw-services",
         dof_services="dof-services",
+        lens_services="lens-services",
         git_metadata=lambda: {"branch": "dev/requests-worker"},
         worker_id="test-worker",
         emit=(emit or (lambda message: None)),
@@ -306,6 +308,16 @@ def dof_row(**overrides):
         "id": "req-7", "kind": "dof", "status": "running",
         "recipe_ref": "dev/requests-worker", "run_id": None, "attempt": 1,
         "payload": {"generation_id": "gen-1", "options": {"focus": [0.5, 0.4]}},
+    }
+    row.update(overrides)
+    return row
+
+
+def lens_row(**overrides):
+    row = {
+        "id": "req-8", "kind": "lens", "status": "running",
+        "recipe_ref": "dev/requests-worker", "run_id": None, "attempt": 1,
+        "payload": {"generation_id": "gen-1", "options": {"strength": -0.5}},
     }
     row.update(overrides)
     return row
@@ -509,19 +521,52 @@ class ExecuteTest(unittest.TestCase):
                 execute(services, dof_row(payload={"options": {"focus": [0, 0]}}))
             self.assertEqual(calls, [])
 
+    def test_lens_kind_maps_options_and_uses_the_lens_services(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_lens(generation_id, lens_services, **kwargs):
+                calls.append((generation_id, lens_services, kwargs))
+                return {"generation_ids": ["g4"]}
+
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake()), lens=fake_lens)
+            result = execute(services, lens_row())
+            self.assertEqual(result["resolved_options"],
+                             {"center": [0.5, 0.5], "strength": -0.5})
+            generation_id, lens_services, kwargs = calls[0]
+            self.assertEqual((generation_id, lens_services), ("gen-1", "lens-services"))
+            self.assertEqual(kwargs["request_id"], "req-8")
+            self.assertEqual(kwargs["center"], (0.5, 0.5))
+
+    def test_lens_kind_rejects_bad_options_and_a_missing_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake()),
+                lens=lambda *a, **k: calls.append((a, k)))
+            with self.assertRaisesRegex(SystemExit, "strength"):
+                execute(services, lens_row(payload={"generation_id": "gen-1",
+                                                    "options": {"strength": 2}}))
+            with self.assertRaisesRegex(SystemExit, "generation_id"):
+                execute(services, lens_row(payload={"options": {}}))
+            self.assertEqual(calls, [])
+
     def test_finalize_requests_are_refused(self):
         with tempfile.TemporaryDirectory() as directory:
             services = make_services(directory, ManagementFake())
             with self.assertRaisesRegex(SystemExit, "no longer supported"):
                 execute(services, finalize_row())
 
-    def test_the_default_kinds_are_exactly_the_six(self):
+    def test_the_default_kinds_are_exactly_the_seven(self):
         self.assertEqual(
             WorkServices.__dataclass_fields__["kinds"].default,
-            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof"))
+            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
+             "lens"))
         self.assertEqual(
             DEFAULT_KINDS,
-            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof"))
+            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
+             "lens"))
 
     def test_unsupported_kind_fails(self):
         with tempfile.TemporaryDirectory() as directory:
