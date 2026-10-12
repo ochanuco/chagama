@@ -70,3 +70,69 @@ def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
     graph[save] = {"class_type": "SaveImage", "inputs": {
         "images": saved_ref, "filename_prefix": prefix + DOF_SUFFIX}}
     return graph
+
+
+def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
+                    prefix: str, *, depth_image: str | None, photo_image: str | None,
+                    place: tuple[float, float], height: float,
+                    stand_at: tuple[float, float] | None, nearer: float,
+                    focus: tuple[float, float] | str, f_number: float,
+                    tilt: float, bokeh: float, viewfinder: str) -> dict:
+    """The dof graph over the layers of a delivery set in a photo.
+
+    The depth is the photo's uploaded `depth_image`, or is built from the
+    uploaded `photo_image` and saved under `prefix` + DEPTH_SUFFIX. The
+    viewfinder (needing a focus point) is drawn as `dof_graph` does.
+    """
+    if depth_image is None and photo_image is None:
+        raise ValueError("photo_dof_graph needs a depth_image or a photo_image")
+    graph: dict = {}
+    cursor = 1
+
+    def allocate() -> str:
+        nonlocal cursor
+        node_id = str(cursor)
+        cursor += 1
+        return node_id
+
+    def load(image: str) -> str:
+        node_id = allocate()
+        graph[node_id] = {"class_type": "LoadImage", "inputs": {"image": image}}
+        return node_id
+
+    figure_id, outline_id = load(figure_image), load(outline_image)
+    backdrop_id = load(backdrop_image)
+    if depth_image is not None:
+        depth_ref = depth_nodes(graph, allocate, [], prefix, depth_image)
+    else:
+        depth_ref = depth_nodes(graph, allocate, [load(photo_image), 0], prefix, None)
+    point = focus if focus != "subject" else (0.5, 0.5)
+    stand = stand_at if stand_at is not None else (0.5, 0.5)
+    blur_id = allocate()
+    graph[blur_id] = {"class_type": "YukariPhotoDepthOfField", "inputs": {
+        "backdrop": [backdrop_id, 0], "depth": depth_ref,
+        "figure": [figure_id, 0], "figure_mask": [figure_id, 1],
+        "outline": [outline_id, 0], "outline_mask": [outline_id, 1],
+        "place_x": place[0], "place_y": place[1], "height": height,
+        "stand": "base" if stand_at is None else "point",
+        "stand_x": stand[0], "stand_y": stand[1], "nearer": nearer,
+        "focus": "subject" if focus == "subject" else "point",
+        "focus_x": point[0], "focus_y": point[1], "f_number": f_number,
+        "tilt": tilt, "bokeh": bokeh}}
+    saved_ref = [blur_id, 0]
+    if viewfinder != "off" and focus != "subject":
+        view_id = allocate()
+        graph[view_id] = {"class_type": "YukariViewfinder", "inputs": {
+            "image": saved_ref, "focus_x": point[0], "focus_y": point[1],
+            "f_number": f_number}}
+        if viewfinder == "on":
+            saved_ref = [view_id, 0]
+        else:
+            save_view = allocate()
+            graph[save_view] = {"class_type": "SaveImage", "inputs": {
+                "images": [view_id, 0],
+                "filename_prefix": prefix + VIEWFINDER_SUFFIX}}
+    save = allocate()
+    graph[save] = {"class_type": "SaveImage", "inputs": {
+        "images": saved_ref, "filename_prefix": prefix + DOF_SUFFIX}}
+    return graph

@@ -20,6 +20,7 @@ from ..application.masked_redraw import masked_redraw
 from ..application.photo import photo
 from ..application.redraw import redraw
 from ..application.repair import repair
+from ..application.stage import lighting, stage
 from ..application.request_options import (
     DELIVER_DIAL_KEYS,
     REDRAW_DIAL_KEYS,
@@ -29,6 +30,8 @@ from ..application.request_options import (
     dof_arguments,
     lens_arguments,
     photo_arguments,
+    stage_arguments,
+    lighting_arguments,
     redraw_arguments,
     resolve_dial,
 )
@@ -45,6 +48,7 @@ from ..domain.yukari.delivery_style import (
     LENS_RADIUS,
     LENS_SHAPE,
     LENS_STRENGTH,
+    LIGHTING_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     PHOTO_HEIGHT,
@@ -65,6 +69,7 @@ from .agent import (
     build_dof_services,
     build_lens_services,
     build_photo_services,
+    build_stage_services,
     build_generate_services,
     build_masked_redraw_services,
     build_redraw_services,
@@ -134,6 +139,10 @@ def _dof_options_from_args(args) -> dict:
         **({"f_number": args.f_number} if args.f_number is not None else {}),
         **({"scope": scope} if scope is not None else {}),
         "viewfinder": args.viewfinder,
+        **({"stand_at": _xy(args.stand_at, "--stand-at")} if args.stand_at else {}),
+        **({"nearer": args.nearer} if args.nearer is not None else {}),
+        **({"tilt": args.tilt} if args.tilt is not None else {}),
+        **({"bokeh": args.bokeh} if args.bokeh is not None else {}),
     }
 
 
@@ -179,6 +188,21 @@ def _photo_options_from_args(args) -> dict:
         options["tilt"] = args.tilt
     if args.bokeh is not None:
         options["bokeh"] = args.bokeh
+    return options
+
+
+def _stage_options_from_args(args) -> dict:
+    options: dict = {}
+    if args.photo is not None:
+        options["photo"] = args.photo
+    if args.place is not None:
+        options["place"] = _xy(args.place, "--place")
+    if args.height is not None:
+        options["height"] = args.height
+    if args.backdrop is not None:
+        options["backdrop"] = args.backdrop
+    if args.shadow_from is not None:
+        options["shadow_from"] = None if args.shadow_from == "none" else args.shadow_from
     return options
 
 
@@ -244,7 +268,7 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--dry-run", action="store_true")
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
-        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof,lens,photo",
+        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof,lens,photo,stage,lighting",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",
@@ -369,6 +393,19 @@ def parser() -> argparse.ArgumentParser:
         help="draw a camera viewfinder over the picture ('on'), or keep it "
              "plain and add the viewfinder picture as an extra generation ('both')")
 
+    dof_parser.add_argument(
+        "--stand-at", metavar="X,Y",
+        help="photo-set pictures only: a photo point whose depth the card stands at")
+    dof_parser.add_argument(
+        "--nearer", type=float, default=None,
+        help="photo-set pictures only: pull the card toward the camera, 0..1")
+    dof_parser.add_argument(
+        "--tilt", type=float, default=None,
+        help="photo-set pictures only: the card's top this much farther, -1..1")
+    dof_parser.add_argument(
+        "--bokeh", type=float, default=None,
+        help="photo-set pictures only: open out-of-focus highlights into discs, 0..1")
+
     lens_parser = commands.add_parser(
         "lens", help="distort one delivered picture through a fisheye or its inverse")
     lens_parser.add_argument("generation_id")
@@ -422,6 +459,39 @@ def parser() -> argparse.ArgumentParser:
         "--f-number", type=float, default=None,
         help=f"{DOF_F_NUMBER['min']}..{DOF_F_NUMBER['max']} "
              f"(default {DOF_F_NUMBER['default']})")
+
+    stage_parser = commands.add_parser(
+        "stage", help="set one delivered picture on a backdrop pattern or in a photo")
+    stage_parser.add_argument("generation_id")
+    stage_parser.add_argument(
+        "--photo", help="the photo Generation to set the delivery in")
+    stage_parser.add_argument(
+        "--place", metavar="X,Y",
+        help="photo only: where the middle of the card's bottom edge goes "
+             "(default 0.5,0.95)")
+    stage_parser.add_argument(
+        "--height", type=float, default=None,
+        help=f"photo only: card height as a share of the photo's, "
+             f"{PHOTO_HEIGHT['min']}..{PHOTO_HEIGHT['max']} (default {PHOTO_HEIGHT['default']})")
+    stage_parser.add_argument(
+        "--backdrop",
+        help=f"without a photo: a pattern ({', '.join(sorted(BACKDROP_PATTERNS))}) "
+             "or #RRGGBB")
+    stage_parser.add_argument(
+        "--shadow-from", choices=[*sorted(STROKE_LIGHTS), "none"],
+        help="without a photo: throw the drop shadow away from this light "
+             "(default: the delivery's own stroke light)")
+
+    lighting_parser = commands.add_parser(
+        "lighting", help="light a staged picture's figure by its backdrop")
+    lighting_parser.add_argument("generation_id")
+    lighting_parser.add_argument(
+        "--direction", choices=sorted(STROKE_LIGHTS),
+        help="also shade the figure from this side (default: exposure and colour only)")
+    lighting_parser.add_argument(
+        "--strength", type=float, default=None,
+        help=f"{LIGHTING_STRENGTH['min']}..{LIGHTING_STRENGTH['max']} "
+             f"(default {LIGHTING_STRENGTH['default']})")
 
     repair_parser = commands.add_parser(
         "repair", help="masked local redraw of hands/feet on an existing generation")
@@ -691,6 +761,26 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as error:
             raise SystemExit(str(error)) from error
         photo(args.generation_id, services, **arguments)
+        return
+    if args.command == "stage":
+        services = build_stage_services(
+            chimera, comfyui, notifier, repository, repository_metadata)
+        try:
+            arguments = stage_arguments(_stage_options_from_args(args))
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+        stage(args.generation_id, services, **arguments)
+        return
+    if args.command == "lighting":
+        services = build_stage_services(
+            chimera, comfyui, notifier, repository, repository_metadata)
+        options = {"direction": args.direction,
+                   **({"strength": args.strength} if args.strength is not None else {})}
+        try:
+            arguments = lighting_arguments(options)
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+        lighting(args.generation_id, services, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()

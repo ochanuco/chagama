@@ -5,7 +5,8 @@
 
 Every render is a row on chimera's `requests` queue, posted through the MCP
 (`derive_request`, `redraw_generation`, `deliver_generation`,
-`dof_generation`, `lens_generation`, `photo_generation`, `repair_generation`, `masked_redraw_generation`,
+`dof_generation`, `lens_generation`, `photo_generation`, `stage_generation`,
+`lighting_generation`, `repair_generation`, `masked_redraw_generation`,
 `create_request`) or `POST /api/v1/requests`.
 `comfy-recipes work` on the GPU box claims a row, runs it, and ingests the
 result back into chimera. Nothing else submits to ComfyUI.
@@ -18,8 +19,8 @@ Options, defaults and ranges live here:
 | Question | Source |
 |---|---|
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
-| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
-| Poses, costumes, parts, patch targets, dials, redraw, deliver, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
+| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|stage\|lighting\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
+| Poses, costumes, parts, patch targets, dials, redraw, deliver, stage, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
 | Patch targets and their ops | `domain/generation/patches.py` |
 | What a request would render, without rendering | `uv run comfy-recipes generate --request r.json --dry-run` |
 
@@ -32,14 +33,18 @@ Options, defaults and ranges live here:
 | `repair` | `{generation_id, options}` | DWPose-masked crop-and-stitch reroll of hands/feet; uploads one picture per seed |
 | `masked_redraw` | `{generation_id, options}` | the same reroll on caller rectangles with a free-text prompt patch |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: repin, backdrop, outline bands; never redraws |
-| `dof` | `{generation_id, options}` | depth-of-field blur over a delivered picture's layers |
+| `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern or in a photo, unblurred |
+| `lighting` | `{generation_id, options}` | light a staged picture's figure and outline by its backdrop: exposure, colour cast, optional side shading |
+| `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 | `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
 
 A `finalize` row is refused. `redraw`, `repair` and `masked_redraw` leave a
 picture on the green key; `deliver` makes the delivered picture, and `dof`
 and `lens` make another delivered picture from it. They stack as separate
-requests in one order: `dof` first, then `lens` (as often as wanted).
+requests in one order: `deliver` (transparent, for the workbench), `stage`,
+`lighting`, `dof`, then `lens` (as often as wanted); `stage`, `lighting` and
+`dof` may each be skipped. `photo` is the older one-step stage-and-blur.
 
 ## Rules the code spreads across files
 
@@ -136,11 +141,52 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
   request's `parameters`, and an absent `stroke_light` follows its `from`;
   an explicit `stroke_light` direction that differs is an error.
 
+### Stage options
+
+- The source must be a deliver output carrying its `layer-figure` and
+  `layer-outline` assets; anything else (a stage or lighting output too) is
+  refused. A transparent delivery is the usual source.
+- With `photo` (a Generation's id, usually a photo uploaded on chimera), the
+  figure and outline are scaled together as one card, the middle of its
+  bottom edge at `place` and `height` tall, exactly as the photo kind places
+  it, at the photo's canvas; nothing is blurred. `backdrop` and
+  `shadow_from` are refused with it.
+- Without `photo`, the layers stay at the delivery's canvas on `backdrop` (a
+  pattern name or `#RRGGBB`, default the deliver default). `shadow_from` (a
+  direction) throws the sticker's drop shadow away from that light, merged
+  into the outline layer as translucent black; null is none, absent takes
+  the transparent delivery's own scene or stroke light (none for a delivery
+  that already has its backdrop and shadow). `place` and `height` are
+  refused without `photo`.
+- The output Generation (`-set`) refines the delivery, is a delivered
+  picture, carries the canvas-sized `layer-figure`, `layer-outline` and
+  `layer-backdrop` assets, and records `kind: "stage"`, `base_generation`
+  and either `photo`, `place`, `height` or `backdrop`, `shadow_from`.
+
+### Lighting options
+
+- The source must be a stage output or a delivery with its backdrop layer;
+  a lighting output (light it again from the stage output instead) and a
+  transparent delivery are refused.
+- The backdrop in a ring around the card (6% of the longest side) is the
+  ambient. The figure and outline are pulled toward its exposure,
+  `(ambient luminance / 0.35) ** (0.4 × strength)` within 0.35..1.15 in
+  linear light, and take half its colour cast at `strength` 1. With a
+  `direction`, the figure is first shaded from that side as the `light`
+  redraw underpaint does (flat depth, silhouette normals), its lit side
+  tinted by the colour of the backdrop's brightest light. `strength` 0..1
+  (default 0.7); `direction` null (default) is exposure and colour only.
+  The backdrop is left as it is.
+- The output Generation (`-lit`) refines its source, carries the relit
+  layers and the unchanged backdrop layer, and records `kind: "lighting"`,
+  `base_generation`, `direction` and `strength`.
+
 ### Dof options
 
-- The source must be a delivered picture carrying its layer assets; a dof
-  output, a picture that was not delivered and a delivery without layers
-  (delivered before layers existed: deliver it again) are refused.
+- The source must be a delivered picture carrying its layer assets: a
+  delivery, a stage output or a lighting output. A dof output, a picture
+  that was not delivered and a delivery without layers (delivered before
+  layers existed: deliver it again) are refused.
 - `focus` (`[x, y]`, fractions of the picture) is required. `f_number`
   1.4..22 (default 2.8), `scope` `{"figure", "outline", "backdrop"}` booleans
   (absent keys on; all off is an error) and `viewfinder` `off | on | both`
@@ -150,9 +196,17 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
   The figure takes its own depth, the outline the nearest figure depth, the
   backdrop the far plane; only the layers in `scope` are blurred, the rest
   are composited sharp. A transparent delivery stays transparent.
+- A picture whose lineage (through `lighting` and `stage`) set it in a
+  photo is blurred as the photo kind blurs: the photo's depth, the card's
+  `place` and `height` from the stage, and the options `stand_at`,
+  `nearer`, `tilt` and `bokeh` with the photo kind's defaults and meanings;
+  `scope` does not apply. Those four options are refused on any other
+  picture. A pattern stage (or a delivery) takes its delivery's source
+  depth as above.
 - The output Generation (`-dof`; `both` adds `-viewfinder`) refines the
   delivery, is itself a delivered picture, and records `kind: "dof"`,
-  `base_generation` and the resolved options.
+  `base_generation` and the resolved options (the photo options in place of
+  `scope` for a photo-set picture).
 
 ### Lens options
 

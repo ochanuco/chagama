@@ -230,8 +230,16 @@ deliver_generation    the pick, delivered: one ComfyUI graph that cuts a matte
                       as a request that refines the source, with its layers
                       (`layer-figure`, `layer-outline`, `layer-backdrop`)
                       as assets.
-dof_generation        optional: depth of field over a delivered picture's
-                      layers (kind `dof`); its output is a delivered picture.
+stage_generation      optional: set a (transparent) delivery's layers on a
+                      backdrop pattern with its drop shadow, or in a photo
+                      uploaded on chimera, unblurred (kind `stage`).
+lighting_generation   optional: light a staged picture's figure and outline
+                      by its backdrop: exposure, colour cast, optional side
+                      shading (kind `lighting`).
+dof_generation        optional: depth of field over a delivered, staged or
+                      lit picture's layers (kind `dof`; a photo-set picture
+                      blurs by the photo's depth); its output is a delivered
+                      picture.
 lens_generation       optional: a fisheye (strength > 0) or inverse fisheye
                       (< 0) over a delivered or dof picture, or with
                       shape `sphere` a bulge / pinch of a disc in it (kind `lens`);

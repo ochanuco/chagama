@@ -9,7 +9,9 @@ from comfyui_recipes.application.request_options import (
     deliver_arguments,
     dof_arguments,
     lens_arguments,
+    lighting_arguments,
     photo_arguments,
+    stage_arguments,
     masked_redraw_arguments,
     redraw_arguments,
     repair_arguments,
@@ -238,7 +240,15 @@ class DofArgumentsTest(unittest.TestCase):
     def test_defaults_take_the_catalog_values(self):
         self.assertEqual(dof_arguments({"focus": [0.5, 0.25]}), {
             "focus": (0.5, 0.25), "f_number": 2.8, "viewfinder": "off",
-            "scope": {"figure": True, "outline": True, "backdrop": True}})
+            "scope": {"figure": True, "outline": True, "backdrop": True},
+            "photo_blur": None})
+
+    def test_photo_keys_fill_the_photo_blur_with_defaults(self):
+        arguments = dof_arguments({"focus": [0.5, 0.25], "tilt": 0.5})
+        self.assertEqual(arguments["photo_blur"], {
+            "stand_at": None, "nearer": 0.0, "tilt": 0.5, "bokeh": 0.0})
+        with self.assertRaises(ValueError):
+            dof_arguments({"focus": [0.5, 0.25], "bokeh": 2})
 
     def test_a_partial_scope_keeps_the_rest_on(self):
         arguments = dof_arguments({"focus": [0, 1], "f_number": 1.4,
@@ -303,6 +313,38 @@ class LensArgumentsTest(unittest.TestCase):
                 lens_arguments(bad)
         with self.assertRaisesRegex(ValueError, "object"):
             lens_arguments([])
+
+
+class StageArgumentsTest(unittest.TestCase):
+    def test_a_photo_takes_place_and_height(self):
+        self.assertEqual(stage_arguments({"photo": "pic"}), {
+            "photo_id": "pic", "place": (0.5, 0.95), "height": 0.7})
+        self.assertEqual(stage_arguments({"photo": "pic", "place": [0.6, 1.2],
+                                          "height": 1.1})["place"], (0.6, 1.2))
+
+    def test_a_pattern_takes_backdrop_and_shadow(self):
+        self.assertEqual(stage_arguments({}), {
+            "backdrop": "dots", "shadow_from": None, "inherit_shadow": True})
+        self.assertEqual(stage_arguments({"backdrop": "#102030", "shadow_from": None}), {
+            "backdrop": "#102030", "shadow_from": None, "inherit_shadow": False})
+        self.assertEqual(stage_arguments({"shadow_from": "nw"})["shadow_from"], "nw")
+
+    def test_the_two_sets_do_not_mix_and_bad_values_fail(self):
+        for bad in ({"photo": "p", "backdrop": "dots"}, {"place": [0.5, 0.5]},
+                    {"backdrop": "nope"}, {"shadow_from": "up"}, {"photo": ""},
+                    {"photo": "p", "height": 3}, {"zoom": 1}):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                stage_arguments(bad)
+
+
+class LightingArgumentsTest(unittest.TestCase):
+    def test_defaults_and_bounds(self):
+        self.assertEqual(lighting_arguments({}), {"direction": None, "strength": 0.7})
+        self.assertEqual(lighting_arguments({"direction": "ne", "strength": 1}),
+                         {"direction": "ne", "strength": 1.0})
+        for bad in ({"direction": "up"}, {"strength": 1.5}, {"scene": "moon"}):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                lighting_arguments(bad)
 
 
 class PhotoArgumentsTest(unittest.TestCase):

@@ -7,7 +7,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..infrastructure.comfyui.dof_graph import dof_graph
+from ..domain.yukari.delivery_style import PHOTO_BOKEH, PHOTO_NEARER, PHOTO_TILT
+from ..infrastructure.comfyui.dof_graph import dof_graph, photo_dof_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import DEPTH_ROLE, attach_cut, current_cut, reusable, stored_cut
@@ -25,6 +26,11 @@ LENS_OUTPUT = ("lens の出力に dof はかけられません。dof を先に�
                "その絵に lens をかけてください")
 NOT_DELIVERED = "dof をかけられるのは納品の絵だけです。先に deliver してください"
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
+PHOTO_ONLY = "stand_at / nearer / tilt / bokeh は写真に置いた絵（stage の photo）の dof だけで使えます"
+LAYERED_KINDS = ("deliver", "stage", "lighting")
+SETTING_HOPS = 4
+PHOTO_BLUR_DEFAULTS = {"stand_at": None, "nearer": PHOTO_NEARER["default"],
+                       "tilt": PHOTO_TILT["default"], "bokeh": PHOTO_BOKEH["default"]}
 
 
 @dataclass(frozen=True)
@@ -36,19 +42,41 @@ class DofServices:
     output_root: Path
     emit: Callable[[str], None] = print
     dof_graph: Callable[..., dict] = dof_graph
+    photo_dof_graph: Callable[..., dict] = photo_dof_graph
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
 def _layer_roles(parameters: dict) -> list[str]:
     roles = ["layer-figure", "layer-outline"]
-    if not parameters.get("transparent"):
+    if parameters.get("kind") != "deliver" or not parameters.get("transparent"):
         roles.append("layer-backdrop")
     return roles
 
 
+def _setting(management, context: dict) -> tuple[str | None, dict | None]:
+    """Where the picture's layers stand: ("photo", the stage parameters)
+    when a stage in its lineage set them in a photo, else (the delivery's
+    own source, None) for layers at the delivery's canvas."""
+    record = context
+    for _ in range(SETTING_HOPS):
+        parameters = record["request"].get("parameters") or {}
+        kind = parameters.get("kind")
+        if kind == "stage" and parameters.get("photo"):
+            return "photo", parameters
+        if kind == "deliver":
+            return (parameters.get("base_generation")
+                    or (record.get("refines_generation") or {}).get("id")), None
+        if kind not in ("stage", "lighting") or not parameters.get("base_generation"):
+            break
+        record = management.request(
+            "GET", f"/api/v1/generations/{parameters['base_generation']}/context")
+    return None, None
+
+
 def _check_source(services: DofServices, generation_id: str,
-                  context: dict) -> tuple[str, list[str]]:
-    """The delivery's own source and the layer roles it carries."""
+                  context: dict) -> tuple[str, dict | None, list[str]]:
+    """The delivery's own source (or "photo" and the stage parameters) and
+    the layer roles the picture carries."""
     request = context["request"]
     parameters = request.get("parameters") or {}
     if request.get("kind") == "dof" or parameters.get("kind") == "dof":
@@ -57,31 +85,38 @@ def _check_source(services: DofServices, generation_id: str,
         raise SystemExit(LENS_OUTPUT)
     if not is_delivered(request):
         raise SystemExit(NOT_DELIVERED)
-    if parameters.get("kind") != "deliver":
+    if parameters.get("kind") not in LAYERED_KINDS:
         raise SystemExit(NO_LAYERS)
     roles = _layer_roles(parameters)
     present = {asset["role"] for asset in
                services.management.list_assets(generation_id)}
     if not set(roles) <= present:
         raise SystemExit(NO_LAYERS)
-    source = (parameters.get("base_generation")
-              or (context.get("refines_generation") or {}).get("id"))
+    source, staged = _setting(services.management, context)
     if not source:
         raise SystemExit(NO_LAYERS)
-    return source, roles
+    return source, staged, roles
 
 
 def _request_parameters(generation_id: str, *, focus: tuple[float, float],
-                        f_number: float, scope: dict, viewfinder: str) -> dict:
-    return {"kind": "dof", "base_generation": generation_id,
-            "focus": list(focus), "f_number": f_number, "scope": dict(scope),
-            "viewfinder": viewfinder}
+                        f_number: float, scope: dict, viewfinder: str,
+                        photo_blur: dict | None = None) -> dict:
+    parameters = {"kind": "dof", "base_generation": generation_id,
+                  "focus": list(focus), "f_number": f_number, "viewfinder": viewfinder}
+    if photo_blur is None:
+        parameters["scope"] = dict(scope)
+    else:
+        stand_at = photo_blur["stand_at"]
+        parameters.update({**photo_blur,
+                           "stand_at": list(stand_at) if stand_at is not None else None})
+    return parameters
 
 
 def dof(generation_id: str, services: DofServices, *,
         focus: tuple[float, float], f_number: float, scope: dict,
-        viewfinder: str = "off", key_prefix: str | None = None,
-        request_id: str | None = None, context: dict | None = None) -> dict:
+        viewfinder: str = "off", photo_blur: dict | None = None,
+        key_prefix: str | None = None, request_id: str | None = None,
+        context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "dof", key_prefix)
     if state_path:
         state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +127,13 @@ def dof(generation_id: str, services: DofServices, *,
     if context is None:
         context = management.request(
             "GET", f"/api/v1/generations/{generation_id}/context")
-    source_id, roles = _check_source(services, generation_id, context)
+    source_id, staged, roles = _check_source(services, generation_id, context)
+    if staged is None and photo_blur is not None:
+        raise SystemExit(PHOTO_ONLY)
+    if staged is not None:
+        # The photo-set layers stand at the photo's depth.
+        source_id = staged["photo"]
+        photo_blur = {**PHOTO_BLUR_DEFAULTS, **(photo_blur or {})}
 
     prefix = f"dof-{generation_id}"
     token = uuid.uuid4().hex[:8]
@@ -111,11 +152,19 @@ def dof(generation_id: str, services: DofServices, *,
     uploaded = {role: services.comfyui.upload_image(
         f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
         for role in roles}
-    graph = services.dof_graph(
-        uploaded["layer-figure"], uploaded["layer-outline"],
-        uploaded.get("layer-backdrop"), prefix, depth_image=depth_image,
-        source_image=source_image, focus=focus, f_number=f_number, scope=scope,
-        viewfinder=viewfinder)
+    if staged is not None:
+        graph = services.photo_dof_graph(
+            uploaded["layer-figure"], uploaded["layer-outline"],
+            uploaded["layer-backdrop"], prefix, depth_image=depth_image,
+            photo_image=source_image, place=tuple(staged["place"]),
+            height=staged["height"], focus=focus, f_number=f_number,
+            viewfinder=viewfinder, **photo_blur)
+    else:
+        graph = services.dof_graph(
+            uploaded["layer-figure"], uploaded["layer-outline"],
+            uploaded.get("layer-backdrop"), prefix, depth_image=depth_image,
+            source_image=source_image, focus=focus, f_number=f_number, scope=scope,
+            viewfinder=viewfinder)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -152,7 +201,7 @@ def dof(generation_id: str, services: DofServices, *,
             "recipe": context["request"].get("recipe") or "yukari",
             "parameters": _request_parameters(
                 generation_id, focus=focus, f_number=f_number, scope=scope,
-                viewfinder=viewfinder),
+                viewfinder=viewfinder, photo_blur=photo_blur),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",
