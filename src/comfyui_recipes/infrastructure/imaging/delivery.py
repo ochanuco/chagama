@@ -208,7 +208,45 @@ def enclosed_cut(pixels: np.ndarray, figure: np.ndarray,
         key = _pocket_key(pixels, figure)
         if key is None:
             return figure
-    return figure & ~enclosed_mask(pixels, ~figure, tolerance, seed=key)
+    return figure & ~(enclosed_mask(pixels, ~figure, tolerance, seed=key)
+                      | _shaded_pockets(pixels, figure, tolerance, key))
+
+
+def _key_shaded(pixels: np.ndarray, key: np.ndarray, tolerance: int) -> np.ndarray:
+    """Pixels within `tolerance` of `key` darkened to no less than
+    `delivery_style.ENCLOSED_KEY_MIN_SHADE` of itself; the key itself included."""
+    shade = np.clip((pixels * key).sum(axis=2) / max((key * key).sum(), 1.0),
+                    0.0, 1.0)
+    return ((np.abs(pixels - shade[..., None] * key).max(axis=2) <= tolerance)
+            & (shade >= delivery_style.ENCLOSED_KEY_MIN_SHADE))
+
+
+def _shaded_pockets(pixels: np.ndarray, figure: np.ndarray, tolerance: int,
+                    key: np.ndarray) -> np.ndarray:
+    """The shaded-key regions `figure` encloses on every side.
+
+    The key in shadow also rings the outer edge, where the matte's soft edge
+    decides; a region touching the outside is left to it."""
+    eight = ndimage.generate_binary_structure(2, 2)
+    candidates = figure & _key_shaded(pixels, key, tolerance)
+    labels, count = ndimage.label(candidates, eight)
+    if not count:
+        return candidates
+    sizes = ndimage.sum(candidates, labels, range(1, count + 1))
+    open_ = np.unique(labels[ndimage.binary_dilation(~figure, eight) & candidates])
+    keep = np.setdiff1d(1 + np.nonzero(sizes >= 16)[0], open_)
+    return np.isin(labels, keep)
+
+
+def key_holes(pixels: np.ndarray, figure: np.ndarray, tolerance: int) -> np.ndarray:
+    """The pixels of `figure`'s holes that are the green key, shaded or not:
+    backdrop for certain, however narrow the hole. Empty unless the raw
+    backdrop is a green key."""
+    key = _corner_seed(pixels)
+    if key[1] - max(key[0], key[2]) < delivery_style.ENCLOSED_KEY_MIN_GREEN_EXCESS:
+        return np.zeros(figure.shape, dtype=bool)
+    holes = ndimage.binary_fill_holes(figure) & ~figure
+    return holes & _key_shaded(pixels, key, tolerance)
 
 
 def drawn_outline(pixels: np.ndarray, figure: np.ndarray, band: int,
