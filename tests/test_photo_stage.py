@@ -84,6 +84,21 @@ class StageTest(unittest.TestCase):
         card_edge = (slice(50, 110), slice(40, 50))
         self.assertLess(contrast(pulled, *card_edge), contrast(sharp, *card_edge))
 
+    def test_a_tilted_card_focused_at_its_top_blurs_toward_its_base(self):
+        photo, depth = scene()
+        figure = np.zeros((80, 60, 4), np.float32)
+        figure[..., :3] = 240
+        figure[..., 3] = 255
+        figure[::4, :, :3] = 40
+        outline = np.zeros_like(figure)
+        options = {"place": (0.5, 1.0), "height": 0.95, "stand_at": None,
+                   "nearer": 0.0, "focus": (0.5, 0.15), "f_number": 1.4}
+        upright = photo_stage.stage(photo, depth, figure, outline, **options)
+        tilted = photo_stage.stage(photo, depth, figure, outline, tilt=0.6, **options)
+        top, base = (slice(12, 30), slice(80, 100)), (slice(95, 115), slice(80, 100))
+        self.assertGreater(contrast(tilted, *top), 0.9 * contrast(upright, *top))
+        self.assertLess(contrast(tilted, *base), 0.8 * contrast(upright, *base))
+
 
 if __name__ == "__main__":
     unittest.main()

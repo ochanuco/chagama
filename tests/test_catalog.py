@@ -291,6 +291,8 @@ class DeliverSectionTest(unittest.TestCase):
                           photo["height"]["default"]), (0.05, 1.5, 0.7))
         self.assertIsNone(photo["stand_at"]["default"])
         self.assertEqual(photo["focus"]["default"], "subject")
+        self.assertEqual((photo["tilt"]["min"], photo["tilt"]["max"],
+                          photo["tilt"]["default"]), (-1.0, 1.0, 0.0))
         self.assertEqual(photo["f_number"]["default"], 2.8)
 
     def test_publishes_the_dof_section_at_the_catalog_root(self):
