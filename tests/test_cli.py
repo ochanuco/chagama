@@ -182,7 +182,8 @@ class CliTest(unittest.TestCase):
         self.assertEqual(args[0], "gen-1")
         self.assertEqual(kwargs, {
             "focus": (0.5, 0.4), "f_number": 4.0, "viewfinder": "both",
-            "scope": {"figure": True, "outline": True, "backdrop": False}})
+            "scope": {"figure": True, "outline": True, "backdrop": False},
+            "photo_blur": None})
         cli.main(["dof", "gen-1", "--focus", "0.5,0.4"])
         self.assertEqual(run_dof.call_args.kwargs["scope"],
                          {"figure": True, "outline": True, "backdrop": True})
@@ -342,7 +343,10 @@ class CliTest(unittest.TestCase):
         work_services = run_work.call_args.args[0]
         self.assertEqual(
             work_services.kinds,
-            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof", "lens", "photo"))
+            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof", "lens", "photo",
+             "stage", "lighting"))
+        self.assertIs(
+            work_services.stage_services.management, chimera_class.return_value)
         self.assertIs(
             work_services.dof_services.management, chimera_class.return_value)
         self.assertIs(

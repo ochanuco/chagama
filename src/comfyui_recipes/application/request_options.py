@@ -21,6 +21,7 @@ from ..domain.yukari.delivery_style import (
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
+    LIGHTING_STRENGTH,
     PHOTO_BOKEH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
@@ -44,12 +45,20 @@ _KNOWN_DELIVER_OPTIONS = frozenset({
     "backdrop", "stroke_light", "outlines", "deliver_size", "light",
 })
 
-_KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"})
+# The photo keys only apply to a delivery set in a photo (stage).
+_DOF_PHOTO_OPTIONS = frozenset({"stand_at", "nearer", "tilt", "bokeh"})
+_KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"}) | _DOF_PHOTO_OPTIONS
 
 _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 
 _KNOWN_PHOTO_OPTIONS = frozenset({
     "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh"})
+
+_KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from"})
+_STAGE_PHOTO_OPTIONS = frozenset({"photo", "place", "height"})
+_STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from"})
+
+_KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -478,8 +487,15 @@ def dof_arguments(options: Mapping) -> dict:
     if viewfinder not in DOF_VIEWFINDER["values"]:
         raise ValueError(
             f"viewfinder must be one of {DOF_VIEWFINDER['values']}, got {viewfinder!r}")
+    photo_blur = None
+    if _DOF_PHOTO_OPTIONS & set(options):
+        photo_blur = {"stand_at": _point(options, "stand_at", None),
+                      "nearer": _ranged(options, "nearer", PHOTO_NEARER),
+                      "tilt": _ranged(options, "tilt", PHOTO_TILT),
+                      "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH)}
     return {"focus": (float(focus[0]), float(focus[1])),
-            "f_number": float(f_number), "scope": scope, "viewfinder": viewfinder}
+            "f_number": float(f_number), "scope": scope, "viewfinder": viewfinder,
+            "photo_blur": photo_blur}
 
 
 def lens_arguments(options: Mapping) -> dict:
@@ -584,6 +600,70 @@ def photo_arguments(options: Mapping) -> dict:
         "tilt": _ranged(options, "tilt", PHOTO_TILT),
         "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH),
     }
+
+
+_SHADOW_INHERITED = object()
+
+
+def stage_arguments(options: Mapping) -> dict:
+    """Validate a stage request's `options` and map it to stage() kwargs.
+
+    `photo` (a photo Generation's id) sets the delivery in that photo, at
+    `place` and `height`; without it the delivery is set on `backdrop`, a
+    pattern or #RRGGBB (the deliver default when absent), with the drop
+    shadow thrown away from `shadow_from` (a direction, null for none,
+    absent to take the delivery's own stroke light). The two sets of keys do
+    not mix.
+    """
+    if not isinstance(options, Mapping):
+        raise ValueError(
+            f"stage options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_STAGE_OPTIONS)
+    if unknown:
+        raise ValueError(f"stage が受け付けない option です: {', '.join(unknown)}")
+    if "photo" in options:
+        mixed = sorted(_STAGE_PATTERN_OPTIONS & set(options))
+        if mixed:
+            raise ValueError(f"photo と一緒には使えない option です: {', '.join(mixed)}")
+        photo_id = options["photo"]
+        if not isinstance(photo_id, str) or not photo_id:
+            raise ValueError(f"photo must be the photo Generation's id, got {photo_id!r}")
+        return {"photo_id": photo_id,
+                "place": _point(options, "place", list(PHOTO_PLACE_DEFAULT),
+                                PHOTO_PLACE_MAX_Y),
+                "height": _ranged(options, "height", PHOTO_HEIGHT)}
+    stray = sorted((_STAGE_PHOTO_OPTIONS - {"photo"}) & set(options))
+    if stray:
+        raise ValueError(f"photo なしでは使えない option です: {', '.join(stray)}")
+    backdrop = options.get("backdrop", DELIVER_DEFAULTS["backdrop"])
+    if not isinstance(backdrop, str) or not is_backdrop(backdrop):
+        raise ValueError(
+            f"backdrop must be one of {sorted(PATTERNS)} or a #RRGGBB colour, got {backdrop!r}")
+    shadow_from = options.get("shadow_from", _SHADOW_INHERITED)
+    if shadow_from is not _SHADOW_INHERITED and shadow_from is not None \
+            and shadow_from not in STROKE_LIGHTS:
+        raise ValueError(
+            f"shadow_from must be null or one of {sorted(STROKE_LIGHTS)}, got {shadow_from!r}")
+    return {"backdrop": backdrop,
+            "shadow_from": None if shadow_from is _SHADOW_INHERITED else shadow_from,
+            "inherit_shadow": shadow_from is _SHADOW_INHERITED}
+
+
+def lighting_arguments(options: Mapping) -> dict:
+    """Validate a lighting request's `options` and map it to lighting()
+    kwargs: `direction` (null or absent for none) and `strength`."""
+    if not isinstance(options, Mapping):
+        raise ValueError(
+            f"lighting options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_LIGHTING_OPTIONS)
+    if unknown:
+        raise ValueError(f"lighting が受け付けない option です: {', '.join(unknown)}")
+    direction = options.get("direction")
+    if direction is not None and direction not in STROKE_LIGHTS:
+        raise ValueError(
+            f"direction must be null or one of {sorted(STROKE_LIGHTS)}, got {direction!r}")
+    return {"direction": direction,
+            "strength": _ranged(options, "strength", LIGHTING_STRENGTH)}
 
 
 def repair_arguments(options: Mapping,

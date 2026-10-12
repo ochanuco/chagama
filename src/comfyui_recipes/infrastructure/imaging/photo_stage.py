@@ -136,23 +136,23 @@ def place_card(premultiplied: np.ndarray, size: tuple[int, int],
     return canvas
 
 
-def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
-          outline: np.ndarray, *, place: tuple[float, float], height: float,
-          stand_at: tuple[float, float] | None, nearer: float,
-          focus: tuple[float, float] | str, f_number: float,
-          tilt: float = 0.0, bokeh: float = 0.0) -> np.ndarray:
-    """`photo` HxWx3 0..255 with `depth` HxW (higher = nearer); `figure` and
-    `outline` are a delivery's straight RGBA layers. `stand_at` names the
-    photo point whose depth the card's base stands at (the base itself when
-    None); `tilt` puts the card's top that much farther (negative: nearer),
-    in normalised scene depth. `focus` is a point of the picture (on the
-    card, the card's depth there) or SUBJECT for the card's middle. `bokeh`
-    (0..1) opens the photo's out-of-focus highlights into bright discs.
-    Returns the HxWx3 composite, 0..255."""
+def blur_card(photo: np.ndarray, depth: np.ndarray, placed: np.ndarray, *,
+              place: tuple[float, float], height: float,
+              stand_at: tuple[float, float] | None, nearer: float,
+              focus: tuple[float, float] | str, f_number: float,
+              tilt: float = 0.0, bokeh: float = 0.0) -> np.ndarray:
+    """`photo` HxWx3 0..255 with `depth` (higher = nearer) and the card
+    already `placed` on it (HxWx4 premultiplied 0..1, its base on `place`,
+    `height` tall), both blurred by depth. `stand_at` names the photo point
+    whose depth the card's base stands at (the base itself when None);
+    `tilt` puts the card's top that much farther (negative: nearer), in
+    normalised scene depth. `focus` is a point of the picture (on the card,
+    the card's depth there) or SUBJECT for the card's middle. `bokeh` (0..1)
+    opens the photo's out-of-focus highlights into bright discs. Returns
+    the HxWx3 composite, 0..255."""
     height_px, width_px = photo.shape[:2]
     scene = normalised_depth(cv2.resize(depth.astype(np.float32), (width_px, height_px),
                                         interpolation=cv2.INTER_LINEAR))
-    placed = place_card(card(figure, outline), (width_px, height_px), place, height)
     card_alpha = placed[..., 3]
     base = stand_at if stand_at is not None else (place[0], min(place[1], 1.0 - 1e-6))
     base_depth = _focus_depth(scene, *base) + nearer
@@ -183,6 +183,15 @@ def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
     cover = np.clip(card_cover, 0.0, 1.0)[..., None]
     linear = card_colour * cover + photo_colour * (1.0 - cover)
     return _to_srgb(linear)
+
+
+def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
+          outline: np.ndarray, *, place: tuple[float, float], height: float,
+          **blur) -> np.ndarray:
+    """`blur_card` with the card made from a delivery's straight RGBA
+    `figure` and `outline` layers and placed on `photo` first."""
+    placed = place_card(card(figure, outline), photo.shape[1::-1], place, height)
+    return blur_card(photo, depth, placed, place=place, height=height, **blur)
 
 
 def stage_png(photo_png: bytes, depth_png: bytes, figure_png: bytes,

@@ -12,8 +12,18 @@ import json
 import numpy as np
 
 from comfyui_recipes.infrastructure.imaging import (
-    delivery, depth_blur, lens, matting, palette, photo_stage, recolor, viewfinder)
+    delivery,
+    depth_blur,
+    lens,
+    matting,
+    palette,
+    photo_stage,
+    recolor,
+    relight,
+    viewfinder,
+)
 from comfyui_recipes.infrastructure.imaging import light as lighting
+from comfyui_recipes.infrastructure.imaging import stage as staging
 
 from . import bridge, vitmatte
 
@@ -317,6 +327,124 @@ class YukariPhotoStage:
         return (bridge.png_to_image(data),)
 
 
+def _fraction(default):
+    return ("FLOAT", {"default": default, "min": 0.0, "max": 1.0, "step": 0.001})
+
+
+class YukariStage:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("image", "figure", "outline", "backdrop")
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "figure": ("IMAGE",),
+            "figure_mask": ("MASK",),
+            "outline": ("IMAGE",),
+            "outline_mask": ("MASK",),
+            "mode": (["pattern", "photo"], {"default": "pattern"}),
+        }, "optional": {
+            "photo": ("IMAGE",),
+            "backdrop": ("STRING", {"default": ""}),
+            "shadow_from": ("STRING", {"default": ""}),
+            "outlines": ("STRING", {"default": ""}),
+            "place_x": _fraction(0.5),
+            "place_y": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.5, "step": 0.001}),
+            "height": ("FLOAT", {"default": 0.7, "min": 0.05, "max": 1.5, "step": 0.01}),
+        }}
+
+    def run(self, figure, figure_mask, outline, outline_mask, mode, photo=None,
+            backdrop="", shadow_from="", outlines="", place_x=0.5, place_y=0.95,
+            height=0.7):
+        if mode == "photo" and photo is None:
+            raise ValueError("YukariStage in photo mode needs a photo")
+        picture, figure_png, outline_png, backdrop_png = staging.stage_pngs(
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
+            photo_png=bridge.image_to_png(photo) if mode == "photo" else None,
+            backdrop=backdrop or None, shadow_from=shadow_from or None,
+            outlines=json.loads(outlines) if outlines else None,
+            place=(place_x, place_y), height=height)
+        return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
+                bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
+
+
+class YukariRelight:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("image", "figure", "outline")
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "figure": ("IMAGE",),
+            "figure_mask": ("MASK",),
+            "outline": ("IMAGE",),
+            "outline_mask": ("MASK",),
+            "backdrop": ("IMAGE",),
+            "direction": ("STRING", {"default": ""}),
+            "strength": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
+        }}
+
+    def run(self, figure, figure_mask, outline, outline_mask, backdrop, direction,
+            strength):
+        picture, figure_png, outline_png = relight.relight_pngs(
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
+            bridge.image_to_png(backdrop), direction=direction or None,
+            strength=strength)
+        return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
+                bridge.png_to_image(outline_png, "RGBA"))
+
+
+class YukariPhotoDepthOfField:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "backdrop": ("IMAGE",),
+            "depth": ("IMAGE",),
+            "figure": ("IMAGE",),
+            "figure_mask": ("MASK",),
+            "outline": ("IMAGE",),
+            "outline_mask": ("MASK",),
+            "place_x": _fraction(0.5),
+            "place_y": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.5, "step": 0.001}),
+            "height": ("FLOAT", {"default": 0.7, "min": 0.05, "max": 1.5, "step": 0.01}),
+            "stand": (["base", "point"], {"default": "base"}),
+            "stand_x": _fraction(0.5),
+            "stand_y": _fraction(0.5),
+            "nearer": _fraction(0.0),
+            "focus": (["subject", "point"], {"default": "subject"}),
+            "focus_x": _fraction(0.5),
+            "focus_y": _fraction(0.5),
+            "f_number": ("FLOAT", {"default": 2.8, "min": 1.4, "max": 22.0, "step": 0.1}),
+            "tilt": ("FLOAT", {"default": 0.0, "min": -1.0, "max": 1.0, "step": 0.01}),
+            "bokeh": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+        }}
+
+    def run(self, backdrop, depth, figure, figure_mask, outline, outline_mask,
+            place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
+            focus_x, focus_y, f_number, tilt, bokeh):
+        data = staging.blur_on_photo_png(
+            bridge.image_to_png(backdrop), bridge.image_to_png(depth),
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
+            place=(place_x, place_y), height=height,
+            stand_at=(stand_x, stand_y) if stand == "point" else None,
+            nearer=nearer,
+            focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
+            f_number=f_number, tilt=tilt, bokeh=bokeh)
+        return (bridge.png_to_image(data),)
+
+
 NODE_CLASS_MAPPINGS = {
     "YukariRepinSkin": YukariRepinSkin,
     "YukariRepin": YukariRepin,
@@ -329,6 +457,9 @@ NODE_CLASS_MAPPINGS = {
     "YukariViewfinder": YukariViewfinder,
     "YukariLens": YukariLens,
     "YukariPhotoStage": YukariPhotoStage,
+    "YukariStage": YukariStage,
+    "YukariRelight": YukariRelight,
+    "YukariPhotoDepthOfField": YukariPhotoDepthOfField,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -343,4 +474,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariViewfinder": "Yukari Viewfinder",
     "YukariLens": "Yukari Lens",
     "YukariPhotoStage": "Yukari Photo Stage",
+    "YukariStage": "Yukari Stage",
+    "YukariRelight": "Yukari Relight",
+    "YukariPhotoDepthOfField": "Yukari Photo Depth of Field",
 }
