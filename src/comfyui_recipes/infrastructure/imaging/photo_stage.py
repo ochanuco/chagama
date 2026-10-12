@@ -22,6 +22,7 @@ from .depth_blur import (
     ALPHA_EPSILON,
     DEPTH_PERCENTILES,
     K_FRACTION,
+    _disc,
     _focus_depth,
     _gather,
     _to_linear,
@@ -39,6 +40,10 @@ BOKEH_THRESHOLD = 0.6
 BOKEH_GAIN = 24.0
 BOKEH_RAMP_PX = 3.0
 LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
+# The photo is cut into this many depth slices, each blurred by the disc of its
+# own depth and laid far to near, so a near out-of-focus object spreads its
+# blur over what stands behind it instead of keeping a hard silhouette.
+DEPTH_SLICES = 24
 SUBJECT = "subject"
 
 
@@ -59,6 +64,31 @@ def lift_highlights(linear: np.ndarray, radius: np.ndarray, bokeh: float) -> np.
     highlight = np.clip((luminance - BOKEH_THRESHOLD) / (1.0 - BOKEH_THRESHOLD), 0.0, 1.0) ** 2
     ramp = np.clip(radius / BOKEH_RAMP_PX, 0.0, 1.0)
     return linear * (1.0 + bokeh * BOKEH_GAIN * highlight * ramp)[..., None]
+
+
+def layered_blur(linear: np.ndarray, depth: np.ndarray, focus_depth: float,
+                 scale: float) -> np.ndarray:
+    """`linear` (HxWx3) blurred by `depth` (HxW, 0..1, higher = nearer): each
+    depth slice is blurred with the disc of its own depth, colour and cover
+    alike, and laid over the slices behind it, far to near. A near slice's
+    soft edge thus covers the farther scene, while a far slice's blur stays
+    hidden behind the near ones."""
+    slice_of = np.clip((depth * DEPTH_SLICES).astype(np.int32), 0, DEPTH_SLICES - 1)
+    colour = np.zeros_like(linear, dtype=np.float32)
+    cover = np.zeros(depth.shape, np.float32)
+    for index in range(DEPTH_SLICES):
+        mask = (slice_of == index).astype(np.float32)
+        if not mask.any():
+            continue
+        radius = scale * abs((index + 0.5) / DEPTH_SLICES - focus_depth)
+        layer = linear * mask[..., None]
+        if radius >= 0.5:
+            kernel = _disc(radius)
+            layer = cv2.filter2D(layer, -1, kernel, borderType=cv2.BORDER_REFLECT)
+            mask = cv2.filter2D(mask, -1, kernel, borderType=cv2.BORDER_REFLECT)
+        colour = layer + colour * (1.0 - mask)[..., None]
+        cover = mask + cover * (1.0 - mask)
+    return colour / np.maximum(cover, ALPHA_EPSILON)[..., None]
 
 
 def card(figure: np.ndarray, outline: np.ndarray) -> np.ndarray:
@@ -141,8 +171,7 @@ def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
     photo_radius = (scale * np.abs(scene - focus_depth)).astype(np.float32)
     photo_linear = lift_highlights(_to_linear(photo.astype(np.float32)).astype(np.float32),
                                    photo_radius, bokeh)
-    photo_colour, _ = _gather(photo_linear.astype(np.float32),
-                              np.ones((height_px, width_px), np.float32), photo_radius)
+    photo_colour = layered_blur(photo_linear.astype(np.float32), scene, focus_depth, scale)
     straight = np.where(card_alpha[..., None] > ALPHA_EPSILON,
                         placed[..., :3] / np.maximum(card_alpha, ALPHA_EPSILON)[..., None],
                         0.0)
