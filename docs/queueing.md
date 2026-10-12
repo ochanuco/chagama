@@ -143,43 +143,30 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
 
 ### Stage options
 
-- The source must be a deliver output carrying its `layer-figure` and
-  `layer-outline` assets; anything else (a stage or lighting output too) is
-  refused. A transparent delivery is the usual source.
-- With `photo` (a Generation's id, usually a photo uploaded on chimera), the
-  figure and outline are scaled together as one card, the middle of its
-  bottom edge at `place` and `height` tall, exactly as the photo kind places
-  it, at the photo's canvas; nothing is blurred. `backdrop` and
-  `shadow_from` are refused with it.
-- Without `photo`, the layers stay at the delivery's canvas on `backdrop` (a
-  pattern name or `#RRGGBB`, default the deliver default). `shadow_from` (a
-  direction) throws the sticker's drop shadow away from that light, merged
-  into the outline layer as translucent black; null is none, absent takes
-  the transparent delivery's own scene or stroke light (none for a delivery
-  that already has its backdrop and shadow). `place` and `height` are
-  refused without `photo`.
-- The output Generation (`-set`) refines the delivery, is a delivered
-  picture, carries the canvas-sized `layer-figure`, `layer-outline` and
-  `layer-backdrop` assets, and records `kind: "stage"`, `base_generation`
-  and either `photo`, `place`, `height` or `backdrop`, `shadow_from`.
+- The source must be a deliver output with `layer-figure` and
+  `layer-outline` (usually transparent); anything else is refused.
+- With `photo`, the card is placed at `place` / `height` exactly as the
+  photo kind places it, at the photo's canvas, unblurred. Without it, the
+  layers stay at their canvas on `backdrop` (pattern or `#RRGGBB`, default
+  the deliver default) with the drop shadow thrown away from `shadow_from`
+  (null: none; absent: the transparent delivery's own light), merged into
+  the outline layer. The two sets of keys do not mix.
+- The output (`-set`) is a delivered picture with canvas-sized
+  `layer-figure`, `layer-outline` and `layer-backdrop`, recording
+  `kind: "stage"` and its options.
 
 ### Lighting options
 
-- The source must be a stage output or a delivery with its backdrop layer;
-  a lighting output (light it again from the stage output instead) and a
-  transparent delivery are refused.
-- The backdrop in a ring around the card (6% of the longest side) is the
-  ambient. The figure and outline are pulled toward its exposure,
-  `(ambient luminance / 0.35) ** (0.4 × strength)` within 0.35..1.15 in
-  linear light, and take half its colour cast at `strength` 1. With a
-  `direction`, the figure is first shaded from that side as the `light`
-  redraw underpaint does (flat depth, silhouette normals), its lit side
-  tinted by the colour of the backdrop's brightest light. `strength` 0..1
-  (default 0.7); `direction` null (default) is exposure and colour only.
-  The backdrop is left as it is.
-- The output Generation (`-lit`) refines its source, carries the relit
-  layers and the unchanged backdrop layer, and records `kind: "lighting"`,
-  `base_generation`, `direction` and `strength`.
+- The source must be a stage output or a delivery with its backdrop; a
+  lighting output and a transparent delivery are refused.
+- The ambient is the backdrop in a ring around the card (6% of the longest
+  side). Figure and outline take `(ambient luminance / 0.35) ** (0.4 ×
+  strength)` (within 0.35..1.15, linear) and half its colour cast at
+  strength 1. A `direction` first shades the figure as the `light` redraw
+  underpaint does, its lit side tinted by the backdrop's brightest light.
+  `strength` 0..1 (default 0.7). The backdrop is unchanged.
+- The output (`-lit`) carries the relit layers and the backdrop layer and
+  records `kind: "lighting"`, `direction` and `strength`.
 
 ### Dof options
 
