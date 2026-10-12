@@ -15,6 +15,8 @@ from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
     DOF_VIEWFINDER,
+    LENS_CENTER_DEFAULT,
+    LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     OUTLINE_WIDTH_MAX_PCT,
@@ -35,6 +37,8 @@ _KNOWN_DELIVER_OPTIONS = frozenset({
 })
 
 _KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"})
+
+_KNOWN_LENS_OPTIONS = frozenset({"center", "strength"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -465,6 +469,38 @@ def dof_arguments(options: Mapping) -> dict:
             f"viewfinder must be one of {DOF_VIEWFINDER['values']}, got {viewfinder!r}")
     return {"focus": (float(focus[0]), float(focus[1])),
             "f_number": float(f_number), "scope": scope, "viewfinder": viewfinder}
+
+
+def lens_arguments(options: Mapping) -> dict:
+    """Validate a lens request's `options` and map it to lens() kwargs.
+
+    Absent keys take the catalog defaults; unknown keys or a wrong type raise
+    ValueError naming the offending key.
+    """
+    if not isinstance(options, Mapping):
+        raise ValueError(
+            f"lens options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_LENS_OPTIONS)
+    if unknown:
+        raise ValueError(f"lens が受け付けない option です: {', '.join(unknown)}")
+    center = options.get("center", list(LENS_CENTER_DEFAULT))
+    if (not isinstance(center, list) or len(center) != 2
+            or any(not isinstance(v, (int, float)) or isinstance(v, bool)
+                   for v in center)):
+        raise ValueError(f"center must be [x, y] numbers, got {center!r}")
+    if any(not (0 <= v <= 1) for v in center):
+        raise ValueError(f"center values must be within 0..1, got {center!r}")
+    strength = options.get("strength", LENS_STRENGTH["default"])
+    if not isinstance(strength, (int, float)) or isinstance(strength, bool):
+        raise ValueError(f"strength must be a number, got {strength!r}")
+    if not (LENS_STRENGTH["min"] <= strength <= LENS_STRENGTH["max"]):
+        raise ValueError(
+            f"strength must be between {LENS_STRENGTH['min']} and "
+            f"{LENS_STRENGTH['max']}, got {strength!r}")
+    if strength == 0:
+        raise ValueError("strength 0 ではレンズが歪みません。魚眼は正、逆魚眼は負の値です")
+    return {"center": (float(center[0]), float(center[1])),
+            "strength": float(strength)}
 
 
 def repair_arguments(options: Mapping,

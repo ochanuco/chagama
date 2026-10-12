@@ -189,6 +189,21 @@ class CliTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "scope"):
             cli.main(["dof", "gen-1", "--focus", "0.5,0.4", "--scope", "rim"])
 
+    @patch.object(cli, "lens")
+    @patch.object(cli, "ChimeraClient")
+    def test_lens_flags_dispatch_without_network(self, chimera_class, run_lens):
+        cli.main(["lens", "gen-1", "--center", "0.5,0.8", "--strength", "-0.6"])
+        args, kwargs = run_lens.call_args
+        self.assertEqual(args[0], "gen-1")
+        self.assertEqual(kwargs, {"center": (0.5, 0.8), "strength": -0.6})
+        cli.main(["lens", "gen-1"])
+        self.assertEqual(run_lens.call_args.kwargs,
+                         {"center": (0.5, 0.5), "strength": 0.7})
+        with self.assertRaisesRegex(SystemExit, "center"):
+            cli.main(["lens", "gen-1", "--center", "middle"])
+        with self.assertRaisesRegex(SystemExit, "strength"):
+            cli.main(["lens", "gen-1", "--strength", "0"])
+
     @patch.object(cli, "redraw")
     @patch.object(cli, "ChimeraClient")
     def test_redraw_methods_dispatch_without_network(
@@ -302,9 +317,11 @@ class CliTest(unittest.TestCase):
         work_services = run_work.call_args.args[0]
         self.assertEqual(
             work_services.kinds,
-            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof"))
+            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof", "lens"))
         self.assertIs(
             work_services.dof_services.management, chimera_class.return_value)
+        self.assertIs(
+            work_services.lens_services.management, chimera_class.return_value)
         self.assertIs(
             work_services.redraw_services.management, chimera_class.return_value)
         self.assertIs(

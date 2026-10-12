@@ -12,7 +12,7 @@ import json
 import numpy as np
 
 from comfyui_recipes.infrastructure.imaging import (
-    delivery, depth_blur, matting, palette, recolor, viewfinder)
+    delivery, depth_blur, lens, matting, palette, recolor, viewfinder)
 from comfyui_recipes.infrastructure.imaging import light as lighting
 
 from . import bridge, vitmatte
@@ -237,6 +237,31 @@ class YukariViewfinder:
         return (bridge.png_to_image(data, "RGBA" if image.shape[-1] == 4 else "RGB"),)
 
 
+class YukariLens:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "image": ("IMAGE",),
+            "mask": ("MASK",),
+            "center_x": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0,
+                                   "step": 0.001}),
+            "center_y": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0,
+                                   "step": 0.001}),
+            "strength": ("FLOAT", {"default": 0.7, "min": -1.0, "max": 1.0,
+                                   "step": 0.01}),
+        }}
+
+    def run(self, image, mask, center_x, center_y, strength):
+        data, mode = lens.lens_png(
+            bridge.loaded_rgba_png(image, mask), (center_x, center_y), strength)
+        return (bridge.png_to_image(data, mode),)
+
+
 NODE_CLASS_MAPPINGS = {
     "YukariRepinSkin": YukariRepinSkin,
     "YukariRepin": YukariRepin,
@@ -247,6 +272,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariDepthOfField": YukariDepthOfField,
     "YukariLight": YukariLight,
     "YukariViewfinder": YukariViewfinder,
+    "YukariLens": YukariLens,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -259,4 +285,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariDepthOfField": "Yukari Depth of Field",
     "YukariLight": "Yukari Light",
     "YukariViewfinder": "Yukari Viewfinder",
+    "YukariLens": "Yukari Lens",
 }

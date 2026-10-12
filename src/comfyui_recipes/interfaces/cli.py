@@ -15,6 +15,7 @@ from ..application.deliver import deliver
 from ..application.dof import dof
 from ..application.generate import generate
 from ..application.ingest import import_images
+from ..application.lens import lens
 from ..application.masked_redraw import masked_redraw
 from ..application.redraw import redraw
 from ..application.repair import repair
@@ -25,6 +26,7 @@ from ..application.request_options import (
     deliver_arguments,
     dials_scope,
     dof_arguments,
+    lens_arguments,
     redraw_arguments,
     resolve_dial,
 )
@@ -38,6 +40,7 @@ from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
     DOF_VIEWFINDER,
+    LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     STROKE_CHOICES,
@@ -55,6 +58,7 @@ from ..infrastructure.repository import discover_repository, git_metadata
 from .agent import (
     build_deliver_services,
     build_dof_services,
+    build_lens_services,
     build_generate_services,
     build_masked_redraw_services,
     build_redraw_services,
@@ -127,6 +131,18 @@ def _dof_options_from_args(args) -> dict:
     }
 
 
+def _lens_options_from_args(args) -> dict:
+    options = {}
+    if args.center is not None:
+        try:
+            options["center"] = [float(value) for value in args.center.split(",")]
+        except ValueError:
+            raise SystemExit(f"--center must be X,Y, got {args.center!r}") from None
+    if args.strength is not None:
+        options["strength"] = args.strength
+    return options
+
+
 def _light_from_args(args) -> Light | None:
     if not args.light:
         return None
@@ -189,7 +205,7 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--dry-run", action="store_true")
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
-        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof",
+        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof,lens",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",
@@ -313,6 +329,18 @@ def parser() -> argparse.ArgumentParser:
         default=DOF_VIEWFINDER["default"],
         help="draw a camera viewfinder over the picture ('on'), or keep it "
              "plain and add the viewfinder picture as an extra generation ('both')")
+
+    lens_parser = commands.add_parser(
+        "lens", help="distort one delivered picture through a fisheye or its inverse")
+    lens_parser.add_argument("generation_id")
+    lens_parser.add_argument(
+        "--center", metavar="X,Y",
+        help="lens centre as fractions of the picture width and height "
+             "(default 0.5,0.5)")
+    lens_parser.add_argument(
+        "--strength", type=float, default=None,
+        help=f"{LENS_STRENGTH['min']}..{LENS_STRENGTH['max']}: positive is a "
+             f"fisheye, negative its inverse (default {LENS_STRENGTH['default']})")
 
     repair_parser = commands.add_parser(
         "repair", help="masked local redraw of hands/feet on an existing generation")
@@ -564,6 +592,15 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as error:
             raise SystemExit(str(error)) from error
         dof(args.generation_id, services, **arguments)
+        return
+    if args.command == "lens":
+        services = build_lens_services(
+            chimera, comfyui, notifier, repository, repository_metadata)
+        try:
+            arguments = lens_arguments(_lens_options_from_args(args))
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+        lens(args.generation_id, services, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()

@@ -21,6 +21,8 @@ from .ingest import (
 from .picture_source import is_delivered
 
 DOF_OUTPUT = "dof の出力に dof はかけられません。納品の絵を指定してください"
+LENS_OUTPUT = ("lens の出力に dof はかけられません。dof を先にかけて、"
+               "その絵に lens をかけてください")
 NOT_DELIVERED = "dof をかけられるのは納品の絵だけです。先に deliver してください"
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
 
@@ -51,6 +53,8 @@ def _check_source(services: DofServices, generation_id: str,
     parameters = request.get("parameters") or {}
     if request.get("kind") == "dof" or parameters.get("kind") == "dof":
         raise SystemExit(DOF_OUTPUT)
+    if request.get("kind") == "lens" or parameters.get("kind") == "lens":
+        raise SystemExit(LENS_OUTPUT)
     if not is_delivered(request):
         raise SystemExit(NOT_DELIVERED)
     if parameters.get("kind") != "deliver":

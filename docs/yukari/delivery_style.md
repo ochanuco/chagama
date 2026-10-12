@@ -20,6 +20,7 @@ in [`findings/delivery.md`](../findings/delivery.md).
 | `MATTE_*`, `KEY_*`, `ENCLOSED_*`, `FRAME_WINDOW_*`, `DRAWN_OUTLINE_*` | matte, keyed edge, pocket cuts and the drawn outline in `delivery.py` |
 | `REDRAW_*`, `ROUGH_STYLE`, `DELIVER_DEFAULTS` | the opt-in IL `canvas` redraw and the deliver defaults the catalog publishes |
 | `DOF_*` | the `dof` request's options and the catalog's top-level `dof` section |
+| `LENS_*` | the `lens` request's options and the catalog's top-level `lens` section |
 
 ## Contracts
 
