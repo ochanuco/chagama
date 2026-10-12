@@ -270,9 +270,23 @@ class DofArgumentsTest(unittest.TestCase):
 
 class LensArgumentsTest(unittest.TestCase):
     def test_defaults_take_the_catalog_values(self):
-        self.assertEqual(lens_arguments({}), {"center": (0.5, 0.5), "strength": 0.7})
+        self.assertEqual(lens_arguments({}), {"center": (0.5, 0.5), "strength": 0.7,
+                                              "shape": "fisheye", "radius": None})
         self.assertEqual(lens_arguments({"center": [0, 1], "strength": -1}),
-                         {"center": (0.0, 1.0), "strength": -1.0})
+                         {"center": (0.0, 1.0), "strength": -1.0,
+                          "shape": "fisheye", "radius": None})
+
+    def test_a_sphere_takes_a_radius_and_a_fisheye_refuses_one(self):
+        self.assertEqual(lens_arguments({"shape": "sphere"})["radius"], 0.3)
+        self.assertEqual(lens_arguments({"shape": "sphere", "radius": 1})["radius"], 1.0)
+        for bad in ({"shape": "sphere", "radius": 0.01},
+                    {"shape": "sphere", "radius": 1.5},
+                    {"shape": "sphere", "radius": "big"},
+                    {"radius": 0.3}):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "radius"):
+                lens_arguments(bad)
+        with self.assertRaisesRegex(ValueError, "shape"):
+            lens_arguments({"shape": "ball"})
 
     def test_bad_options_are_rejected(self):
         for bad, key in (({"center": [0.5]}, "center"),

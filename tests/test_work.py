@@ -533,7 +533,8 @@ class ExecuteTest(unittest.TestCase):
                 make_services(directory, ManagementFake()), lens=fake_lens)
             result = execute(services, lens_row())
             self.assertEqual(result["resolved_options"],
-                             {"center": [0.5, 0.5], "strength": -0.5})
+                             {"center": [0.5, 0.5], "strength": -0.5,
+                              "shape": "fisheye"})
             generation_id, lens_services, kwargs = calls[0]
             self.assertEqual((generation_id, lens_services), ("gen-1", "lens-services"))
             self.assertEqual(kwargs["request_id"], "req-8")

@@ -45,6 +45,31 @@ class SourceRadiusTest(unittest.TestCase):
                                        atol=1e-9)
 
 
+class SphereTest(unittest.TestCase):
+    def test_the_disc_rim_stays_put_and_the_bulge_and_pinch_invert_at_full_strength(self):
+        radius = np.linspace(0, 1, 11)
+        bulge = lens.sphere_radius(radius, 1.0)
+        self.assertAlmostEqual(float(bulge[-1]), 1.0)
+        self.assertTrue((bulge[1:-1] < radius[1:-1]).all())
+        np.testing.assert_allclose(lens.sphere_radius(bulge, -1.0), radius, atol=1e-9)
+        outside = np.array([1.2, 2.0])
+        np.testing.assert_allclose(lens.sphere_radius(outside, 0.7), outside)
+
+    def test_the_sphere_swells_its_disc_and_leaves_the_rest(self):
+        source = dot()
+        source[:6, :6] = (10, 200, 10)
+        data, _ = lens.lens_png(png(source, "RGB"), (32 / 63, 48 / 95), 0.9,
+                                "sphere", 0.3)
+        result = np.asarray(decoded(data))
+        self.assertGreater(dark_area(result), 1.3 * dark_area(source))
+        np.testing.assert_array_equal(result[:6, :6], source[:6, :6])
+        np.testing.assert_array_equal(result[-10:], source[-10:])
+
+    def test_a_sphere_needs_a_radius(self):
+        with self.assertRaisesRegex(ValueError, "radius"):
+            lens.distort(np.zeros((8, 8, 3), np.float32), (0.5, 0.5), 0.5, "sphere")
+
+
 class LensTest(unittest.TestCase):
     def test_the_fisheye_swells_what_sits_at_its_centre(self):
         source = dot()
