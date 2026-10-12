@@ -4,7 +4,7 @@ from __future__ import annotations
 
 # "hires-chain" and the request kind "finalize" name pictures delivered before
 # deliver existed; their rows are still read.
-DELIVERED_KINDS = ("deliver", "dof", "lens", "hires-chain")
+DELIVERED_KINDS = ("deliver", "dof", "lens", "photo", "hires-chain")
 DERIVED_KINDS = ("repair", "masked_redraw", "redraw")
 
 
@@ -12,7 +12,7 @@ def is_delivered(request: dict) -> bool:
     """Whether the request's output is a delivered picture, not a drawing."""
     parameters = request.get("parameters") or {}
     kind = parameters.get("kind")
-    return bool(request.get("kind") in ("deliver", "dof", "lens", "finalize")
+    return bool(request.get("kind") in ("deliver", "dof", "lens", "photo", "finalize")
                 or kind in DELIVERED_KINDS
                 or (kind == "repair" and parameters.get("deliver_only")))
 

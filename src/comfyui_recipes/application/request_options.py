@@ -21,6 +21,9 @@ from ..domain.yukari.delivery_style import (
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
+    PHOTO_HEIGHT,
+    PHOTO_NEARER,
+    PHOTO_PLACE_DEFAULT,
     OUTLINE_WIDTH_MAX_PCT,
     OUTLINES_MAX,
     STROKE_CHOICES,
@@ -41,6 +44,9 @@ _KNOWN_DELIVER_OPTIONS = frozenset({
 _KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"})
 
 _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
+
+_KNOWN_PHOTO_OPTIONS = frozenset({
+    "photo", "place", "height", "stand_at", "nearer", "focus", "f_number"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -518,6 +524,60 @@ def lens_arguments(options: Mapping) -> dict:
         raise ValueError("radius は shape が sphere のときだけ使えます")
     return {"center": (float(center[0]), float(center[1])),
             "strength": float(strength), "shape": shape, "radius": radius}
+
+
+def _point(options: Mapping, key: str, default):
+    value = options.get(key, default)
+    if value is None:
+        return None
+    if (not isinstance(value, (list, tuple)) or len(value) != 2
+            or any(not isinstance(v, (int, float)) or isinstance(v, bool) for v in value)):
+        raise ValueError(f"{key} must be [x, y] numbers, got {value!r}")
+    if any(not (0 <= v <= 1) for v in value):
+        raise ValueError(f"{key} values must be within 0..1, got {value!r}")
+    return (float(value[0]), float(value[1]))
+
+
+def _ranged(options: Mapping, key: str, limits: Mapping) -> float:
+    value = options.get(key, limits["default"])
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise ValueError(f"{key} must be a number, got {value!r}")
+    if not (limits["min"] <= value <= limits["max"]):
+        raise ValueError(
+            f"{key} must be between {limits['min']} and {limits['max']}, got {value!r}")
+    return float(value)
+
+
+def photo_arguments(options: Mapping) -> dict:
+    """Validate a photo request's `options` and map it to photo() kwargs.
+
+    `photo` (the Generation whose image is the scene) is required; absent
+    keys take the catalog defaults; unknown keys or a wrong type raise
+    ValueError naming the offending key.
+    """
+    if not isinstance(options, Mapping):
+        raise ValueError(
+            f"photo options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_PHOTO_OPTIONS)
+    if unknown:
+        raise ValueError(f"photo が受け付けない option です: {', '.join(unknown)}")
+    photo_id = options.get("photo")
+    if not isinstance(photo_id, str) or not photo_id:
+        raise ValueError(f"photo must be the photo Generation's id, got {photo_id!r}")
+    focus = options.get("focus", "subject")
+    if focus != "subject":
+        focus = _point(options, "focus", None)
+        if focus is None:
+            raise ValueError('focus must be "subject" or [x, y]')
+    return {
+        "photo_id": photo_id,
+        "place": _point(options, "place", list(PHOTO_PLACE_DEFAULT)),
+        "height": _ranged(options, "height", PHOTO_HEIGHT),
+        "stand_at": _point(options, "stand_at", None),
+        "nearer": _ranged(options, "nearer", PHOTO_NEARER),
+        "focus": focus,
+        "f_number": _ranged(options, "f_number", DOF_F_NUMBER),
+    }
 
 
 def repair_arguments(options: Mapping,

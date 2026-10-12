@@ -27,6 +27,9 @@ from ..domain.yukari.delivery_style import (
     LENS_RADIUS,
     LENS_SHAPE,
     LENS_STRENGTH,
+    PHOTO_HEIGHT,
+    PHOTO_NEARER,
+    PHOTO_PLACE_DEFAULT,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     OUTLINE_WIDTH_MAX_PCT,
@@ -183,6 +186,25 @@ def _lens_block() -> dict:
     }
 
 
+def _photo_block() -> dict:
+    return {
+        "place": {"default": list(PHOTO_PLACE_DEFAULT),
+                  "help": "fractions [x, y] of the photo where the middle of the "
+                          "card's bottom edge (the stand's base) goes"},
+        "height": {**PHOTO_HEIGHT, "help": "the card's height as a share of the photo's"},
+        "stand_at": {"default": None,
+                     "help": "a photo point [x, y] whose depth the card stands at, "
+                             "e.g. a signboard to share its focus; null stands it at "
+                             "its own base"},
+        "nearer": {**PHOTO_NEARER, "help": "how far to pull the card toward the "
+                                           "camera, in normalised scene depth"},
+        "focus": {"default": "subject",
+                  "help": '"subject" focuses on the card; [x, y] on that point of '
+                          "the picture"},
+        "f_number": DOF_F_NUMBER,
+    }
+
+
 def build_catalog(git: dict) -> dict:
     """The catalog document for this worker checkout. Pure -- no I/O."""
     return {
@@ -195,6 +217,7 @@ def build_catalog(git: dict) -> dict:
         "patches": _patches_block(),
         "dof": _dof_block(),
         "lens": _lens_block(),
+        "photo": _photo_block(),
         "backdrops": _backdrops_block(),
     }
 

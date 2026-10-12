@@ -17,6 +17,7 @@ from ..application.generate import generate
 from ..application.ingest import import_images
 from ..application.lens import lens
 from ..application.masked_redraw import masked_redraw
+from ..application.photo import photo
 from ..application.redraw import redraw
 from ..application.repair import repair
 from ..application.request_options import (
@@ -27,6 +28,7 @@ from ..application.request_options import (
     dials_scope,
     dof_arguments,
     lens_arguments,
+    photo_arguments,
     redraw_arguments,
     resolve_dial,
 )
@@ -45,6 +47,7 @@ from ..domain.yukari.delivery_style import (
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
+    PHOTO_HEIGHT,
     STROKE_CHOICES,
     STROKE_LIGHTS,
     Light,
@@ -61,6 +64,7 @@ from .agent import (
     build_deliver_services,
     build_dof_services,
     build_lens_services,
+    build_photo_services,
     build_generate_services,
     build_masked_redraw_services,
     build_redraw_services,
@@ -149,6 +153,31 @@ def _lens_options_from_args(args) -> dict:
     return options
 
 
+def _xy(text: str, flag: str) -> list[float]:
+    try:
+        return [float(value) for value in text.split(",")]
+    except ValueError:
+        raise SystemExit(f"{flag} must be X,Y, got {text!r}") from None
+
+
+def _photo_options_from_args(args) -> dict:
+    options: dict = {"photo": args.photo}
+    if args.place is not None:
+        options["place"] = _xy(args.place, "--place")
+    if args.height is not None:
+        options["height"] = args.height
+    if args.stand_at is not None:
+        options["stand_at"] = _xy(args.stand_at, "--stand-at")
+    if args.nearer is not None:
+        options["nearer"] = args.nearer
+    if args.focus is not None:
+        options["focus"] = (args.focus if args.focus == "subject"
+                            else _xy(args.focus, "--focus"))
+    if args.f_number is not None:
+        options["f_number"] = args.f_number
+    return options
+
+
 def _light_from_args(args) -> Light | None:
     if not args.light:
         return None
@@ -211,7 +240,7 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--dry-run", action="store_true")
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
-        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof,lens",
+        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof,lens,photo",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",
@@ -355,6 +384,32 @@ def parser() -> argparse.ArgumentParser:
         "--radius", type=float, default=None,
         help=f"sphere only: {LENS_RADIUS['min']}..{LENS_RADIUS['max']} of the "
              f"shorter side (default {LENS_RADIUS['default']})")
+
+    photo_parser = commands.add_parser(
+        "photo", help="stand one delivered figure in a photo and blur it by depth")
+    photo_parser.add_argument("generation_id")
+    photo_parser.add_argument(
+        "--photo", required=True, help="the Generation whose image is the scene")
+    photo_parser.add_argument(
+        "--place", metavar="X,Y",
+        help="where the middle of the card's bottom edge goes (default 0.5,0.95)")
+    photo_parser.add_argument(
+        "--height", type=float, default=None,
+        help=f"card height as a share of the photo's, {PHOTO_HEIGHT['min']}.."
+             f"{PHOTO_HEIGHT['max']} (default {PHOTO_HEIGHT['default']})")
+    photo_parser.add_argument(
+        "--stand-at", metavar="X,Y",
+        help="a photo point whose depth the card stands at (default: its own base)")
+    photo_parser.add_argument(
+        "--nearer", type=float, default=None,
+        help="pull the card toward the camera, 0..1 of the scene depth (default 0)")
+    photo_parser.add_argument(
+        "--focus", metavar="subject|X,Y",
+        help="focus on the card ('subject', default) or on a point of the picture")
+    photo_parser.add_argument(
+        "--f-number", type=float, default=None,
+        help=f"{DOF_F_NUMBER['min']}..{DOF_F_NUMBER['max']} "
+             f"(default {DOF_F_NUMBER['default']})")
 
     repair_parser = commands.add_parser(
         "repair", help="masked local redraw of hands/feet on an existing generation")
@@ -615,6 +670,15 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as error:
             raise SystemExit(str(error)) from error
         lens(args.generation_id, services, **arguments)
+        return
+    if args.command == "photo":
+        services = build_photo_services(
+            chimera, comfyui, notifier, repository, repository_metadata)
+        try:
+            arguments = photo_arguments(_photo_options_from_args(args))
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+        photo(args.generation_id, services, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()
