@@ -194,6 +194,7 @@ def make_services(directory: Path, management, *, heartbeats=None,
         dof_services="dof-services",
         lens_services="lens-services",
         photo_services="photo-services",
+        stage_services="stage-services",
         git_metadata=lambda: {"branch": branch},
         worker_id="test-worker",
         emit=(emit or (lambda message: None)),
@@ -234,6 +235,7 @@ def make_hub_services(directory: Path, *, hub=None, progress_feed=None,
         dof_services="dof-services",
         lens_services="lens-services",
         photo_services="photo-services",
+        stage_services="stage-services",
         git_metadata=lambda: {"branch": "dev/requests-worker"},
         worker_id="test-worker",
         emit=(emit or (lambda message: None)),
@@ -604,15 +606,15 @@ class ExecuteTest(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "no longer supported"):
                 execute(services, finalize_row())
 
-    def test_the_default_kinds_are_exactly_the_eight(self):
+    def test_the_default_kinds_are_exactly_the_ten(self):
         self.assertEqual(
             WorkServices.__dataclass_fields__["kinds"].default,
             ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-             "lens", "photo"))
+             "lens", "photo", "stage", "lighting"))
         self.assertEqual(
             DEFAULT_KINDS,
             ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-             "lens", "photo"))
+             "lens", "photo", "stage", "lighting"))
 
     def test_unsupported_kind_fails(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -559,6 +559,12 @@ PHOTO_NEARER = {"min": 0.0, "max": 1.0, "default": 0.0}
 PHOTO_TILT = {"min": -1.0, "max": 1.0, "default": 0.0}
 # How strongly the photo's out-of-focus highlights open into bright discs.
 PHOTO_BOKEH = {"min": 0.0, "max": 1.0, "default": 0.0}
+# A stage request sets a delivery's figure and outline layers on a backdrop of
+# their own: a pattern (or #RRGGBB) at the delivery's canvas, optionally with
+# the drop shadow thrown away from `shadow_from`, or a photo, the card's base
+# on `place` and `height` tall as a photo request places it, unblurred.
+# A lighting request then lights the figure and outline by that backdrop.
+LIGHTING_STRENGTH = {"min": 0.0, "max": 1.0, "default": 0.7}
 
 
 class Light(NamedTuple):

@@ -132,6 +132,7 @@ class NodeMappingTest(unittest.TestCase):
             "YukariRepinSkin", "YukariRepin", "YukariRecolor", "YukariMatting",
             "YukariForeground", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
+            "YukariStage", "YukariRelight", "YukariPhotoDepthOfField",
         })
         self.assertEqual(
             set(nodes.NODE_DISPLAY_NAME_MAPPINGS),
@@ -339,6 +340,53 @@ class NodeRunTest(unittest.TestCase):
             place_x=0.5, place_y=0.95, height=0.6, stand="base", stand_x=0.5,
             stand_y=0.5, nearer=0.0, focus="subject", focus_x=0.5, focus_y=0.5,
             f_number=2.8)
+        self.assertEqual(image.array.shape, (1, 48, 80, 3))
+
+    def test_stage_sets_layers_on_a_pattern_or_a_photo(self):
+        node = nodes.YukariStage()
+        figure, figure_mask = image_tensor(swatch()), mask_tensor(255 - matte_array())
+        outline = image_tensor(np.zeros((64, 64, 3), np.uint8))
+        outline_mask = mask_tensor(np.full((64, 64), 255, np.uint8))
+        image, staged_figure, staged_outline, backdrop = node.run(
+            figure, figure_mask, outline, outline_mask, mode="pattern",
+            backdrop="stripes", shadow_from="nw")
+        self.assertEqual(image.array.shape, (1, 64, 64, 3))
+        self.assertEqual(staged_figure.array.shape, (1, 64, 64, 4))
+        self.assertEqual(staged_outline.array.shape, (1, 64, 64, 4))
+        self.assertEqual(backdrop.array.shape, (1, 64, 64, 3))
+        photo = image_tensor(np.full((48, 80, 3), 120, np.uint8))
+        image, staged_figure, _, backdrop = node.run(
+            figure, figure_mask, outline, outline_mask, mode="photo", photo=photo,
+            place_x=0.5, place_y=1.0, height=0.8)
+        self.assertEqual(image.array.shape, (1, 48, 80, 3))
+        self.assertEqual(staged_figure.array.shape, (1, 48, 80, 4))
+        self.assertEqual(backdrop.array.shape, (1, 48, 80, 3))
+
+    def test_relight_returns_the_picture_and_its_layers(self):
+        node = nodes.YukariRelight()
+        image, figure, outline = node.run(
+            image_tensor(swatch()), mask_tensor(255 - matte_array()),
+            image_tensor(np.zeros((64, 64, 3), np.uint8)),
+            mask_tensor(np.full((64, 64), 255, np.uint8)),
+            image_tensor(np.full((64, 64, 3), 40, np.uint8)), direction="nw", strength=0.8)
+        self.assertEqual(image.array.shape, (1, 64, 64, 3))
+        self.assertEqual(figure.array.shape, (1, 64, 64, 4))
+        self.assertEqual(outline.array.shape, (1, 64, 64, 4))
+
+    def test_photo_depth_of_field_returns_the_backdrop_size_in_rgb(self):
+        node = nodes.YukariPhotoDepthOfField()
+        depth = np.tile(np.linspace(0, 255, 48, dtype=np.uint8)[:, None], (1, 80))
+        figure = np.zeros((48, 80, 3), np.uint8)
+        figure_alpha = np.full((48, 80), 255, np.uint8)
+        figure_alpha[10:40, 30:50] = 0
+        (image,) = node.run(
+            image_tensor(np.full((48, 80, 3), 120, np.uint8)),
+            image_tensor(np.dstack([depth] * 3)), image_tensor(figure),
+            mask_tensor(figure_alpha), image_tensor(figure),
+            mask_tensor(np.full((48, 80), 255, np.uint8)),
+            place_x=0.5, place_y=40 / 48, height=30 / 48, stand="base", stand_x=0.5,
+            stand_y=0.5, nearer=0.0, focus="subject", focus_x=0.5, focus_y=0.5,
+            f_number=2.8, tilt=0.3, bokeh=0.5)
         self.assertEqual(image.array.shape, (1, 48, 80, 3))
 
     def test_deliver_backdrop_stripes_returns_rgb_and_a_bg_tag(self):

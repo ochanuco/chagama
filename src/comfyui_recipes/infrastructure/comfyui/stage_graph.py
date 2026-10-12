@@ -1,0 +1,85 @@
+"""ComfyUI graphs that set a delivery's layers on a backdrop and light them by it."""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Callable
+
+from .refinement_graph import (
+    LAYER_BACKDROP_SUFFIX,
+    LAYER_FIGURE_SUFFIX,
+    LAYER_OUTLINE_SUFFIX,
+)
+
+STAGE_SUFFIX = "-set"
+LIT_SUFFIX = "-lit"
+
+
+def _builder() -> tuple[dict, Callable[[], str], Callable[[str], str]]:
+    graph: dict = {}
+    cursor = 1
+
+    def allocate() -> str:
+        nonlocal cursor
+        node_id = str(cursor)
+        cursor += 1
+        return node_id
+
+    def load(image: str) -> str:
+        node_id = allocate()
+        graph[node_id] = {"class_type": "LoadImage", "inputs": {"image": image}}
+        return node_id
+
+    return graph, allocate, load
+
+
+def _save(graph: dict, allocate, ref: list, filename_prefix: str) -> None:
+    graph[allocate()] = {"class_type": "SaveImage", "inputs": {
+        "images": ref, "filename_prefix": filename_prefix}}
+
+
+def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
+                photo_image: str | None = None, backdrop: str | None = None,
+                shadow_from: str | None = None, outlines: list | None = None,
+                place: tuple[float, float] = (0.5, 1.0), height: float = 1.0) -> dict:
+    """Set the uploaded layer images on the uploaded `photo_image`, or on
+    the `backdrop` pattern when there is none. The picture is saved under
+    `prefix` + STAGE_SUFFIX and its three layers beside it."""
+    graph, allocate, load = _builder()
+    figure_id, outline_id = load(figure_image), load(outline_image)
+    inputs = {"figure": [figure_id, 0], "figure_mask": [figure_id, 1],
+              "outline": [outline_id, 0], "outline_mask": [outline_id, 1]}
+    if photo_image is not None:
+        inputs.update({"mode": "photo", "photo": [load(photo_image), 0],
+                       "place_x": place[0], "place_y": place[1], "height": height})
+    else:
+        inputs.update({"mode": "pattern", "backdrop": backdrop or "",
+                       "shadow_from": shadow_from or "",
+                       "outlines": json.dumps(outlines) if outlines is not None else ""})
+    stage_id = allocate()
+    graph[stage_id] = {"class_type": "YukariStage", "inputs": inputs}
+    _save(graph, allocate, [stage_id, 0], prefix + STAGE_SUFFIX)
+    for output, suffix in ((1, LAYER_FIGURE_SUFFIX), (2, LAYER_OUTLINE_SUFFIX),
+                           (3, LAYER_BACKDROP_SUFFIX)):
+        _save(graph, allocate, [stage_id, output], prefix + suffix)
+    return graph
+
+
+def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str,
+                   prefix: str, *, direction: str | None, strength: float) -> dict:
+    """Light the uploaded layer images by their uploaded backdrop. The
+    picture is saved under `prefix` + LIT_SUFFIX and the relit figure and
+    outline layers beside it; the backdrop is unchanged."""
+    graph, allocate, load = _builder()
+    figure_id, outline_id = load(figure_image), load(outline_image)
+    backdrop_id = load(backdrop_image)
+    light_id = allocate()
+    graph[light_id] = {"class_type": "YukariRelight", "inputs": {
+        "figure": [figure_id, 0], "figure_mask": [figure_id, 1],
+        "outline": [outline_id, 0], "outline_mask": [outline_id, 1],
+        "backdrop": [backdrop_id, 0], "direction": direction or "",
+        "strength": strength}}
+    _save(graph, allocate, [light_id, 0], prefix + LIT_SUFFIX)
+    _save(graph, allocate, [light_id, 1], prefix + LAYER_FIGURE_SUFFIX)
+    _save(graph, allocate, [light_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
+    return graph
