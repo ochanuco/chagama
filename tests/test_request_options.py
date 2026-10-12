@@ -310,7 +310,7 @@ class PhotoArgumentsTest(unittest.TestCase):
         self.assertEqual(photo_arguments({"photo": "pic"}), {
             "photo_id": "pic", "place": (0.5, 0.95), "height": 0.7,
             "stand_at": None, "nearer": 0.0, "focus": "subject", "f_number": 2.8,
-            "tilt": 0.0})
+            "tilt": 0.0, "bokeh": 0.0})
         arguments = photo_arguments({"photo": "pic", "focus": [0.2, 0.3],
                                      "stand_at": [0.8, 0.4], "nearer": 0.5})
         self.assertEqual((arguments["focus"], arguments["stand_at"], arguments["nearer"]),
@@ -332,6 +332,7 @@ class PhotoArgumentsTest(unittest.TestCase):
                          ({"photo": "p", "focus": None}, "focus"),
                          ({"photo": "p", "f_number": 1}, "f_number"),
                          ({"photo": "p", "tilt": 1.5}, "tilt"),
+                         ({"photo": "p", "bokeh": 1.5}, "bokeh"),
                          ({"photo": "p", "blur": 1}, "blur")):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, key):
                 photo_arguments(bad)
