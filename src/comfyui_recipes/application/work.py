@@ -178,7 +178,10 @@ def _execute_lens(services: WorkServices, row: Mapping) -> dict:
     result = services.lens(generation_id, services.lens_services,
                            key_prefix=f"request:{row['id']}",
                            request_id=row["id"], context=context, **arguments)
-    result["resolved_options"] = {**arguments, "center": list(arguments["center"])}
+    resolved = {**arguments, "center": list(arguments["center"])}
+    if resolved["radius"] is None:
+        del resolved["radius"]
+    result["resolved_options"] = resolved
     return result
 
 

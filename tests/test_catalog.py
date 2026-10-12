@@ -279,6 +279,10 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertEqual(lens["strength"], {"min": -1.0, "max": 1.0, "default": 0.7})
         self.assertEqual(lens["center"]["default"], [0.5, 0.5])
         self.assertIsInstance(lens["center"]["help"], str)
+        self.assertEqual(lens["shape"], {"values": ["fisheye", "sphere"],
+                                         "default": "fisheye"})
+        self.assertEqual((lens["radius"]["min"], lens["radius"]["max"],
+                          lens["radius"]["default"]), (0.05, 1.0, 0.3))
 
     def test_publishes_the_dof_section_at_the_catalog_root(self):
         dof = build_catalog(GIT)["dof"]

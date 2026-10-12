@@ -16,6 +16,8 @@ from ..domain.yukari.delivery_style import (
     DOF_SCOPE,
     DOF_VIEWFINDER,
     LENS_CENTER_DEFAULT,
+    LENS_RADIUS,
+    LENS_SHAPE,
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
@@ -38,7 +40,7 @@ _KNOWN_DELIVER_OPTIONS = frozenset({
 
 _KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"})
 
-_KNOWN_LENS_OPTIONS = frozenset({"center", "strength"})
+_KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -499,8 +501,23 @@ def lens_arguments(options: Mapping) -> dict:
             f"{LENS_STRENGTH['max']}, got {strength!r}")
     if strength == 0:
         raise ValueError("strength 0 ではレンズが歪みません。魚眼は正、逆魚眼は負の値です")
+    shape = options.get("shape", LENS_SHAPE["default"])
+    if shape not in LENS_SHAPE["values"]:
+        raise ValueError(f"shape must be one of {LENS_SHAPE['values']}, got {shape!r}")
+    radius = None
+    if shape == "sphere":
+        radius = options.get("radius", LENS_RADIUS["default"])
+        if not isinstance(radius, (int, float)) or isinstance(radius, bool):
+            raise ValueError(f"radius must be a number, got {radius!r}")
+        if not (LENS_RADIUS["min"] <= radius <= LENS_RADIUS["max"]):
+            raise ValueError(
+                f"radius must be between {LENS_RADIUS['min']} and "
+                f"{LENS_RADIUS['max']}, got {radius!r}")
+        radius = float(radius)
+    elif "radius" in options:
+        raise ValueError("radius は shape が sphere のときだけ使えます")
     return {"center": (float(center[0]), float(center[1])),
-            "strength": float(strength)}
+            "strength": float(strength), "shape": shape, "radius": radius}
 
 
 def repair_arguments(options: Mapping,

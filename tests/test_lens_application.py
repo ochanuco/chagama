@@ -134,11 +134,22 @@ class LensUseCaseTest(unittest.TestCase):
                           if call[0] == "POST" and call[1] == "/api/v1/requests")[2]
         self.assertEqual(resolution["parameters"], {
             "kind": "lens", "base_generation": "dlv", "center": [0.5, 0.8],
-            "strength": 0.7})
+            "strength": 0.7, "shape": "fisheye"})
         self.assertEqual(resolution["references"][0]["source_generation_id"], "dlv")
         names = [call[3][0]["original_filename"] for call in services.management.calls
                  if call[1].endswith("/generations")]
         self.assertEqual(names, ["lens-dlv-lens_00001_.png"])
+
+    def test_a_sphere_carries_its_radius_into_the_node_and_the_record(self):
+        services, _ = run(shape="sphere", radius=0.35)
+        node = next(n for n in services.comfyui.submitted[0].values()
+                    if n["class_type"] == "YukariLens")
+        self.assertEqual((node["inputs"]["shape"], node["inputs"]["radius"]),
+                         ("sphere", 0.35))
+        resolution = next(call for call in services.management.calls
+                          if call[0] == "POST" and call[1] == "/api/v1/requests")[2]
+        self.assertEqual((resolution["parameters"]["shape"],
+                          resolution["parameters"]["radius"]), ("sphere", 0.35))
 
     def test_a_missing_lens_output_fails_loudly(self):
         class Silent(ComfyFake):
