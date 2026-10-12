@@ -297,11 +297,13 @@ class YukariPhotoStage:
             "focus_x": fraction(0.5),
             "focus_y": fraction(0.5),
             "f_number": ("FLOAT", {"default": 2.8, "min": 1.4, "max": 22.0, "step": 0.1}),
+        }, "optional": {
+            "tilt": ("FLOAT", {"default": 0.0, "min": -1.0, "max": 1.0, "step": 0.01}),
         }}
 
     def run(self, photo, depth, figure, figure_mask, outline, outline_mask,
             place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
-            focus_x, focus_y, f_number):
+            focus_x, focus_y, f_number, tilt=0.0):
         data = photo_stage.stage_png(
             bridge.image_to_png(photo), bridge.image_to_png(depth),
             bridge.loaded_rgba_png(figure, figure_mask),
@@ -310,7 +312,7 @@ class YukariPhotoStage:
             stand_at=(stand_x, stand_y) if stand == "point" else None,
             nearer=nearer,
             focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
-            f_number=f_number)
+            f_number=f_number, tilt=tilt)
         return (bridge.png_to_image(data),)
 
 

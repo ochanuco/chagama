@@ -175,6 +175,8 @@ def _photo_options_from_args(args) -> dict:
                             else _xy(args.focus, "--focus"))
     if args.f_number is not None:
         options["f_number"] = args.f_number
+    if args.tilt is not None:
+        options["tilt"] = args.tilt
     return options
 
 
@@ -406,6 +408,10 @@ def parser() -> argparse.ArgumentParser:
     photo_parser.add_argument(
         "--focus", metavar="subject|X,Y",
         help="focus on the card ('subject', default) or on a point of the picture")
+    photo_parser.add_argument(
+        "--tilt", type=float, default=None,
+        help="lean the card: its top this much farther than its base, -1..1 "
+             "(default 0); focus on the face to blur the body")
     photo_parser.add_argument(
         "--f-number", type=float, default=None,
         help=f"{DOF_F_NUMBER['min']}..{DOF_F_NUMBER['max']} "
