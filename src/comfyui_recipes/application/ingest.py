@@ -16,6 +16,7 @@ from ..infrastructure.comfyui.refinement_graph import (
     LAYER_FIGURE_SUFFIX,
     LAYER_OUTLINE_SUFFIX,
 )
+from ..infrastructure.comfyui.stage_graph import LIT_SUFFIX, STAGE_SUFFIX
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.safety import rate_image
 
@@ -66,6 +67,20 @@ def classify_photo_outputs(outputs: list) -> dict[str, list]:
     """A photo submission's outputs by role: `depth` when it built the
     photo's depth itself, and the `staged` picture."""
     return _by_suffix(outputs, {"depth": DEPTH_SUFFIX, "staged": STAGED_SUFFIX})
+
+
+def classify_stage_outputs(outputs: list) -> dict[str, list]:
+    """A stage submission's outputs by role: the `staged` picture and its
+    `layer-*` layers."""
+    return _by_suffix(outputs, {"staged": STAGE_SUFFIX, **LAYER_ROLES})
+
+
+def classify_lighting_outputs(outputs: list) -> dict[str, list]:
+    """A lighting submission's outputs by role: the `lit` picture and its
+    relit figure and outline layers."""
+    return _by_suffix(outputs, {"lit": LIT_SUFFIX,
+                                "layer-figure": LAYER_FIGURE_SUFFIX,
+                                "layer-outline": LAYER_OUTLINE_SUFFIX})
 
 
 def classify_redraw_outputs(outputs: list) -> dict[str, list]:

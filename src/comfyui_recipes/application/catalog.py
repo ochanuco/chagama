@@ -27,6 +27,7 @@ from ..domain.yukari.delivery_style import (
     LENS_RADIUS,
     LENS_SHAPE,
     LENS_STRENGTH,
+    LIGHTING_STRENGTH,
     PHOTO_BOKEH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
@@ -173,6 +174,11 @@ def _dof_block() -> dict:
         "viewfinder": DOF_VIEWFINDER,
         "focus": "fractions [x, y] of the delivered picture",
         "guide_radius_per_f": round(sharp_reach_per_f(), 4),
+        "photo": {"stand_at": {"default": None}, "nearer": PHOTO_NEARER,
+                  "tilt": PHOTO_TILT, "bokeh": PHOTO_BOKEH,
+                  "help": "only for a picture set in a photo by stage: the card's "
+                          "depth and lean and the photo's bokeh, as the photo "
+                          "block describes; scope does not apply there"},
     }
 
 
@@ -215,6 +221,30 @@ def _photo_block() -> dict:
     }
 
 
+def _stage_block() -> dict:
+    return {
+        "photo": {"help": "a photo Generation's id: the delivery's figure and outline "
+                          "are set in it, unblurred, at place and height"},
+        "place": {"default": list(PHOTO_PLACE_DEFAULT), "max_y": PHOTO_PLACE_MAX_Y},
+        "height": PHOTO_HEIGHT,
+        "backdrop": {"default": DELIVER_DEFAULTS["backdrop"],
+                     "help": "without a photo: a backdrops pattern name or #RRGGBB"},
+        "shadow_from": {"values": sorted(STROKE_LIGHTS),
+                        "help": "without a photo: the light the drop shadow is "
+                                "thrown away from; null for none, absent for the "
+                                "delivery's own stroke light"},
+    }
+
+
+def _lighting_block() -> dict:
+    return {
+        "direction": {"values": sorted(STROKE_LIGHTS), "default": None,
+                      "help": "also shade the figure from this side; null for "
+                              "exposure and colour only"},
+        "strength": LIGHTING_STRENGTH,
+    }
+
+
 def build_catalog(git: dict) -> dict:
     """The catalog document for this worker checkout. Pure -- no I/O."""
     return {
@@ -228,6 +258,8 @@ def build_catalog(git: dict) -> dict:
         "dof": _dof_block(),
         "lens": _lens_block(),
         "photo": _photo_block(),
+        "stage": _stage_block(),
+        "lighting": _lighting_block(),
         "backdrops": _backdrops_block(),
     }
 

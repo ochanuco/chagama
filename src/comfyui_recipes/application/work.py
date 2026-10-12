@@ -22,6 +22,7 @@ from .generate import GenerateServices, generate, request_file_path
 from .lens import LensServices, lens
 from .masked_redraw import MaskedRedrawServices, masked_redraw
 from .photo import PhotoServices, photo
+from .stage import StageServices, lighting, stage
 from .redraw import RedrawServices, redraw
 from .repair import RepairServices, repair
 from .request_options import (
@@ -34,8 +35,10 @@ from .request_options import (
     dials_scope,
     dof_arguments,
     lens_arguments,
+    lighting_arguments,
     masked_redraw_arguments,
     photo_arguments,
+    stage_arguments,
     redraw_arguments,
     repair_arguments,
 )
@@ -66,6 +69,7 @@ class WorkServices:
     dof_services: DofServices
     lens_services: LensServices
     photo_services: PhotoServices
+    stage_services: StageServices
     git_metadata: Callable[[], dict]
     worker_id: str
     generate: Callable[..., dict | None] = generate
@@ -76,11 +80,14 @@ class WorkServices:
     dof: Callable[..., dict] = dof
     lens: Callable[..., dict] = lens
     photo: Callable[..., dict] = photo
+    stage: Callable[..., dict] = stage
+    lighting: Callable[..., dict] = lighting
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
     kinds: tuple[str, ...] = ("generate", "redraw", "repair", "masked_redraw",
-                              "deliver", "dof", "lens", "photo")
+                              "deliver", "dof", "lens", "photo", "stage",
+                              "lighting")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
@@ -165,7 +172,13 @@ def _execute_dof(services: WorkServices, row: Mapping) -> dict:
     result = services.dof(generation_id, services.dof_services,
                           key_prefix=f"request:{row['id']}",
                           request_id=row["id"], context=context, **arguments)
-    result["resolved_options"] = {**arguments, "focus": list(arguments["focus"])}
+    resolved = {**arguments, "focus": list(arguments["focus"])}
+    photo_blur = resolved.pop("photo_blur")
+    if photo_blur is not None:
+        stand_at = photo_blur["stand_at"]
+        resolved.update({**photo_blur,
+                         "stand_at": list(stand_at) if stand_at is not None else None})
+    result["resolved_options"] = resolved
     return result
 
 
@@ -205,6 +218,47 @@ def _execute_photo(services: WorkServices, row: Mapping) -> dict:
     resolved = {key: list(value) if isinstance(value, tuple) else value
                 for key, value in arguments.items() if key != "photo_id"}
     result["resolved_options"] = {"photo": arguments["photo_id"], **resolved}
+    return result
+
+
+def _execute_stage(services: WorkServices, row: Mapping) -> dict:
+    payload = row.get("payload") or {}
+    generation_id = payload.get("generation_id")
+    if not generation_id:
+        raise SystemExit("stage payload.generation_id is required")
+    context, _ = fetch_source(services.management, generation_id)
+    try:
+        arguments = stage_arguments(payload.get("options") or {})
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    result = services.stage(generation_id, services.stage_services,
+                            key_prefix=f"request:{row['id']}",
+                            request_id=row["id"], context=context, **arguments)
+    if "photo_id" in arguments:
+        result["resolved_options"] = {"photo": arguments["photo_id"],
+                                      "place": list(arguments["place"]),
+                                      "height": arguments["height"]}
+    else:
+        result["resolved_options"] = {"backdrop": arguments["backdrop"]}
+        if not arguments["inherit_shadow"]:
+            result["resolved_options"]["shadow_from"] = arguments["shadow_from"]
+    return result
+
+
+def _execute_lighting(services: WorkServices, row: Mapping) -> dict:
+    payload = row.get("payload") or {}
+    generation_id = payload.get("generation_id")
+    if not generation_id:
+        raise SystemExit("lighting payload.generation_id is required")
+    context, _ = fetch_source(services.management, generation_id)
+    try:
+        arguments = lighting_arguments(payload.get("options") or {})
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    result = services.lighting(generation_id, services.stage_services,
+                               key_prefix=f"request:{row['id']}",
+                               request_id=row["id"], context=context, **arguments)
+    result["resolved_options"] = dict(arguments)
     return result
 
 
@@ -270,6 +324,10 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_lens(services, row)
     if kind == "photo":
         return _execute_photo(services, row)
+    if kind == "stage":
+        return _execute_stage(services, row)
+    if kind == "lighting":
+        return _execute_lighting(services, row)
     if kind == "finalize":
         raise SystemExit(
             "finalize requests are no longer supported; use redraw and deliver")

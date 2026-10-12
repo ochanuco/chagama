@@ -18,6 +18,7 @@ from ..application.deliver import DeliverServices
 from ..application.dof import DofServices
 from ..application.lens import LensServices
 from ..application.photo import PhotoServices
+from ..application.stage import StageServices
 from ..application.redraw import RedrawServices
 from ..application.generate import GenerateServices, request_graph
 from ..application.masked_redraw import MaskedRedrawServices
@@ -44,7 +45,7 @@ DRAIN_FILE = ".local/_nogit/worker/drain"
 # Must track the `work` subparser's own defaults in interfaces/cli.py by
 # hand -- no single source both can read.
 DEFAULT_KINDS = ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-                 "lens", "photo")
+                 "lens", "photo", "stage", "lighting")
 
 
 def default_worker_id() -> str:
@@ -164,6 +165,17 @@ def build_photo_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifie
     )
 
 
+def build_stage_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier: object,
+                         repository: Path, repository_metadata) -> StageServices:
+    return StageServices(
+        management=chimera,
+        comfyui=comfyui,
+        git_metadata=repository_metadata,
+        notifier=notifier,
+        output_root=repository / ".local/_nogit/stage",
+    )
+
+
 def build_repair_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier: object,
                      repository: Path, repository_metadata) -> RepairServices:
     return RepairServices(
@@ -235,6 +247,8 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
         lens_services=build_lens_services(
             chimera, comfyui, notifier, repository, repository_metadata),
         photo_services=build_photo_services(
+            chimera, comfyui, notifier, repository, repository_metadata),
+        stage_services=build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata),
         git_metadata=repository_metadata,
         worker_id=worker_id,
