@@ -286,7 +286,8 @@ class DeliverSectionTest(unittest.TestCase):
 
     def test_publishes_the_photo_section_at_the_catalog_root(self):
         photo = build_catalog(GIT)["photo"]
-        self.assertEqual(photo["place"]["default"], [0.5, 0.95])
+        self.assertEqual((photo["place"]["default"], photo["place"]["max_y"]),
+                         ([0.5, 0.95], 1.5))
         self.assertEqual((photo["height"]["min"], photo["height"]["max"],
                           photo["height"]["default"]), (0.05, 1.5, 0.7))
         self.assertIsNone(photo["stand_at"]["default"])

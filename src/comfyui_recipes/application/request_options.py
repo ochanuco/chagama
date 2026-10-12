@@ -24,6 +24,7 @@ from ..domain.yukari.delivery_style import (
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
+    PHOTO_PLACE_MAX_Y,
     PHOTO_TILT,
     OUTLINE_WIDTH_MAX_PCT,
     OUTLINES_MAX,
@@ -527,15 +528,16 @@ def lens_arguments(options: Mapping) -> dict:
             "strength": float(strength), "shape": shape, "radius": radius}
 
 
-def _point(options: Mapping, key: str, default):
+def _point(options: Mapping, key: str, default, max_y: float = 1.0):
     value = options.get(key, default)
     if value is None:
         return None
     if (not isinstance(value, (list, tuple)) or len(value) != 2
             or any(not isinstance(v, (int, float)) or isinstance(v, bool) for v in value)):
         raise ValueError(f"{key} must be [x, y] numbers, got {value!r}")
-    if any(not (0 <= v <= 1) for v in value):
-        raise ValueError(f"{key} values must be within 0..1, got {value!r}")
+    if not (0 <= value[0] <= 1 and 0 <= value[1] <= max_y):
+        bounds = "0..1" if max_y == 1.0 else f"0..1 for x and 0..{max_y} for y"
+        raise ValueError(f"{key} values must be within {bounds}, got {value!r}")
     return (float(value[0]), float(value[1]))
 
 
@@ -572,7 +574,7 @@ def photo_arguments(options: Mapping) -> dict:
             raise ValueError('focus must be "subject" or [x, y]')
     return {
         "photo_id": photo_id,
-        "place": _point(options, "place", list(PHOTO_PLACE_DEFAULT)),
+        "place": _point(options, "place", list(PHOTO_PLACE_DEFAULT), PHOTO_PLACE_MAX_Y),
         "height": _ranged(options, "height", PHOTO_HEIGHT),
         "stand_at": _point(options, "stand_at", None),
         "nearer": _ranged(options, "nearer", PHOTO_NEARER),
