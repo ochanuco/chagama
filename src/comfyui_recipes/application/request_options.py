@@ -21,6 +21,7 @@ from ..domain.yukari.delivery_style import (
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
+    PHOTO_BOKEH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
@@ -48,7 +49,7 @@ _KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"})
 _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 
 _KNOWN_PHOTO_OPTIONS = frozenset({
-    "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt"})
+    "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -581,6 +582,7 @@ def photo_arguments(options: Mapping) -> dict:
         "focus": focus,
         "f_number": _ranged(options, "f_number", DOF_F_NUMBER),
         "tilt": _ranged(options, "tilt", PHOTO_TILT),
+        "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH),
     }
 
 

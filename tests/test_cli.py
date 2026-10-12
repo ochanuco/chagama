@@ -214,18 +214,18 @@ class CliTest(unittest.TestCase):
     def test_photo_flags_dispatch_without_network(self, chimera_class, run_photo):
         cli.main(["photo", "gen-1", "--photo", "pic-1", "--place", "0.3,0.9",
                   "--height", "0.5", "--stand-at", "0.8,0.4", "--nearer", "0.1",
-                  "--focus", "0.8,0.4", "--f-number", "2", "--tilt", "0.3"])
+                  "--focus", "0.8,0.4", "--f-number", "2", "--tilt", "0.3", "--bokeh", "0.6"])
         args, kwargs = run_photo.call_args
         self.assertEqual(args[0], "gen-1")
         self.assertEqual(kwargs, {
             "photo_id": "pic-1", "place": (0.3, 0.9), "height": 0.5,
             "stand_at": (0.8, 0.4), "nearer": 0.1, "focus": (0.8, 0.4),
-            "f_number": 2.0, "tilt": 0.3})
+            "f_number": 2.0, "tilt": 0.3, "bokeh": 0.6})
         cli.main(["photo", "gen-1", "--photo", "pic-1"])
         self.assertEqual(run_photo.call_args.kwargs, {
             "photo_id": "pic-1", "place": (0.5, 0.95), "height": 0.7,
             "stand_at": None, "nearer": 0.0, "focus": "subject", "f_number": 2.8,
-            "tilt": 0.0})
+            "tilt": 0.0, "bokeh": 0.0})
         with self.assertRaisesRegex(SystemExit, "place"):
             cli.main(["photo", "gen-1", "--photo", "pic-1", "--place", "left"])
 

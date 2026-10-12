@@ -203,6 +203,9 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
 - `tilt` (-1..1, default 0) leans the card: its top is that much farther
   than its base (negative: nearer), its depth changing row by row, so a
   focus on the face lets the body blur below it.
+- `bokeh` (0..1, default 0) lifts the photo's out-of-focus highlights above
+  white before the blur, so street lamps open into bright discs instead of
+  smearing into the dark; in-focus pixels are left as they were.
 - `focus` is `"subject"` (the card; its middle when tilted, default) or
   `[x, y]` of the picture (a point on the card is the card's depth there);
   `f_number` follows the dof's range. The photo is blurred per pixel and the

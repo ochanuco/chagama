@@ -27,6 +27,7 @@ from ..domain.yukari.delivery_style import (
     LENS_RADIUS,
     LENS_SHAPE,
     LENS_STRENGTH,
+    PHOTO_BOKEH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
@@ -208,6 +209,9 @@ def _photo_block() -> dict:
                   "help": '"subject" focuses on the card (its middle when tilted); '
                           "[x, y] on that point of the picture"},
         "f_number": DOF_F_NUMBER,
+        "bokeh": {**PHOTO_BOKEH, "help": "how strongly the photo's out-of-focus "
+                                         "highlights (street lamps) open into bright "
+                                         "discs; 0 leaves them as they blur"},
     }
 
 

@@ -30,6 +30,15 @@ from .depth_blur import (
 
 # Card pixels at or below this alpha are cut from its bounding box.
 CARD_EDGE_ALPHA = 0.02
+# Bokeh: a photo's highlights are clipped at white, so a blurred street lamp
+# smears into its dark surroundings instead of opening into a bright disc.
+# Linear luminance above BOKEH_THRESHOLD is lifted back toward the light it
+# stood for, by up to BOKEH_GAIN at bokeh 1, before the blur; the lift fades in
+# over the first BOKEH_RAMP_PX of blur radius so what is in focus is untouched.
+BOKEH_THRESHOLD = 0.6
+BOKEH_GAIN = 24.0
+BOKEH_RAMP_PX = 3.0
+LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
 SUBJECT = "subject"
 
 
@@ -39,6 +48,17 @@ def normalised_depth(depth: np.ndarray) -> np.ndarray:
     if high - low < 1e-6:
         return np.zeros_like(depth, dtype=np.float32)
     return np.clip((depth - low) / (high - low), 0.0, 1.0).astype(np.float32)
+
+
+def lift_highlights(linear: np.ndarray, radius: np.ndarray, bokeh: float) -> np.ndarray:
+    """`linear` (HxWx3) with its out-of-focus highlights lifted above white,
+    so the blur spreads them into bright discs."""
+    if bokeh <= 0:
+        return linear
+    luminance = linear @ LUMA
+    highlight = np.clip((luminance - BOKEH_THRESHOLD) / (1.0 - BOKEH_THRESHOLD), 0.0, 1.0) ** 2
+    ramp = np.clip(radius / BOKEH_RAMP_PX, 0.0, 1.0)
+    return linear * (1.0 + bokeh * BOKEH_GAIN * highlight * ramp)[..., None]
 
 
 def card(figure: np.ndarray, outline: np.ndarray) -> np.ndarray:
@@ -90,13 +110,14 @@ def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
           outline: np.ndarray, *, place: tuple[float, float], height: float,
           stand_at: tuple[float, float] | None, nearer: float,
           focus: tuple[float, float] | str, f_number: float,
-          tilt: float = 0.0) -> np.ndarray:
+          tilt: float = 0.0, bokeh: float = 0.0) -> np.ndarray:
     """`photo` HxWx3 0..255 with `depth` HxW (higher = nearer); `figure` and
     `outline` are a delivery's straight RGBA layers. `stand_at` names the
     photo point whose depth the card's base stands at (the base itself when
     None); `tilt` puts the card's top that much farther (negative: nearer),
     in normalised scene depth. `focus` is a point of the picture (on the
-    card, the card's depth there) or SUBJECT for the card's middle.
+    card, the card's depth there) or SUBJECT for the card's middle. `bokeh`
+    (0..1) opens the photo's out-of-focus highlights into bright discs.
     Returns the HxWx3 composite, 0..255."""
     height_px, width_px = photo.shape[:2]
     scene = normalised_depth(cv2.resize(depth.astype(np.float32), (width_px, height_px),
@@ -117,9 +138,11 @@ def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
                        else _focus_depth(scene, focus[0], focus[1]))
 
     scale = K_FRACTION * max(width_px, height_px) / f_number
-    photo_colour, _ = _gather(_to_linear(photo.astype(np.float32)).astype(np.float32),
-                              np.ones((height_px, width_px), np.float32),
-                              (scale * np.abs(scene - focus_depth)).astype(np.float32))
+    photo_radius = (scale * np.abs(scene - focus_depth)).astype(np.float32)
+    photo_linear = lift_highlights(_to_linear(photo.astype(np.float32)).astype(np.float32),
+                                   photo_radius, bokeh)
+    photo_colour, _ = _gather(photo_linear.astype(np.float32),
+                              np.ones((height_px, width_px), np.float32), photo_radius)
     straight = np.where(card_alpha[..., None] > ALPHA_EPSILON,
                         placed[..., :3] / np.maximum(card_alpha, ALPHA_EPSILON)[..., None],
                         0.0)

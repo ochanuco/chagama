@@ -108,5 +108,25 @@ class StageTest(unittest.TestCase):
         self.assertLess(contrast(tilted, *base), 0.8 * contrast(upright, *base))
 
 
+class BokehTest(unittest.TestCase):
+    def test_out_of_focus_highlights_open_into_bright_discs(self):
+        photo = np.full((H, W, 3), 15.0, np.float32)
+        photo[20:24, 100:104] = 255.0
+        depth = np.tile(np.linspace(0, 255, H, dtype=np.float32)[:, None], (1, W))
+        figure, outline = layers()
+        options = {"place": (0.1, 1.0), "height": 0.3, "stand_at": None, "nearer": 0.0,
+                   "focus": photo_stage.SUBJECT, "f_number": 1.4}
+        plain = photo_stage.stage(photo, depth, figure, outline, **options)
+        lifted = photo_stage.stage(photo, depth, figure, outline, bokeh=1.0, **options)
+        around = (slice(14, 31), slice(94, 111))
+        self.assertGreater((lifted[around] - 15).sum(), 1.5 * (plain[around] - 15).sum())
+
+    def test_in_focus_highlights_stay_as_they_were(self):
+        linear = np.full((4, 4, 3), 0.95, np.float32)
+        lifted = photo_stage.lift_highlights(linear, np.zeros((4, 4), np.float32), 1.0)
+        np.testing.assert_array_equal(lifted, linear)
+        self.assertIs(photo_stage.lift_highlights(linear, np.ones((4, 4)), 0.0), linear)
+
+
 if __name__ == "__main__":
     unittest.main()
