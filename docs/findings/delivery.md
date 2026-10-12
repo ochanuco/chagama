@@ -31,8 +31,10 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
   in 512 px tiles; foreground colour by pymatting's estimate, despilled on
   the soft edge only. The ViTMatte alpha is the saved `alpha` asset. Every
   pose renders on green (grey sat too close to the pale skin at the edge).
-  Green in small pockets between fingers is left by both the old cut and
-  ViTMatte. The 1 px key alpha and `drawn_outline` remain only for graphs
+  A key pocket the figure encloses is cut where it is the key or the key in
+  shadow (down to `ENCLOSED_KEY_MIN_SHADE` 0.75), and held known backdrop in
+  the trimap, so a pocket narrower than the ±12 px band is not handed back
+  to ViTMatte as figure. The 1 px key alpha and `drawn_outline` remain only for graphs
   recorded before the matting stage. `[Anima]`
 - Depth of field is its own request (`dof`) on a delivered picture's layers:
   each layer blurred on its own and composited back to front, so an

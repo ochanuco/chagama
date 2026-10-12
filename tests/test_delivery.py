@@ -31,6 +31,7 @@ from comfyui_recipes.infrastructure.imaging.delivery import (
     graph_from_png,
     graph_from_png_or_none,
     keep_scene,
+    key_holes,
     keyed_coverage,
     parse_color,
     refine_matte,
@@ -210,6 +211,35 @@ class DeliveryTest(unittest.TestCase):
         self.assertFalse(cut[100:120, 100:120].any())
         self.assertTrue(cut[150:153, 150:153].all())
         self.assertEqual(int((figure & ~cut).sum()), 400)
+
+    def test_enclosed_cut_drops_a_shaded_key_pocket_only_where_it_is_enclosed(self):
+        pixels = np.full((256, 256, 3), (138, 196, 138), dtype=np.uint8)
+        pixels[64:192, 64:192] = (170, 140, 210)
+        pixels[100:130, 100:106] = (122, 168, 120)   # the key deep in a loop of hair
+        pixels[64:192, 64:67] = (120, 170, 120)      # the key's shade on the edge
+        pixels[150:160, 150:160] = (60, 85, 60)      # darker than the key's shade
+        figure = np.zeros((256, 256), dtype=bool)
+        figure[64:192, 64:192] = True
+        cut = enclosed_cut(pixels.astype(float), figure, 20)
+        self.assertFalse(cut[100:130, 100:106].any())
+        self.assertTrue(cut[64:192, 64:67].all())
+        self.assertTrue(cut[150:160, 150:160].all())
+        self.assertEqual(int((figure & ~cut).sum()), 180)
+
+    def test_key_holes_are_the_key_coloured_pixels_of_the_figures_holes(self):
+        pixels = np.full((128, 128, 3), (138, 196, 138), dtype=np.uint8)
+        pixels[32:96, 32:96] = (170, 140, 210)
+        pixels[50:60, 50:54] = (122, 168, 120)
+        pixels[70:80, 70:74] = (60, 40, 70)          # a hole the matte left dark
+        figure = np.zeros((128, 128), dtype=bool)
+        figure[32:96, 32:96] = True
+        figure[50:60, 50:54] = False
+        figure[70:80, 70:74] = False
+        holes = key_holes(pixels.astype(float), figure, 20)
+        self.assertTrue(holes[50:60, 50:54].all())
+        self.assertEqual(int(holes.sum()), 40)
+        pixels[:] = (210, 230, 235)
+        self.assertFalse(key_holes(pixels.astype(float), figure, 20).any())
 
     def test_cut_figure_fills_a_matte_hole_that_holds_no_key(self):
         pixels = np.full((256, 256, 3), (89, 166, 119), dtype=np.uint8)

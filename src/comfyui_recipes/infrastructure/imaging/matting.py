@@ -99,12 +99,23 @@ def _png(array: np.ndarray, mode: str | None = None) -> bytes:
     return output.getvalue()
 
 
+def known_regions(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
+    """The trimap of the retraced matte, with the key the figure encloses
+    known backdrop: a gap narrower than the unknown band is otherwise left
+    to the model, which reads it as figure."""
+    figure = delivery.cut_figure(px, soft)
+    known = trimap(figure, delivery_style.MATTING_TRIMAP_PX)
+    known[delivery.key_holes(px, figure, delivery_style.MATTE_EDGE_TOLERANCE)] = (
+        KNOWN_BACKDROP)
+    return known
+
+
 def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     """The alpha (L PNG) of the figure in `data`, from the matte model's soft
     output `matte`."""
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
-    known = trimap(delivery.cut_figure(px, soft), delivery_style.MATTING_TRIMAP_PX)
+    known = known_regions(px, soft)
     alpha = tiled(predict, px.astype(np.uint8), known,
                   delivery_style.MATTING_TILE_PX,
                   delivery_style.MATTING_TILE_OVERLAP_PX)

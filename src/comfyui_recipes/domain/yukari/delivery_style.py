@@ -377,6 +377,10 @@ SHADOW_DARK_FAR = 90
 # figure is green, while its whites and pale hair sit inside
 # MATTE_EDGE_TOLERANCE of a grey or light blue backdrop.
 ENCLOSED_KEY_MIN_GREEN_EXCESS = 12
+# A gap deep in a loop of hair is the key in shadow, not the key itself: a
+# pocket the figure fully encloses is also cut where it is the key darkened
+# to no less than this share of itself, within MATTE_EDGE_TOLERANCE.
+ENCLOSED_KEY_MIN_SHADE = 0.75
 # When the corners are not a green key (a drawn frame line closes the green
 # off from a white outside), the key is taken from the figure's own green
 # pixels instead, once there are at least this many of them. Interior
