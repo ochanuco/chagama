@@ -44,6 +44,25 @@ class TrimapTest(unittest.TestCase):
         self.assertEqual(known[51, 32], 0)
 
 
+class KnownRegionsTest(unittest.TestCase):
+    def test_a_key_pocket_narrower_than_the_band_is_known_backdrop(self):
+        pixels = np.full((64, 64, 3), (138, 196, 138), dtype=np.uint8)
+        pixels[16:48, 16:48] = (170, 140, 210)
+        pixels[26:36, 30:33] = (122, 168, 120)       # the key in a loop of hair
+        soft = np.zeros((64, 64), dtype=np.uint8)
+        soft[16:48, 16:48] = 255
+        px = pixels.astype(float)
+        known = matting.known_regions(px, soft)
+        figure = delivery.cut_figure(px, soft)
+        self.assertFalse(figure[26:36, 30:33].any())
+        self.assertTrue((known[26:36, 30:33] == matting.KNOWN_BACKDROP).all())
+        self.assertEqual(known[24, 31], matting.UNKNOWN)
+        np.testing.assert_array_equal(
+            known[~figure_mask(box=(26, 36, 30, 33))],
+            matting.trimap(figure, delivery_style.MATTING_TRIMAP_PX)[
+                ~figure_mask(box=(26, 36, 30, 33))])
+
+
 class SettleTest(unittest.TestCase):
     def test_settle_forces_the_known_regions_onto_the_alpha(self):
         known = np.full((8, 8), matting.UNKNOWN, dtype=np.uint8)
@@ -110,8 +129,7 @@ class AlphaAndForegroundPngTest(unittest.TestCase):
 
     def test_composed_stages_equal_the_single_pass_the_node_used_to_run(self):
         px = self.pixels.astype(float)
-        known = matting.trimap(
-            delivery.cut_figure(px, self.soft), delivery_style.MATTING_TRIMAP_PX)
+        known = matting.known_regions(px, self.soft)
         alpha = matting.settle(matting.tiled(
             self.predict, self.pixels, known, delivery_style.MATTING_TILE_PX,
             delivery_style.MATTING_TILE_OVERLAP_PX), known)
