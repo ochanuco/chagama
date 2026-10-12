@@ -274,6 +274,12 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertNotIn("dof", section["defaults"])
         self.assertNotIn("outlines", section["defaults"])
 
+    def test_publishes_the_lens_section_at_the_catalog_root(self):
+        lens = build_catalog(GIT)["lens"]
+        self.assertEqual(lens["strength"], {"min": -1.0, "max": 1.0, "default": 0.7})
+        self.assertEqual(lens["center"]["default"], [0.5, 0.5])
+        self.assertIsInstance(lens["center"]["help"], str)
+
     def test_publishes_the_dof_section_at_the_catalog_root(self):
         dof = build_catalog(GIT)["dof"]
         self.assertEqual(dof["f_number"], {

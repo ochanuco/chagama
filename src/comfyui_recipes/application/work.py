@@ -19,6 +19,7 @@ from .catalog import publish_catalog as publish_catalog_document
 from .deliver import DeliverServices, deliver
 from .dof import DofServices, dof
 from .generate import GenerateServices, generate, request_file_path
+from .lens import LensServices, lens
 from .masked_redraw import MaskedRedrawServices, masked_redraw
 from .redraw import RedrawServices, redraw
 from .repair import RepairServices, repair
@@ -31,6 +32,7 @@ from .request_options import (
     deliver_arguments,
     dials_scope,
     dof_arguments,
+    lens_arguments,
     masked_redraw_arguments,
     redraw_arguments,
     repair_arguments,
@@ -60,6 +62,7 @@ class WorkServices:
     repair_services: RepairServices
     masked_redraw_services: MaskedRedrawServices
     dof_services: DofServices
+    lens_services: LensServices
     git_metadata: Callable[[], dict]
     worker_id: str
     generate: Callable[..., dict | None] = generate
@@ -68,11 +71,12 @@ class WorkServices:
     repair: Callable[..., dict] = repair
     masked_redraw: Callable[..., dict] = masked_redraw
     dof: Callable[..., dict] = dof
+    lens: Callable[..., dict] = lens
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
     kinds: tuple[str, ...] = ("generate", "redraw", "repair", "masked_redraw",
-                              "deliver", "dof")
+                              "deliver", "dof", "lens")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
@@ -161,6 +165,23 @@ def _execute_dof(services: WorkServices, row: Mapping) -> dict:
     return result
 
 
+def _execute_lens(services: WorkServices, row: Mapping) -> dict:
+    payload = row.get("payload") or {}
+    generation_id = payload.get("generation_id")
+    if not generation_id:
+        raise SystemExit("lens payload.generation_id is required")
+    context, _ = fetch_source(services.management, generation_id)
+    try:
+        arguments = lens_arguments(payload.get("options") or {})
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    result = services.lens(generation_id, services.lens_services,
+                           key_prefix=f"request:{row['id']}",
+                           request_id=row["id"], context=context, **arguments)
+    result["resolved_options"] = {**arguments, "center": list(arguments["center"])}
+    return result
+
+
 def _execute_repair(services: WorkServices, row: Mapping) -> dict:
     payload = row.get("payload") or {}
     generation_id = payload.get("generation_id")
@@ -219,6 +240,8 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_masked_redraw(services, row)
     if kind == "dof":
         return _execute_dof(services, row)
+    if kind == "lens":
+        return _execute_lens(services, row)
     if kind == "finalize":
         raise SystemExit(
             "finalize requests are no longer supported; use redraw and deliver")

@@ -23,6 +23,8 @@ from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
     DOF_VIEWFINDER,
+    LENS_CENTER_DEFAULT,
+    LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     OUTLINE_WIDTH_MAX_PCT,
@@ -166,6 +168,15 @@ def _dof_block() -> dict:
     }
 
 
+def _lens_block() -> dict:
+    return {
+        "strength": LENS_STRENGTH,
+        "center": {"default": list(LENS_CENTER_DEFAULT),
+                   "help": "fractions [x, y] of the picture; the fisheye swells "
+                           "what sits here, the inverse shrinks it"},
+    }
+
+
 def build_catalog(git: dict) -> dict:
     """The catalog document for this worker checkout. Pure -- no I/O."""
     return {
@@ -177,6 +188,7 @@ def build_catalog(git: dict) -> dict:
         "recipes": [_yukari_recipe()],
         "patches": _patches_block(),
         "dof": _dof_block(),
+        "lens": _lens_block(),
         "backdrops": _backdrops_block(),
     }
 
