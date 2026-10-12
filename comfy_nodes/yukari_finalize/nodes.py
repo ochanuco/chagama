@@ -254,11 +254,17 @@ class YukariLens:
                                    "step": 0.001}),
             "strength": ("FLOAT", {"default": 0.7, "min": -1.0, "max": 1.0,
                                    "step": 0.01}),
+        }, "optional": {
+            "shape": (list(lens.SHAPES), {"default": "fisheye"}),
+            "radius": ("FLOAT", {"default": 0.3, "min": 0.05, "max": 1.0,
+                                 "step": 0.01}),
         }}
 
-    def run(self, image, mask, center_x, center_y, strength):
+    def run(self, image, mask, center_x, center_y, strength, shape="fisheye",
+            radius=0.3):
         data, mode = lens.lens_png(
-            bridge.loaded_rgba_png(image, mask), (center_x, center_y), strength)
+            bridge.loaded_rgba_png(image, mask), (center_x, center_y), strength,
+            shape, radius if shape == "sphere" else None)
         return (bridge.png_to_image(data, mode),)
 
 

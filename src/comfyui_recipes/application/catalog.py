@@ -24,6 +24,8 @@ from ..domain.yukari.delivery_style import (
     DOF_SCOPE,
     DOF_VIEWFINDER,
     LENS_CENTER_DEFAULT,
+    LENS_RADIUS,
+    LENS_SHAPE,
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
@@ -171,6 +173,10 @@ def _dof_block() -> dict:
 def _lens_block() -> dict:
     return {
         "strength": LENS_STRENGTH,
+        "shape": LENS_SHAPE,
+        "radius": {**LENS_RADIUS,
+                   "help": "sphere only: the bent disc's radius as a share of "
+                           "the shorter side"},
         "center": {"default": list(LENS_CENTER_DEFAULT),
                    "help": "fractions [x, y] of the picture; the fisheye swells "
                            "what sits here, the inverse shrinks it"},

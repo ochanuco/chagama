@@ -536,6 +536,10 @@ DOF_VIEWFINDER = {"values": ["off", "on", "both"], "default": "off"}
 # fisheye), negative shrinks it and stretches the rim (the inverse fisheye).
 LENS_STRENGTH = {"min": -1.0, "max": 1.0, "default": 0.7}
 LENS_CENTER_DEFAULT = (0.5, 0.5)
+# `fisheye` bends the whole frame; `sphere` bends only a disc of `radius`
+# (a share of the shorter side) around the centre, like a spherize filter.
+LENS_SHAPE = {"values": ["fisheye", "sphere"], "default": "fisheye"}
+LENS_RADIUS = {"min": 0.05, "max": 1.0, "default": 0.3}
 
 
 class Light(NamedTuple):

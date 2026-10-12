@@ -40,6 +40,8 @@ from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
     DOF_VIEWFINDER,
+    LENS_RADIUS,
+    LENS_SHAPE,
     LENS_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
@@ -140,6 +142,10 @@ def _lens_options_from_args(args) -> dict:
             raise SystemExit(f"--center must be X,Y, got {args.center!r}") from None
     if args.strength is not None:
         options["strength"] = args.strength
+    if args.shape is not None:
+        options["shape"] = args.shape
+    if args.radius is not None:
+        options["radius"] = args.radius
     return options
 
 
@@ -341,6 +347,14 @@ def parser() -> argparse.ArgumentParser:
         "--strength", type=float, default=None,
         help=f"{LENS_STRENGTH['min']}..{LENS_STRENGTH['max']}: positive is a "
              f"fisheye, negative its inverse (default {LENS_STRENGTH['default']})")
+    lens_parser.add_argument(
+        "--shape", choices=LENS_SHAPE["values"], default=None,
+        help="fisheye bends the whole frame; sphere bends only a disc around "
+             f"the centre (default {LENS_SHAPE['default']})")
+    lens_parser.add_argument(
+        "--radius", type=float, default=None,
+        help=f"sphere only: {LENS_RADIUS['min']}..{LENS_RADIUS['max']} of the "
+             f"shorter side (default {LENS_RADIUS['default']})")
 
     repair_parser = commands.add_parser(
         "repair", help="masked local redraw of hands/feet on an existing generation")

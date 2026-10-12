@@ -33,7 +33,7 @@ Options, defaults and ranges live here:
 | `masked_redraw` | `{generation_id, options}` | the same reroll on caller rectangles with a free-text prompt patch |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: repin, backdrop, outline bands; never redraws |
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered picture's layers |
-| `lens` | `{generation_id, options}` | fisheye or inverse-fisheye distortion of a delivered picture |
+| `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 
 A `finalize` row is refused. `redraw`, `repair` and `masked_redraw` leave a
 picture on the green key; `deliver` makes the delivered picture, and `dof`
@@ -169,11 +169,17 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
   A negative strength is the exact inverse: the centre shrinks and the rim
   stretches, zoomed in just enough that no sample falls outside the picture.
   Put the centre on the feet to push the legs forward.
-- The whole delivered picture is bent, outline bands and backdrop with it; a
+- `shape` `fisheye` (default) bends the whole frame as above. `shape`
+  `sphere` is a spherize filter: only the disc of `radius` (0.05..1 of the
+  shorter side, default 0.3; refused with `fisheye`) around `center` is
+  wrapped over a hemisphere seen head-on, so a positive strength bulges it
+  like a ball and a negative one pinches it; `|strength|` blends that with
+  no bend, and everything outside the disc keeps its pixels.
+- The delivered picture is bent, outline bands and backdrop with it; a
   transparent delivery stays transparent.
 - The output Generation (`-lens`) refines its source, is itself a delivered
   picture, and records `kind: "lens"`, `base_generation` and the resolved
-  options.
+  options (`radius` only for a sphere).
 
 ### Repair and masked redraw
 

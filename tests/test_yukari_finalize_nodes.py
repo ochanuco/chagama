@@ -322,6 +322,10 @@ class NodeRunTest(unittest.TestCase):
         (cut,) = node.run(image_tensor(swatch()), mask_tensor(255 - matte_array()),
                           center_x=0.5, center_y=0.5, strength=-0.7)
         self.assertEqual(cut.array.shape, (1, 64, 64, 4))
+        (sphere,) = node.run(image_tensor(swatch()), mask_tensor(np.zeros((64, 64), np.uint8)),
+                             center_x=0.5, center_y=0.5, strength=0.7,
+                             shape="sphere", radius=0.3)
+        self.assertEqual(sphere.array.shape, (1, 64, 64, 3))
 
     def test_deliver_backdrop_stripes_returns_rgb_and_a_bg_tag(self):
         node = nodes.YukariDeliver()
