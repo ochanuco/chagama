@@ -131,7 +131,7 @@ class NodeMappingTest(unittest.TestCase):
         self.assertEqual(set(nodes.NODE_CLASS_MAPPINGS), {
             "YukariRepinSkin", "YukariRepin", "YukariRecolor", "YukariMatting",
             "YukariForeground", "YukariDeliver", "YukariDepthOfField",
-            "YukariLight", "YukariViewfinder", "YukariLens",
+            "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
         })
         self.assertEqual(
             set(nodes.NODE_DISPLAY_NAME_MAPPINGS),
@@ -326,6 +326,20 @@ class NodeRunTest(unittest.TestCase):
                              center_x=0.5, center_y=0.5, strength=0.7,
                              shape="sphere", radius=0.3)
         self.assertEqual(sphere.array.shape, (1, 64, 64, 3))
+
+    def test_photo_stage_returns_the_photo_size_in_rgb(self):
+        node = nodes.YukariPhotoStage()
+        photo = np.full((48, 80, 3), 120, np.uint8)
+        depth = np.tile(np.linspace(0, 255, 48, dtype=np.uint8)[:, None], (1, 80))
+        (image,) = node.run(
+            image_tensor(photo), image_tensor(np.dstack([depth] * 3)),
+            image_tensor(swatch()), mask_tensor(255 - matte_array()),
+            image_tensor(np.zeros((64, 64, 3), np.uint8)),
+            mask_tensor(np.full((64, 64), 255, np.uint8)),
+            place_x=0.5, place_y=0.95, height=0.6, stand="base", stand_x=0.5,
+            stand_y=0.5, nearer=0.0, focus="subject", focus_x=0.5, focus_y=0.5,
+            f_number=2.8)
+        self.assertEqual(image.array.shape, (1, 48, 80, 3))
 
     def test_deliver_backdrop_stripes_returns_rgb_and_a_bg_tag(self):
         node = nodes.YukariDeliver()
