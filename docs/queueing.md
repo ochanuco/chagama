@@ -5,7 +5,7 @@
 
 Every render is a row on chimera's `requests` queue, posted through the MCP
 (`derive_request`, `redraw_generation`, `deliver_generation`,
-`dof_generation`, `repair_generation`, `masked_redraw_generation`,
+`dof_generation`, `lens_generation`, `repair_generation`, `masked_redraw_generation`,
 `create_request`) or `POST /api/v1/requests`.
 `comfy-recipes work` on the GPU box claims a row, runs it, and ingests the
 result back into chimera. Nothing else submits to ComfyUI.
@@ -18,8 +18,8 @@ Options, defaults and ranges live here:
 | Question | Source |
 |---|---|
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
-| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|dof\|repair\|masked_redraw> --help`, `application/request_options.py` |
-| Poses, costumes, parts, patch targets, dials, redraw, deliver and dof defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
+| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|dof\|lens\|repair\|masked_redraw> --help`, `application/request_options.py` |
+| Poses, costumes, parts, patch targets, dials, redraw, deliver, dof and lens defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
 | Patch targets and their ops | `domain/generation/patches.py` |
 | What a request would render, without rendering | `uv run comfy-recipes generate --request r.json --dry-run` |
 
@@ -33,10 +33,12 @@ Options, defaults and ranges live here:
 | `masked_redraw` | `{generation_id, options}` | the same reroll on caller rectangles with a free-text prompt patch |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: repin, backdrop, outline bands; never redraws |
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered picture's layers |
+| `lens` | `{generation_id, options}` | fisheye or inverse-fisheye distortion of a delivered picture |
 
 A `finalize` row is refused. `redraw`, `repair` and `masked_redraw` leave a
 picture on the green key; `deliver` makes the delivered picture, and `dof`
-makes another delivered picture from it.
+and `lens` make another delivered picture from it. They stack as separate
+requests in one order: `dof` first, then `lens` (as often as wanted).
 
 ## Rules the code spreads across files
 
@@ -150,6 +152,28 @@ makes another delivered picture from it.
 - The output Generation (`-dof`; `both` adds `-viewfinder`) refines the
   delivery, is itself a delivered picture, and records `kind: "dof"`,
   `base_generation` and the resolved options.
+
+### Lens options
+
+- The source must be a delivered picture: a delivery, a dof picture without
+  the viewfinder overlay, or a lens picture. A picture that was not
+  delivered and a viewfinder picture (`viewfinder: on`, or the second output
+  of `both`) are refused. A dof on a lens picture is refused too: its depth
+  and layers would no longer line up, so blur first and bend after.
+- `center` (`[x, y]`, fractions of the picture, default `[0.5, 0.5]`) and
+  `strength` (-1..1, default 0.7; 0 is an error) follow the catalog's
+  top-level `lens` section. A positive strength is a fisheye: the picture is
+  taken as rectilinear and remapped to an equidistant fisheye whose half
+  angle at the farthest corner is `strength` × 75°, so what sits at the
+  centre swells and the rim is squeezed while the farthest corner stays put.
+  A negative strength is the exact inverse: the centre shrinks and the rim
+  stretches, zoomed in just enough that no sample falls outside the picture.
+  Put the centre on the feet to push the legs forward.
+- The whole delivered picture is bent, outline bands and backdrop with it; a
+  transparent delivery stays transparent.
+- The output Generation (`-lens`) refines its source, is itself a delivered
+  picture, and records `kind: "lens"`, `base_generation` and the resolved
+  options.
 
 ### Repair and masked redraw
 

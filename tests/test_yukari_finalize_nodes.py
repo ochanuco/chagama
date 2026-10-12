@@ -131,7 +131,7 @@ class NodeMappingTest(unittest.TestCase):
         self.assertEqual(set(nodes.NODE_CLASS_MAPPINGS), {
             "YukariRepinSkin", "YukariRepin", "YukariRecolor", "YukariMatting",
             "YukariForeground", "YukariDeliver", "YukariDepthOfField",
-            "YukariLight", "YukariViewfinder",
+            "YukariLight", "YukariViewfinder", "YukariLens",
         })
         self.assertEqual(
             set(nodes.NODE_DISPLAY_NAME_MAPPINGS),
@@ -313,6 +313,15 @@ class NodeRunTest(unittest.TestCase):
             f_number=2.8, blur_figure=True, blur_outline=True, blur_backdrop=True)
         self.assertEqual(cut.array.shape, (1, 64, 64, 4))
         self.assertEqual(cut.array[0, 0, 0, 3], 0)
+
+    def test_lens_keeps_an_opaque_picture_rgb_and_a_cut_one_rgba(self):
+        node = nodes.YukariLens()
+        (image,) = node.run(image_tensor(swatch()), mask_tensor(np.zeros((64, 64), np.uint8)),
+                            center_x=0.5, center_y=0.5, strength=0.7)
+        self.assertEqual(image.array.shape, (1, 64, 64, 3))
+        (cut,) = node.run(image_tensor(swatch()), mask_tensor(255 - matte_array()),
+                          center_x=0.5, center_y=0.5, strength=-0.7)
+        self.assertEqual(cut.array.shape, (1, 64, 64, 4))
 
     def test_deliver_backdrop_stripes_returns_rgb_and_a_bg_tag(self):
         node = nodes.YukariDeliver()

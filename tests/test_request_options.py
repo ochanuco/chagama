@@ -8,6 +8,7 @@ from comfyui_recipes.application.deliver import RECIPE_DEFAULT
 from comfyui_recipes.application.request_options import (
     deliver_arguments,
     dof_arguments,
+    lens_arguments,
     masked_redraw_arguments,
     redraw_arguments,
     repair_arguments,
@@ -265,6 +266,28 @@ class DofArgumentsTest(unittest.TestCase):
                 dof_arguments(bad)
         with self.assertRaisesRegex(ValueError, "object"):
             dof_arguments([])
+
+
+class LensArgumentsTest(unittest.TestCase):
+    def test_defaults_take_the_catalog_values(self):
+        self.assertEqual(lens_arguments({}), {"center": (0.5, 0.5), "strength": 0.7})
+        self.assertEqual(lens_arguments({"center": [0, 1], "strength": -1}),
+                         {"center": (0.0, 1.0), "strength": -1.0})
+
+    def test_bad_options_are_rejected(self):
+        for bad, key in (({"center": [0.5]}, "center"),
+                         ({"center": [0.5, 1.2]}, "center"),
+                         ({"center": [0.5, True]}, "center"),
+                         ({"center": "middle"}, "center"),
+                         ({"strength": 1.5}, "strength"),
+                         ({"strength": -1.01}, "strength"),
+                         ({"strength": 0}, "strength"),
+                         ({"strength": True}, "strength"),
+                         ({"zoom": 2}, "zoom")):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, key):
+                lens_arguments(bad)
+        with self.assertRaisesRegex(ValueError, "object"):
+            lens_arguments([])
 
 
 class RepairArgumentsTest(unittest.TestCase):

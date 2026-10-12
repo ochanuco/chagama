@@ -532,6 +532,10 @@ DOF_F_NUMBER = {"min": 1.4, "max": 22, "default": 2.8,
 # The delivered layers a dof blurs, all of them unless the request says so.
 DOF_SCOPE = {"figure": True, "outline": True, "backdrop": True}
 DOF_VIEWFINDER = {"values": ["off", "on", "both"], "default": "off"}
+# A lens request's strength: positive swells the frame around its centre (a
+# fisheye), negative shrinks it and stretches the rim (the inverse fisheye).
+LENS_STRENGTH = {"min": -1.0, "max": 1.0, "default": 0.7}
+LENS_CENTER_DEFAULT = (0.5, 0.5)
 
 
 class Light(NamedTuple):

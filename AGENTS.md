@@ -232,6 +232,10 @@ deliver_generation    the pick, delivered: one ComfyUI graph that cuts a matte
                       as assets.
 dof_generation        optional: depth of field over a delivered picture's
                       layers (kind `dof`); its output is a delivered picture.
+lens_generation       optional: a fisheye (strength > 0) or inverse fisheye
+                      (< 0) over a delivered or dof picture (kind `lens`);
+                      its output is a delivered picture. Blur before bending:
+                      dof refuses a lens picture.
 get_request           status of any of the above; list_requests for the queue.
 ```
 
