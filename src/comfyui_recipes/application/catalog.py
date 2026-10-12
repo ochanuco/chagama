@@ -30,6 +30,7 @@ from ..domain.yukari.delivery_style import (
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
+    PHOTO_PLACE_MAX_Y,
     PHOTO_TILT,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
@@ -189,9 +190,10 @@ def _lens_block() -> dict:
 
 def _photo_block() -> dict:
     return {
-        "place": {"default": list(PHOTO_PLACE_DEFAULT),
+        "place": {"default": list(PHOTO_PLACE_DEFAULT), "max_y": PHOTO_PLACE_MAX_Y,
                   "help": "fractions [x, y] of the photo where the middle of the "
-                          "card's bottom edge (the stand's base) goes"},
+                          "card's bottom edge (the stand's base) goes; y above 1 "
+                          "puts the base below the frame, cropping the feet"},
         "height": {**PHOTO_HEIGHT, "help": "the card's height as a share of the photo's"},
         "stand_at": {"default": None,
                      "help": "a photo point [x, y] whose depth the card stands at, "
