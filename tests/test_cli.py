@@ -209,6 +209,25 @@ class CliTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "strength"):
             cli.main(["lens", "gen-1", "--strength", "0"])
 
+    @patch.object(cli, "photo")
+    @patch.object(cli, "ChimeraClient")
+    def test_photo_flags_dispatch_without_network(self, chimera_class, run_photo):
+        cli.main(["photo", "gen-1", "--photo", "pic-1", "--place", "0.3,0.9",
+                  "--height", "0.5", "--stand-at", "0.8,0.4", "--nearer", "0.1",
+                  "--focus", "0.8,0.4", "--f-number", "2"])
+        args, kwargs = run_photo.call_args
+        self.assertEqual(args[0], "gen-1")
+        self.assertEqual(kwargs, {
+            "photo_id": "pic-1", "place": (0.3, 0.9), "height": 0.5,
+            "stand_at": (0.8, 0.4), "nearer": 0.1, "focus": (0.8, 0.4),
+            "f_number": 2.0})
+        cli.main(["photo", "gen-1", "--photo", "pic-1"])
+        self.assertEqual(run_photo.call_args.kwargs, {
+            "photo_id": "pic-1", "place": (0.5, 0.95), "height": 0.7,
+            "stand_at": None, "nearer": 0.0, "focus": "subject", "f_number": 2.8})
+        with self.assertRaisesRegex(SystemExit, "place"):
+            cli.main(["photo", "gen-1", "--photo", "pic-1", "--place", "left"])
+
     @patch.object(cli, "redraw")
     @patch.object(cli, "ChimeraClient")
     def test_redraw_methods_dispatch_without_network(
@@ -322,11 +341,13 @@ class CliTest(unittest.TestCase):
         work_services = run_work.call_args.args[0]
         self.assertEqual(
             work_services.kinds,
-            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof", "lens"))
+            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof", "lens", "photo"))
         self.assertIs(
             work_services.dof_services.management, chimera_class.return_value)
         self.assertIs(
             work_services.lens_services.management, chimera_class.return_value)
+        self.assertIs(
+            work_services.photo_services.management, chimera_class.return_value)
         self.assertIs(
             work_services.redraw_services.management, chimera_class.return_value)
         self.assertIs(

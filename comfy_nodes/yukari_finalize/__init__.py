@@ -1,4 +1,4 @@
-"""ComfyUI custom node registration for Yukari's redraw, deliver, dof and lens graphs.
+"""ComfyUI custom node registration for Yukari's redraw, deliver, dof, lens and photo graphs.
 
 ComfyUI reaches this package through a junction/symlink named
 ``yukari_finalize`` under its own ``custom_nodes/``, so ``__file__`` -- not

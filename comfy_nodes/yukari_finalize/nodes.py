@@ -12,7 +12,7 @@ import json
 import numpy as np
 
 from comfyui_recipes.infrastructure.imaging import (
-    delivery, depth_blur, lens, matting, palette, recolor, viewfinder)
+    delivery, depth_blur, lens, matting, palette, photo_stage, recolor, viewfinder)
 from comfyui_recipes.infrastructure.imaging import light as lighting
 
 from . import bridge, vitmatte
@@ -268,6 +268,52 @@ class YukariLens:
         return (bridge.png_to_image(data, mode),)
 
 
+class YukariPhotoStage:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        def fraction(default):
+            return ("FLOAT", {"default": default, "min": 0.0, "max": 1.0, "step": 0.001})
+
+        return {"required": {
+            "photo": ("IMAGE",),
+            "depth": ("IMAGE",),
+            "figure": ("IMAGE",),
+            "figure_mask": ("MASK",),
+            "outline": ("IMAGE",),
+            "outline_mask": ("MASK",),
+            "place_x": fraction(0.5),
+            "place_y": fraction(0.95),
+            "height": ("FLOAT", {"default": 0.7, "min": 0.05, "max": 1.5, "step": 0.01}),
+            "stand": (["base", "point"], {"default": "base"}),
+            "stand_x": fraction(0.5),
+            "stand_y": fraction(0.5),
+            "nearer": fraction(0.0),
+            "focus": (["subject", "point"], {"default": "subject"}),
+            "focus_x": fraction(0.5),
+            "focus_y": fraction(0.5),
+            "f_number": ("FLOAT", {"default": 2.8, "min": 1.4, "max": 22.0, "step": 0.1}),
+        }}
+
+    def run(self, photo, depth, figure, figure_mask, outline, outline_mask,
+            place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
+            focus_x, focus_y, f_number):
+        data = photo_stage.stage_png(
+            bridge.image_to_png(photo), bridge.image_to_png(depth),
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
+            place=(place_x, place_y), height=height,
+            stand_at=(stand_x, stand_y) if stand == "point" else None,
+            nearer=nearer,
+            focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
+            f_number=f_number)
+        return (bridge.png_to_image(data),)
+
+
 NODE_CLASS_MAPPINGS = {
     "YukariRepinSkin": YukariRepinSkin,
     "YukariRepin": YukariRepin,
@@ -279,6 +325,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariLight": YukariLight,
     "YukariViewfinder": YukariViewfinder,
     "YukariLens": YukariLens,
+    "YukariPhotoStage": YukariPhotoStage,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -292,4 +339,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariLight": "Yukari Light",
     "YukariViewfinder": "Yukari Viewfinder",
     "YukariLens": "Yukari Lens",
+    "YukariPhotoStage": "Yukari Photo Stage",
 }

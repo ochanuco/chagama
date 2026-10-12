@@ -540,6 +540,13 @@ LENS_CENTER_DEFAULT = (0.5, 0.5)
 # (a share of the shorter side) around the centre, like a spherize filter.
 LENS_SHAPE = {"values": ["fisheye", "sphere"], "default": "fisheye"}
 LENS_RADIUS = {"min": 0.05, "max": 1.0, "default": 0.3}
+# A photo request stands a delivery's figure and outline, one flat card like
+# an acrylic stand, in a photo: the middle of the card's bottom edge on
+# `place`, its height a share of the photo's, its depth the photo's where it
+# stands pulled toward the camera by `nearer`. The f-number is the dof's.
+PHOTO_PLACE_DEFAULT = (0.5, 0.95)
+PHOTO_HEIGHT = {"min": 0.05, "max": 1.5, "default": 0.7}
+PHOTO_NEARER = {"min": 0.0, "max": 1.0, "default": 0.0}
 
 
 class Light(NamedTuple):

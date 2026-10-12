@@ -284,6 +284,15 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertEqual((lens["radius"]["min"], lens["radius"]["max"],
                           lens["radius"]["default"]), (0.05, 1.0, 0.3))
 
+    def test_publishes_the_photo_section_at_the_catalog_root(self):
+        photo = build_catalog(GIT)["photo"]
+        self.assertEqual(photo["place"]["default"], [0.5, 0.95])
+        self.assertEqual((photo["height"]["min"], photo["height"]["max"],
+                          photo["height"]["default"]), (0.05, 1.5, 0.7))
+        self.assertIsNone(photo["stand_at"]["default"])
+        self.assertEqual(photo["focus"]["default"], "subject")
+        self.assertEqual(photo["f_number"]["default"], 2.8)
+
     def test_publishes_the_dof_section_at_the_catalog_root(self):
         dof = build_catalog(GIT)["dof"]
         self.assertEqual(dof["f_number"], {
