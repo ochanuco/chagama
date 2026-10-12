@@ -9,6 +9,7 @@ from comfyui_recipes.application.request_options import (
     deliver_arguments,
     dof_arguments,
     lens_arguments,
+    photo_arguments,
     masked_redraw_arguments,
     redraw_arguments,
     repair_arguments,
@@ -302,6 +303,34 @@ class LensArgumentsTest(unittest.TestCase):
                 lens_arguments(bad)
         with self.assertRaisesRegex(ValueError, "object"):
             lens_arguments([])
+
+
+class PhotoArgumentsTest(unittest.TestCase):
+    def test_defaults_take_the_catalog_values(self):
+        self.assertEqual(photo_arguments({"photo": "pic"}), {
+            "photo_id": "pic", "place": (0.5, 0.95), "height": 0.7,
+            "stand_at": None, "nearer": 0.0, "focus": "subject", "f_number": 2.8})
+        arguments = photo_arguments({"photo": "pic", "focus": [0.2, 0.3],
+                                     "stand_at": [0.8, 0.4], "nearer": 0.5})
+        self.assertEqual((arguments["focus"], arguments["stand_at"], arguments["nearer"]),
+                         ((0.2, 0.3), (0.8, 0.4), 0.5))
+
+    def test_bad_options_are_rejected(self):
+        for bad, key in (({}, "photo"), ({"photo": ""}, "photo"),
+                         ({"photo": "p", "place": [0.5]}, "place"),
+                         ({"photo": "p", "place": [0.5, 1.2]}, "place"),
+                         ({"photo": "p", "height": 0.01}, "height"),
+                         ({"photo": "p", "height": 2}, "height"),
+                         ({"photo": "p", "stand_at": "sign"}, "stand_at"),
+                         ({"photo": "p", "nearer": -0.1}, "nearer"),
+                         ({"photo": "p", "focus": "sign"}, "focus"),
+                         ({"photo": "p", "focus": None}, "focus"),
+                         ({"photo": "p", "f_number": 1}, "f_number"),
+                         ({"photo": "p", "blur": 1}, "blur")):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, key):
+                photo_arguments(bad)
+        with self.assertRaisesRegex(ValueError, "object"):
+            photo_arguments([])
 
 
 class RepairArgumentsTest(unittest.TestCase):

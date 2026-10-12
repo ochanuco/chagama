@@ -9,6 +9,7 @@ from pathlib import Path
 from ..infrastructure.comfyui.deliver_graph import ALPHA_SUFFIX, DEPTH_SUFFIX
 from ..infrastructure.comfyui.dof_graph import DOF_SUFFIX, VIEWFINDER_SUFFIX
 from ..infrastructure.comfyui.lens_graph import LENS_SUFFIX
+from ..infrastructure.comfyui.photo_graph import STAGED_SUFFIX
 from ..infrastructure.comfyui.refinement_graph import (
     DELIVERED_SUFFIX,
     LAYER_BACKDROP_SUFFIX,
@@ -59,6 +60,12 @@ def classify_dof_outputs(outputs: list) -> dict[str, list]:
 def classify_lens_outputs(outputs: list) -> dict[str, list]:
     """A lens submission's outputs by role: the distorted `lens` picture."""
     return _by_suffix(outputs, {"lens": LENS_SUFFIX})
+
+
+def classify_photo_outputs(outputs: list) -> dict[str, list]:
+    """A photo submission's outputs by role: `depth` when it built the
+    photo's depth itself, and the `staged` picture."""
+    return _by_suffix(outputs, {"depth": DEPTH_SUFFIX, "staged": STAGED_SUFFIX})
 
 
 def classify_redraw_outputs(outputs: list) -> dict[str, list]:

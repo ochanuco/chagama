@@ -5,7 +5,7 @@
 
 Every render is a row on chimera's `requests` queue, posted through the MCP
 (`derive_request`, `redraw_generation`, `deliver_generation`,
-`dof_generation`, `lens_generation`, `repair_generation`, `masked_redraw_generation`,
+`dof_generation`, `lens_generation`, `photo_generation`, `repair_generation`, `masked_redraw_generation`,
 `create_request`) or `POST /api/v1/requests`.
 `comfy-recipes work` on the GPU box claims a row, runs it, and ingests the
 result back into chimera. Nothing else submits to ComfyUI.
@@ -18,8 +18,8 @@ Options, defaults and ranges live here:
 | Question | Source |
 |---|---|
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
-| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|dof\|lens\|repair\|masked_redraw> --help`, `application/request_options.py` |
-| Poses, costumes, parts, patch targets, dials, redraw, deliver, dof and lens defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
+| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
+| Poses, costumes, parts, patch targets, dials, redraw, deliver, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
 | Patch targets and their ops | `domain/generation/patches.py` |
 | What a request would render, without rendering | `uv run comfy-recipes generate --request r.json --dry-run` |
 
@@ -34,6 +34,7 @@ Options, defaults and ranges live here:
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: repin, backdrop, outline bands; never redraws |
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
+| `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
 
 A `finalize` row is refused. `redraw`, `repair` and `masked_redraw` leave a
 picture on the green key; `deliver` makes the delivered picture, and `dof`
@@ -180,6 +181,32 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
 - The output Generation (`-lens`) refines its source, is itself a delivered
   picture, and records `kind: "lens"`, `base_generation` and the resolved
   options (`radius` only for a sphere).
+
+### Photo options
+
+- The source must be a deliver output carrying its `layer-figure` and
+  `layer-outline` assets (its backdrop is replaced by the photo); a picture
+  that was not delivered, a dof or lens output and a delivery without layers
+  are refused. `photo` names the Generation whose image is the scene: any
+  Generation, usually a photo uploaded on chimera's GUI (an `import` whose
+  `parameters.kind` is `photo`).
+- The figure over its outline bands is one flat card, like an acrylic stand.
+  `place` (`[x, y]` of the photo, default `[0.5, 0.95]`) is where the middle
+  of its bottom edge goes; `height` (0.05..1.5 of the photo height, default
+  0.7) its size. The output is the photo's size.
+- The photo's depth is the `depth` asset of the photo Generation, reused
+  under the `cut` rule, or built in the graph and attached to it. The card
+  takes one depth: the photo's at `stand_at` (`[x, y]`; null, the default,
+  is the card's own base), pulled toward the camera by `nearer` (0..1 of the
+  normalised scene depth, default 0).
+- `focus` is `"subject"` (the card, default) or `[x, y]` of the picture (a
+  point on the card is the card); `f_number` follows the dof's range. The
+  photo is blurred per pixel and the card as a whole by the dof's lens disc,
+  so a card standing at a signboard's depth shares its focus. The card is
+  composited over the photo; nothing in the photo covers it.
+- The output Generation (`-staged`) refines the delivery, is itself a
+  delivered picture (a lens may follow), and records `kind: "photo"`,
+  `base_generation`, `photo` and the resolved options.
 
 ### Repair and masked redraw
 
