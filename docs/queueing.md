@@ -208,8 +208,10 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
   smearing into the dark; in-focus pixels are left as they were.
 - `focus` is `"subject"` (the card; its middle when tilted, default) or
   `[x, y]` of the picture (a point on the card is the card's depth there);
-  `f_number` follows the dof's range. The photo is blurred per pixel and the
-  card row by row by the dof's lens disc, so a card standing at a
+  `f_number` follows the dof's range. The photo is cut into 24 depth slices,
+  each blurred by the dof's lens disc of its depth and laid far to near (so a
+  near out-of-focus object's blur spreads over what stands behind it), and
+  the card is blurred row by row by the same disc, so a card standing at a
   signboard's depth shares its focus. The card is
   composited over the photo; nothing in the photo covers it.
 - The output Generation (`-staged`) refines the delivery, is itself a
