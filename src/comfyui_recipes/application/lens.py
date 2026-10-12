@@ -57,14 +57,15 @@ def _check_source(context: dict) -> None:
 
 
 def _request_parameters(generation_id: str, *, center: tuple[float, float],
-                        strength: float) -> dict:
+                        strength: float, shape: str, radius: float | None) -> dict:
     return {"kind": "lens", "base_generation": generation_id,
-            "center": list(center), "strength": strength}
+            "center": list(center), "strength": strength, "shape": shape,
+            **({"radius": radius} if shape == "sphere" else {})}
 
 
 def lens(generation_id: str, services: LensServices, *,
-         center: tuple[float, float], strength: float,
-         key_prefix: str | None = None, request_id: str | None = None,
+         center: tuple[float, float], strength: float, shape: str = "fisheye",
+         radius: float | None = None, key_prefix: str | None = None, request_id: str | None = None,
          context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "lens", key_prefix)
     if state_path:
@@ -83,7 +84,8 @@ def lens(generation_id: str, services: LensServices, *,
     picture = services.comfyui.upload_image(
         f"{prefix}-picture-{token}.png",
         management.fetch_generation_image(generation_id))
-    graph = services.lens_graph(picture, prefix, center=center, strength=strength)
+    graph = services.lens_graph(picture, prefix, center=center, strength=strength,
+                                shape=shape, radius=radius)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -112,7 +114,8 @@ def lens(generation_id: str, services: LensServices, *,
             "raw_instruction": f"{generation_id} に lens",
             "recipe": context["request"].get("recipe") or "yukari",
             "parameters": _request_parameters(
-                generation_id, center=center, strength=strength),
+                generation_id, center=center, strength=strength, shape=shape,
+                radius=radius),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",
