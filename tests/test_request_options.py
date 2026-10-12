@@ -315,11 +315,15 @@ class PhotoArgumentsTest(unittest.TestCase):
                                      "stand_at": [0.8, 0.4], "nearer": 0.5})
         self.assertEqual((arguments["focus"], arguments["stand_at"], arguments["nearer"]),
                          ((0.2, 0.3), (0.8, 0.4), 0.5))
+        self.assertEqual(photo_arguments({"photo": "p", "place": [0.3, 1.4]})["place"],
+                         (0.3, 1.4))
 
     def test_bad_options_are_rejected(self):
         for bad, key in (({}, "photo"), ({"photo": ""}, "photo"),
                          ({"photo": "p", "place": [0.5]}, "place"),
-                         ({"photo": "p", "place": [0.5, 1.2]}, "place"),
+                         ({"photo": "p", "place": [0.5, 1.6]}, "place"),
+                         ({"photo": "p", "place": [1.2, 0.5]}, "place"),
+                         ({"photo": "p", "stand_at": [0.5, 1.2]}, "stand_at"),
                          ({"photo": "p", "height": 0.01}, "height"),
                          ({"photo": "p", "height": 2}, "height"),
                          ({"photo": "p", "stand_at": "sign"}, "stand_at"),

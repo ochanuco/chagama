@@ -191,8 +191,9 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
   Generation, usually a photo uploaded on chimera's GUI (an `import` whose
   `parameters.kind` is `photo`).
 - The figure over its outline bands is one flat card, like an acrylic stand.
-  `place` (`[x, y]` of the photo, default `[0.5, 0.95]`) is where the middle
-  of its bottom edge goes; `height` (0.05..1.5 of the photo height, default
+  `place` (`[x, y]` of the photo, default `[0.5, 0.95]`; y may go to 1.5,
+  below the frame, to crop the feet and show the card larger) is where the
+  middle of its bottom edge goes; `height` (0.05..1.5 of the photo height, default
   0.7) its size. The output is the photo's size.
 - The photo's depth is the `depth` asset of the photo Generation, reused
   under the `cut` rule, or built in the graph and attached to it. The card

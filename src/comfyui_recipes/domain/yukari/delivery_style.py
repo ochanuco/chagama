@@ -545,6 +545,9 @@ LENS_RADIUS = {"min": 0.05, "max": 1.0, "default": 0.3}
 # `place`, its height a share of the photo's, its depth the photo's where it
 # stands pulled toward the camera by `nearer`. The f-number is the dof's.
 PHOTO_PLACE_DEFAULT = (0.5, 0.95)
+# The base may sit below the frame (y > 1), cropping the card's feet so it
+# can be shown larger.
+PHOTO_PLACE_MAX_Y = 1.5
 PHOTO_HEIGHT = {"min": 0.05, "max": 1.5, "default": 0.7}
 PHOTO_NEARER = {"min": 0.0, "max": 1.0, "default": 0.0}
 # How much farther the card's top is than its base (negative: nearer), so a
