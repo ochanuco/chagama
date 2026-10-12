@@ -199,10 +199,14 @@ requests in one order: `dof` first, then `lens` (as often as wanted).
   takes one depth: the photo's at `stand_at` (`[x, y]`; null, the default,
   is the card's own base), pulled toward the camera by `nearer` (0..1 of the
   normalised scene depth, default 0).
-- `focus` is `"subject"` (the card, default) or `[x, y]` of the picture (a
-  point on the card is the card); `f_number` follows the dof's range. The
-  photo is blurred per pixel and the card as a whole by the dof's lens disc,
-  so a card standing at a signboard's depth shares its focus. The card is
+- `tilt` (-1..1, default 0) leans the card: its top is that much farther
+  than its base (negative: nearer), its depth changing row by row, so a
+  focus on the face lets the body blur below it.
+- `focus` is `"subject"` (the card; its middle when tilted, default) or
+  `[x, y]` of the picture (a point on the card is the card's depth there);
+  `f_number` follows the dof's range. The photo is blurred per pixel and the
+  card row by row by the dof's lens disc, so a card standing at a
+  signboard's depth shares its focus. The card is
   composited over the photo; nothing in the photo covers it.
 - The output Generation (`-staged`) refines the delivery, is itself a
   delivered picture (a lens may follow), and records `kind: "photo"`,

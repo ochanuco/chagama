@@ -547,6 +547,9 @@ LENS_RADIUS = {"min": 0.05, "max": 1.0, "default": 0.3}
 PHOTO_PLACE_DEFAULT = (0.5, 0.95)
 PHOTO_HEIGHT = {"min": 0.05, "max": 1.5, "default": 0.7}
 PHOTO_NEARER = {"min": 0.0, "max": 1.0, "default": 0.0}
+# How much farther the card's top is than its base (negative: nearer), so a
+# focus on the face blurs the body below it.
+PHOTO_TILT = {"min": -1.0, "max": 1.0, "default": 0.0}
 
 
 class Light(NamedTuple):

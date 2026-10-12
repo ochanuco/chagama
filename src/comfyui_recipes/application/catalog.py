@@ -30,6 +30,7 @@ from ..domain.yukari.delivery_style import (
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
+    PHOTO_TILT,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     OUTLINE_WIDTH_MAX_PCT,
@@ -198,9 +199,12 @@ def _photo_block() -> dict:
                              "its own base"},
         "nearer": {**PHOTO_NEARER, "help": "how far to pull the card toward the "
                                            "camera, in normalised scene depth"},
+        "tilt": {**PHOTO_TILT, "help": "how much farther the card's top is than "
+                                       "its base (negative: nearer); with a focus on "
+                                       "the face the body blurs below it"},
         "focus": {"default": "subject",
-                  "help": '"subject" focuses on the card; [x, y] on that point of '
-                          "the picture"},
+                  "help": '"subject" focuses on the card (its middle when tilted); '
+                          "[x, y] on that point of the picture"},
         "f_number": DOF_F_NUMBER,
     }
 
