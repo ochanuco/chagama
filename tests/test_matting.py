@@ -189,6 +189,14 @@ class SeeThroughTest(unittest.TestCase):
         alpha = (known > 0).astype(float)
         np.testing.assert_array_equal(matting.see_through(px, alpha, known), alpha)
 
+    def test_clearer_scales_the_key_showing_through_the_inside(self):
+        px, known = film_scene()
+        alpha = matting.see_through(px, (known > 0).astype(float), known)
+        clearer = matting.clearer(px, alpha, 2.0)
+        np.testing.assert_allclose(clearer[40, 40], 0.4, atol=1e-6)
+        self.assertEqual(clearer[12, 12], 1.0)
+        np.testing.assert_array_equal(matting.clearer(px, alpha, 1.0), alpha)
+
     def test_the_film_colour_is_unmixed_from_the_key(self):
         px, known = film_scene()
         alpha = matting.see_through(px, (known > 0).astype(float), known)

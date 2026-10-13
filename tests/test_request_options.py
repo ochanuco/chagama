@@ -123,6 +123,14 @@ class DeliverArgumentsTest(unittest.TestCase):
                          {"color": "#885b80", "width": 1.04}],
             "light": None})
 
+    def test_see_through_is_a_gain_from_one_to_five(self):
+        self.assertEqual(deliver_arguments({"see_through": 3})["see_through"], 3.0)
+        self.assertNotIn("see_through", deliver_arguments({"see_through": None}))
+        self.assertNotIn("see_through", deliver_arguments({"see_through": 1}))
+        for bad in (0.5, 6, True, "3"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "see_through"):
+                deliver_arguments({"see_through": bad})
+
     def test_unknown_keys_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "denoise"):
             deliver_arguments({"denoise": 0.4})

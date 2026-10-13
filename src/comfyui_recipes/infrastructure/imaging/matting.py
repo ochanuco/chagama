@@ -123,6 +123,17 @@ def see_through(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndar
     return np.where(region, np.minimum(alpha, cap), alpha)
 
 
+def clearer(px: np.ndarray, alpha: np.ndarray, gain: float) -> np.ndarray:
+    """`alpha` with the key showing through the see-through inside scaled by
+    `gain`: 1 - gain * (1 - alpha) there. The soft edge is left as is."""
+    if gain == 1.0:
+        return alpha
+    inside = ndimage.binary_erosion(alpha > 0, iterations=delivery_style.MATTING_TRIMAP_PX)
+    known = np.where(inside, KNOWN_FIGURE, UNKNOWN).astype(np.uint8)
+    region = translucent(px, alpha, known) & (alpha < 1.0)
+    return np.where(region, np.clip(1.0 - gain * (1.0 - alpha), 0.0, 1.0), alpha)
+
+
 def unmixed(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:
     """Where the green key shows through the figure's inside, the colour
     the key was blended with at `alpha`; elsewhere NaN. The soft edge, within
@@ -182,6 +193,13 @@ def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
                   delivery_style.MATTING_TILE_PX,
                   delivery_style.MATTING_TILE_OVERLAP_PX)
     return _png(see_through(px, settle(alpha, known), known) * 255, "L")
+
+
+def clearer_png(data: bytes, alpha: bytes, gain: float) -> bytes:
+    """`clearer` over the alpha (L PNG) of the figure in `data`."""
+    px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
+    solved = np.array(Image.open(io.BytesIO(alpha)).convert("L")).astype(float) / 255.0
+    return _png(clearer(px, solved, gain) * 255, "L")
 
 
 def foreground_png(data: bytes, alpha: bytes, foreground: Foreground) -> bytes:
