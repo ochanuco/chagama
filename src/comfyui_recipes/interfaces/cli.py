@@ -203,6 +203,11 @@ def _stage_options_from_args(args) -> dict:
         options["backdrop"] = args.backdrop
     if args.shadow_from is not None:
         options["shadow_from"] = None if args.shadow_from == "none" else args.shadow_from
+    if args.light == "none":
+        options["light"] = None
+    elif args.light:
+        light = _light_from_args(args)
+        options["light"] = {"scene": light.scene, "from": light.direction}
     return options
 
 
@@ -480,7 +485,12 @@ def parser() -> argparse.ArgumentParser:
     stage_parser.add_argument(
         "--shadow-from", choices=[*sorted(STROKE_LIGHTS), "none"],
         help="without a photo: throw the drop shadow away from this light "
-             "(default: the delivery's own stroke light)")
+             "(default: the delivery's own light)")
+    stage_parser.add_argument(
+        "--light", metavar="SCENE[,FROM]|none",
+        help="without a photo: tint the backdrop to this scene "
+             f"({', '.join(sorted(LIGHT_SCENES))}); 'none' for no scene "
+             "(default: the nearest light redraw in the lineage)")
 
     lighting_parser = commands.add_parser(
         "lighting", help="light a staged picture's figure by its backdrop")

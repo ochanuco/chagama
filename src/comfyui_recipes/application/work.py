@@ -242,6 +242,10 @@ def _execute_stage(services: WorkServices, row: Mapping) -> dict:
         result["resolved_options"] = {"backdrop": arguments["backdrop"]}
         if not arguments["inherit_shadow"]:
             result["resolved_options"]["shadow_from"] = arguments["shadow_from"]
+        if not arguments["inherit_light"]:
+            light = arguments["light"]
+            result["resolved_options"]["light"] = (
+                {"scene": light.scene, "from": light.direction} if light else None)
     return result
 
 
