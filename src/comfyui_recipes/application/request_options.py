@@ -43,7 +43,10 @@ from .redraw import HIRES_DENOISE
 _KNOWN_DELIVER_OPTIONS = frozenset({
     "repin", "recolor", "skin", "keep_legwear", "keep_scene", "transparent",
     "backdrop", "stroke_light", "outlines", "deliver_size", "light",
+    "see_through",
 })
+# The see-through gain's range; 1 is the cut as solved.
+_SEE_THROUGH_RANGE = (1.0, 5.0)
 
 # The photo keys only apply to a delivery set in a photo (stage).
 _DOF_PHOTO_OPTIONS = frozenset({"stand_at", "nearer", "tilt", "bokeh"})
@@ -429,6 +432,16 @@ def deliver_arguments(options: Mapping,
 
     outlines = _outlines_argument(options.get("outlines"))
 
+    see_through = options.get("see_through")
+    if see_through is None:
+        see_through = 1.0
+    elif not isinstance(see_through, (int, float)) or isinstance(see_through, bool):
+        raise ValueError(
+            f"see_through must be null or a number, got {type(see_through).__name__}")
+    low, high = _SEE_THROUGH_RANGE
+    if not low <= see_through <= high:
+        raise ValueError(f"see_through must be between {low:g} and {high:g}, got {see_through!r}")
+
     recolor = boolean("recolor")
     return {
         "repin": boolean("repin", DELIVER_DEFAULTS["repin"]) and not recolor,
@@ -442,6 +455,7 @@ def deliver_arguments(options: Mapping,
         "outlines": outlines,
         "deliver_size": deliver_size,
         "light": light,
+        **({"see_through": float(see_through)} if see_through != 1.0 else {}),
     }
 
 

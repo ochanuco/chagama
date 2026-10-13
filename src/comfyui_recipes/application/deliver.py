@@ -96,7 +96,7 @@ def _request_parameters(generation_id: str, *, repin: bool, skin: bool,
                         keep_scene: bool, transparent: bool,
                         backdrop: str | None, stroke_light: str | None,
                         outlines: list[dict], deliver_size: int | None,
-                        light: Light | None) -> dict:
+                        light: Light | None, see_through: float = 1.0) -> dict:
     return {
         "kind": "deliver",
         "base_generation": generation_id,
@@ -112,6 +112,7 @@ def _request_parameters(generation_id: str, *, repin: bool, skin: bool,
         "outlines": outlines,
         **({"light": {"scene": light.scene, "from": light.direction}}
            if light is not None else {}),
+        **({"see_through": see_through} if see_through != 1.0 else {}),
     }
 
 
@@ -123,6 +124,7 @@ def deliver(generation_id: str, services: DeliverServices, *,
             stroke_light: str | None | object = RECIPE_DEFAULT,
             outlines: list[dict] | None = None,
             deliver_size: int | None = None, light: Light | None = None,
+            see_through: float = 1.0,
             key_prefix: str | None = None, request_id: str | None = None,
             context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "deliver", key_prefix)
@@ -166,7 +168,8 @@ def deliver(generation_id: str, services: DeliverServices, *,
         outlines=outlines, deliver_size=deliver_size,
         canvas=services.image_size(picked),
         light_scene=light.scene if light is not None else None,
-        light_from=light.direction if light is not None else None)
+        light_from=light.direction if light is not None else None,
+        see_through=see_through)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -215,7 +218,8 @@ def deliver(generation_id: str, services: DeliverServices, *,
                 recolor=recolor, keep_legwear=keep_legwear,
                 keep_scene=keep_scene, transparent=transparent,
                 backdrop=backdrop, stroke_light=stroke_light,
-                outlines=outlines, deliver_size=deliver_size, light=light),
+                outlines=outlines, deliver_size=deliver_size, light=light,
+                see_through=see_through),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",

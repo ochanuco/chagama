@@ -1228,6 +1228,23 @@ class OutlinesTest(unittest.TestCase):
         self.assertGreater(out[..., 3].max(), 0)
         self.assertTrue((delivered[..., 3].astype(int) >= out[..., 3].astype(int) - 1).all())
 
+    def test_the_bands_follow_the_silhouette_not_a_thinned_matte(self):
+        px, soft = purple_only_input()
+        thinned = soft.copy()
+        inside = np.argwhere(soft == 255)
+        top, left = inside.min(axis=0) + 20
+        bottom, right = inside.max(axis=0) - 20
+        thinned[top:bottom, left:right] = 80
+        for transparent in (False, True):
+            with self.subTest(transparent=transparent):
+                kwargs = dict(matted=True, light="n", transparent=transparent,
+                              outlines=WHITE_PURPLE)
+                _, figure, outline, _, _ = deliver_pngs(
+                    png(px), png(thinned), silhouette=png(soft), **kwargs)
+                _, _, expected, _, _ = deliver_pngs(png(px), png(soft), **kwargs)
+                np.testing.assert_array_equal(decode(outline), decode(expected))
+                self.assertEqual(decode(figure)[top + 5, left + 5, 3], 80)
+
     def test_a_kept_scene_is_its_own_backdrop_with_an_empty_outline(self):
         px, soft = purple_only_input()
         picture, figure, outline, backdrop, tag = deliver_pngs(

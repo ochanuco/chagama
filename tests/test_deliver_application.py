@@ -117,6 +117,24 @@ class DeliverGraphTest(unittest.TestCase):
         self.assertEqual(recolor["inputs"]["image"], [skin_id, 0])
         self.assertNotIn("YukariRepin", classes(graph))
 
+    def test_see_through_scales_the_tail_alpha_not_the_saved_one(self):
+        graph = build(see_through=3.0)
+        [(load_id, _)] = nodes_of(graph, "LoadImage")
+        [(matting_id, _)] = nodes_of(graph, "YukariMatting")
+        [(_, foreground)] = nodes_of(graph, "YukariForeground")
+        self.assertEqual(foreground["inputs"]["alpha"], [matting_id, 0])
+        [(see_id, see)] = nodes_of(graph, "YukariSeeThrough")
+        self.assertEqual(see["inputs"], {
+            "image": [load_id, 0], "alpha": [matting_id, 0], "gain": 3.0})
+        [(_, delivered)] = nodes_of(graph, "YukariDeliver")
+        self.assertEqual(delivered["inputs"]["matte"], [see_id, 0])
+        self.assertEqual(delivered["inputs"]["silhouette"], [matting_id, 0])
+        [(_, to_image)] = nodes_of(graph, "MaskToImage")
+        self.assertEqual(to_image["inputs"]["mask"], [matting_id, 0])
+
+    def test_see_through_one_adds_no_node(self):
+        self.assertNotIn("YukariSeeThrough", classes(build(see_through=1.0)))
+
     def test_keep_scene_skips_the_foreground_and_composites_with_the_alpha(self):
         graph = build(keep_scene=True)
         self.assertNotIn("YukariForeground", classes(graph))

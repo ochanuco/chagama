@@ -121,6 +121,25 @@ class YukariForeground:
         return (bridge.png_to_image(data),)
 
 
+class YukariSeeThrough:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("MASK",)
+    RETURN_NAMES = ("alpha",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "image": ("IMAGE",), "alpha": ("MASK",),
+            "gain": ("FLOAT", {"default": 1.0, "min": 1.0, "max": 5.0, "step": 0.1}),
+        }}
+
+    def run(self, image, alpha, gain):
+        data = matting.clearer_png(
+            bridge.image_to_png(image), bridge.mask_to_png(alpha), gain)
+        return (bridge.png_to_mask(data),)
+
+
 class YukariDeliver:
     CATEGORY = "yukari"
     RETURN_TYPES = ("IMAGE", "STRING", "IMAGE", "IMAGE", "IMAGE")
@@ -141,16 +160,19 @@ class YukariDeliver:
             "light_from": ("STRING", {"default": ""}),
             "matted": ("BOOLEAN", {"default": False}),
             "outlines": ("STRING", {"default": ""}),
+            "silhouette": ("MASK",),
         }}
 
     def run(self, image, matte, keep_scene, transparent=False, stroke_light="",
-            backdrop="", light_scene="", light_from="", matted=False, outlines=""):
+            backdrop="", light_scene="", light_from="", matted=False, outlines="",
+            silhouette=None):
         picture, figure, outline, backdrop_png, tag = delivery.deliver_pngs(
             bridge.image_to_png(image), bridge.mask_to_png(matte),
             keep_scene=keep_scene, transparent=transparent,
             light=stroke_light or None, backdrop=backdrop or None,
             scene=light_scene or None, light_from=light_from or None,
-            matted=matted, outlines=json.loads(outlines) if outlines else None)
+            matted=matted, outlines=json.loads(outlines) if outlines else None,
+            silhouette=None if silhouette is None else bridge.mask_to_png(silhouette))
         mode = "RGBA" if (transparent and not keep_scene) else "RGB"
         # A transparent delivery has no backdrop layer; this output is never saved.
         backdrop_image = bridge.png_to_image(
@@ -457,6 +479,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariRecolor": YukariRecolor,
     "YukariMatting": YukariMatting,
     "YukariForeground": YukariForeground,
+    "YukariSeeThrough": YukariSeeThrough,
     "YukariDeliver": YukariDeliver,
     "YukariDepthOfField": YukariDepthOfField,
     "YukariLight": YukariLight,
@@ -474,6 +497,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariRecolor": "Yukari Recolor",
     "YukariMatting": "Yukari Matting",
     "YukariForeground": "Yukari Foreground",
+    "YukariSeeThrough": "Yukari See Through",
     "YukariDeliver": "Yukari Deliver",
     "YukariDepthOfField": "Yukari Depth of Field",
     "YukariLight": "Yukari Light",
