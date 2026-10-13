@@ -1,6 +1,6 @@
 """Per-pixel alpha for the delivery cut: a trimap from the retraced matte,
-solved by a matting model, and the figure's own colour recovered under that
-alpha.
+solved by a matting model, see-through clothing unmixed from the green key,
+and the figure's own colour recovered under that alpha.
 
 The model and the foreground estimator are passed in, so this module stays
 numpy-only; the worker's node pack supplies both.
@@ -81,11 +81,73 @@ def settle(alpha: np.ndarray, known: np.ndarray) -> np.ndarray:
     return alpha
 
 
+def green_key(px: np.ndarray) -> np.ndarray | None:
+    """The raw backdrop's colour when it is a green key, else None."""
+    key = delivery._corner_seed(px)
+    if key[1] - max(key[0], key[2]) < delivery_style.ENCLOSED_KEY_MIN_GREEN_EXCESS:
+        return None
+    return key
+
+
+def key_share(px: np.ndarray, key: np.ndarray) -> np.ndarray:
+    """Each pixel's green excess as a share of the key's own: 1 on the key,
+    0 or less on a neutral or on any colour green does not lead."""
+    excess = px[..., 1] - np.maximum(px[..., 0], px[..., 2])
+    return excess / max(float(key[1] - max(key[0], key[2])), 1.0)
+
+
+def translucent(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndarray:
+    """The figure pixels the green key shows through: key-tinted components
+    that reach the trimap's known figure. Empty off a green key."""
+    key = green_key(px)
+    if key is None:
+        return np.zeros(alpha.shape, dtype=bool)
+    tinted = (alpha > 0) & (key_share(px, key) >= delivery_style.TRANSLUCENT_MIN_KEY_SHARE)
+    labels, count = ndimage.label(tinted, ndimage.generate_binary_structure(2, 2))
+    if not count:
+        return tinted
+    index = range(1, count + 1)
+    sizes = ndimage.sum(tinted, labels, index)
+    reach = ndimage.sum(known == KNOWN_FIGURE, labels, index)
+    keep = 1 + np.nonzero((sizes >= delivery_style.TRANSLUCENT_MIN_AREA) & (reach > 0))[0]
+    return np.isin(labels, keep)
+
+
+def see_through(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndarray:
+    """`alpha` capped at 1 - key share on the `translucent` pixels: a
+    material green does not lead, laid over the key at that coverage."""
+    region = translucent(px, alpha, known)
+    if not region.any():
+        return alpha
+    cap = np.clip(1.0 - key_share(px, green_key(px)), 0.0, 1.0)
+    return np.where(region, np.minimum(alpha, cap), alpha)
+
+
+def unmixed(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:
+    """Where the green key shows through the figure's inside, the colour
+    the key was blended with at `alpha`; elsewhere NaN. The soft edge, within
+    the trimap band of the cut, is left to the foreground estimate."""
+    solved = np.full(px.shape, np.nan)
+    key = green_key(px)
+    if key is None:
+        return solved
+    inside = ndimage.binary_erosion(alpha > 0, iterations=delivery_style.MATTING_TRIMAP_PX)
+    region = (inside & (alpha < 1.0)
+              & (alpha >= delivery_style.TRANSLUCENT_MIN_SOLVE_ALPHA)
+              & (key_share(px, key) >= delivery_style.TRANSLUCENT_MIN_KEY_SHARE))
+    safe = np.where(region, alpha, 1.0)[..., None]
+    colour = np.clip(key + (px - key) / safe, 0.0, 255.0)
+    return np.where(region[..., None], colour, solved)
+
+
 def figure_colour(px: np.ndarray, alpha: np.ndarray,
                   foreground: Foreground) -> np.ndarray:
-    """The figure's colour under `alpha`: estimated where alpha > 0 and
-    despilled of the raw key on the soft edge, the raw pixel where alpha is 0."""
+    """The figure's colour under `alpha`: estimated where alpha > 0 (unmixed
+    from the key where it shows through) and despilled of the raw key on the
+    soft edge, the raw pixel where alpha is 0."""
     colour = np.clip(foreground(px / 255.0, alpha), 0.0, 1.0) * 255.0
+    solved = unmixed(px, alpha)
+    colour = np.where(np.isnan(solved), colour, solved)
     edge = (alpha > 0) & ~ndimage.binary_erosion(alpha >= 1.0)
     colour = delivery.despill(colour, ndimage.binary_dilation(edge, iterations=2),
                               delivery._corner_seed(px))
@@ -119,7 +181,7 @@ def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     alpha = tiled(predict, px.astype(np.uint8), known,
                   delivery_style.MATTING_TILE_PX,
                   delivery_style.MATTING_TILE_OVERLAP_PX)
-    return _png(settle(alpha, known) * 255, "L")
+    return _png(see_through(px, settle(alpha, known), known) * 255, "L")
 
 
 def foreground_png(data: bytes, alpha: bytes, foreground: Foreground) -> bytes:
