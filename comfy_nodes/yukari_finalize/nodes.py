@@ -376,8 +376,8 @@ class YukariStage:
 
 class YukariRelight:
     CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE")
-    RETURN_NAMES = ("image", "figure", "outline")
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("image", "figure", "outline", "backdrop")
     FUNCTION = "run"
 
     @classmethod
@@ -390,17 +390,20 @@ class YukariRelight:
             "backdrop": ("IMAGE",),
             "direction": ("STRING", {"default": ""}),
             "strength": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
+        }, "optional": {
+            "scene": ("STRING", {"default": ""}),
+            "tint_backdrop": ("BOOLEAN", {"default": False}),
         }}
 
     def run(self, figure, figure_mask, outline, outline_mask, backdrop, direction,
-            strength):
-        picture, figure_png, outline_png = relight.relight_pngs(
+            strength, scene="", tint_backdrop=False):
+        picture, figure_png, outline_png, backdrop_png = relight.relight_pngs(
             bridge.loaded_rgba_png(figure, figure_mask),
             bridge.loaded_rgba_png(outline, outline_mask),
             bridge.image_to_png(backdrop), direction=direction or None,
-            strength=strength)
+            strength=strength, scene=scene or None, tint_backdrop=tint_backdrop)
         return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
-                bridge.png_to_image(outline_png, "RGBA"))
+                bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
 
 
 class YukariPhotoDepthOfField:

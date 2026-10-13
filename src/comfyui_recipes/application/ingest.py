@@ -77,10 +77,8 @@ def classify_stage_outputs(outputs: list) -> dict[str, list]:
 
 def classify_lighting_outputs(outputs: list) -> dict[str, list]:
     """A lighting submission's outputs by role: the `lit` picture and its
-    relit figure and outline layers."""
-    return _by_suffix(outputs, {"lit": LIT_SUFFIX,
-                                "layer-figure": LAYER_FIGURE_SUFFIX,
-                                "layer-outline": LAYER_OUTLINE_SUFFIX})
+    three layers."""
+    return _by_suffix(outputs, {"lit": LIT_SUFFIX, **LAYER_ROLES})
 
 
 def classify_redraw_outputs(outputs: list) -> dict[str, list]:

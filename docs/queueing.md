@@ -167,7 +167,9 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
   strength)` (within 0.35..1.15, linear) and half its colour cast at
   strength 1. A `direction` first shades the figure as the `light` redraw
   underpaint does, its lit side tinted by the backdrop's brightest light.
-  `strength` 0..1 (default 0.7). The backdrop is unchanged.
+  `strength` 0..1 (default 0.7). A `scene` (sunset / moon) shades and tints
+  the figure as that light redraw does (`direction` default nw) and tints a
+  pattern backdrop to the scene; a photo backdrop is never changed.
 - The output (`-lit`) carries the relit layers and the backdrop layer and
   records `kind: "lighting"`, `direction` and `strength`.
 
