@@ -36,6 +36,20 @@ class PatternTest(unittest.TestCase):
         np.testing.assert_allclose(staged.picture[40, 30], (200, 60, 120))
 
 
+    def test_a_scene_tints_the_backdrop_and_casts_its_coloured_shadow(self):
+        figure, outline = layers()
+        plain = stage.on_pattern(figure, outline, "#ffffff", outlines=[])
+        moon = stage.on_pattern(figure, outline, "#ffffff", shadow_from="nw", outlines=[],
+                                scene="moon", light_from="nw")
+        # The moon dims the backdrop and turns it blue.
+        self.assertLess(moon.backdrop[2, 2].mean(), plain.backdrop[2, 2].mean())
+        self.assertGreater(moon.backdrop[2, 2][2], moon.backdrop[2, 2][0])
+        # Its shadow is painted into the backdrop, not the outline layer.
+        self.assertLess(moon.picture[75, 50].mean(), moon.backdrop[2, 2].mean() * 0.95)
+        np.testing.assert_allclose(moon.outline_alpha, outline[..., 3] / 255.0)
+        np.testing.assert_allclose(moon.picture[40, 30], (200, 60, 120))
+
+
 class PhotoTest(unittest.TestCase):
     def test_figure_and_outline_scale_together_onto_the_photo(self):
         figure, outline = layers()
