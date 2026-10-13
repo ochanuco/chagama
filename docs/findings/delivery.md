@@ -38,7 +38,10 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
   component reaching the known figure whose green excess is at least
   `TRANSLUCENT_MIN_KEY_SHARE` of the key's) gets alpha 1 − that share and
   its colour unmixed from the key, so a staged backdrop shows through it;
-  a material drawn opaque (pale cyan, no key in it) is left as is. The 1 px key alpha and `drawn_outline` remain only for graphs
+  a material drawn opaque (pale cyan, no key in it) is left as is. The
+  `see_through` deliver option (1–5) scales that showing-through for the
+  composite only (1 − gain × (1 − alpha) inside the trimap band); the
+  saved alpha asset stays as solved. The 1 px key alpha and `drawn_outline` remain only for graphs
   recorded before the matting stage. `[Anima]`
 - Depth of field is its own request (`dof`) on a delivered picture's layers:
   each layer blurred on its own and composited back to front, so an

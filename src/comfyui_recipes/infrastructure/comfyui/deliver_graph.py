@@ -13,6 +13,7 @@ from .refinement_graph import (
     foreground_node,
     matting_node,
     save_mask,
+    see_through_node,
 )
 
 ALPHA_SUFFIX = "-alpha"
@@ -62,12 +63,15 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   deliver_size: int | None, canvas: tuple[int, int],
-                  light_scene: str | None, light_from: str | None) -> dict:
+                  light_scene: str | None, light_from: str | None,
+                  see_through: float = 1.0) -> dict:
     """The deliver graph over the uploaded `source_image`.
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
     computing; without it the graph cuts the unrepinned source itself and
-    saves the result under `prefix` + ALPHA_SUFFIX.
+    saves the result under `prefix` + ALPHA_SUFFIX. `see_through` scales the
+    key showing through see-through clothing after the colour is solved;
+    the saved alpha stays unscaled.
     """
     if stroke_light is not None and stroke_light not in STROKE_CHOICES:
         valid = ", ".join(repr(key) for key in STROKE_CHOICES)
@@ -110,13 +114,19 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
             "keep_legwear": keep_legwear is not None,
             "keep_legwear_cut": keep_legwear if keep_legwear is not None else 0.62}}
         image_ref = [repin_id, 0]
+    silhouette_ref = None
     if not keep_scene:
         image_ref = foreground_node(graph, allocate, image_ref, alpha_ref)
+        if see_through != 1.0:
+            silhouette_ref = alpha_ref
+            alpha_ref = see_through_node(
+                graph, allocate, source_ref, alpha_ref, see_through)
 
     delivery_tail(
         graph, allocate, image_ref, alpha_ref, prefix,
         keep_scene=keep_scene, transparent=transparent, backdrop=backdrop,
         stroke_light=stroke_light, outlines=outlines,
         deliver_size=deliver_size, canvas=canvas,
-        light_scene=light_scene, light_from=light_from)
+        light_scene=light_scene, light_from=light_from,
+        silhouette_ref=silhouette_ref)
     return graph
