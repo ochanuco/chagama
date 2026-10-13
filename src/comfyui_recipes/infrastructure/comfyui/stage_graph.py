@@ -69,10 +69,12 @@ def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
 
 
 def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str,
-                   prefix: str, *, direction: str | None, strength: float) -> dict:
-    """Light the uploaded layer images by their uploaded backdrop. The
-    picture is saved under `prefix` + LIT_SUFFIX and the relit figure and
-    outline layers beside it; the backdrop is unchanged."""
+                   prefix: str, *, direction: str | None, strength: float,
+                   scene: str | None = None, tint_backdrop: bool = False) -> dict:
+    """Light the uploaded layer images by their uploaded backdrop, in the
+    light `scene` when one is given (tinting the backdrop when
+    `tint_backdrop`). The picture is saved under `prefix` + LIT_SUFFIX and
+    the three layers beside it."""
     graph, allocate, load = _builder()
     figure_id, outline_id = load(figure_image), load(outline_image)
     backdrop_id = load(backdrop_image)
@@ -81,8 +83,9 @@ def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str,
         "figure": [figure_id, 0], "figure_mask": [figure_id, 1],
         "outline": [outline_id, 0], "outline_mask": [outline_id, 1],
         "backdrop": [backdrop_id, 0], "direction": direction or "",
-        "strength": strength}}
+        "strength": strength, "scene": scene or "", "tint_backdrop": tint_backdrop}}
     _save(graph, allocate, [light_id, 0], prefix + LIT_SUFFIX)
     _save(graph, allocate, [light_id, 1], prefix + LAYER_FIGURE_SUFFIX)
     _save(graph, allocate, [light_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
+    _save(graph, allocate, [light_id, 3], prefix + LAYER_BACKDROP_SUFFIX)
     return graph

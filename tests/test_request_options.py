@@ -345,10 +345,11 @@ class StageArgumentsTest(unittest.TestCase):
 
 class LightingArgumentsTest(unittest.TestCase):
     def test_defaults_and_bounds(self):
-        self.assertEqual(lighting_arguments({}), {"direction": None, "strength": 0.7})
-        self.assertEqual(lighting_arguments({"direction": "ne", "strength": 1}),
-                         {"direction": "ne", "strength": 1.0})
-        for bad in ({"direction": "up"}, {"strength": 1.5}, {"scene": "moon"}):
+        self.assertEqual(lighting_arguments({}),
+                         {"direction": None, "strength": 0.7, "scene": None})
+        self.assertEqual(lighting_arguments({"direction": "ne", "strength": 1, "scene": "moon"}),
+                         {"direction": "ne", "strength": 1.0, "scene": "moon"})
+        for bad in ({"direction": "up"}, {"strength": 1.5}, {"scene": "noon"}, {"glow": 1}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 lighting_arguments(bad)
 

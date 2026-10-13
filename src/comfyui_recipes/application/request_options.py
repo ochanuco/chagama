@@ -59,7 +59,7 @@ _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shado
 _STAGE_PHOTO_OPTIONS = frozenset({"photo", "place", "height"})
 _STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light"})
 
-_KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength"})
+_KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -656,7 +656,8 @@ def stage_arguments(options: Mapping) -> dict:
 
 def lighting_arguments(options: Mapping) -> dict:
     """Validate a lighting request's `options` and map it to lighting()
-    kwargs: `direction` (null or absent for none) and `strength`."""
+    kwargs: `direction` (null or absent for none; a scene's default is nw),
+    `strength` and `scene` (sunset / moon, null or absent for none)."""
     if not isinstance(options, Mapping):
         raise ValueError(
             f"lighting options must be an object, got {type(options).__name__}")
@@ -667,8 +668,12 @@ def lighting_arguments(options: Mapping) -> dict:
     if direction is not None and direction not in STROKE_LIGHTS:
         raise ValueError(
             f"direction must be null or one of {sorted(STROKE_LIGHTS)}, got {direction!r}")
+    scene = options.get("scene")
+    if scene is not None and scene not in LIGHT_SCENES:
+        raise ValueError(f"scene must be null or one of {sorted(LIGHT_SCENES)}, got {scene!r}")
     return {"direction": direction,
-            "strength": _ranged(options, "strength", LIGHTING_STRENGTH)}
+            "strength": _ranged(options, "strength", LIGHTING_STRENGTH),
+            "scene": scene}
 
 
 def repair_arguments(options: Mapping,

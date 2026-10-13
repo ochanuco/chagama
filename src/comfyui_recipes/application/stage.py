@@ -218,10 +218,12 @@ def stage(generation_id: str, services: StageServices, *,
 
 
 def lighting(generation_id: str, services: StageServices, *,
-             direction: str | None, strength: float, key_prefix: str | None = None,
-             request_id: str | None = None, context: dict | None = None) -> dict:
+             direction: str | None, strength: float, scene: str | None = None,
+             key_prefix: str | None = None, request_id: str | None = None,
+             context: dict | None = None) -> dict:
     """Light the staged picture `generation_id`'s figure and outline by its
-    backdrop."""
+    backdrop, in the light `scene` when one is given (which also tints a
+    pattern backdrop, never a photo)."""
     state_path, state = _load_state(services, "lighting", key_prefix)
     if state.get("status") == "completed" and state.get("result"):
         return state["result"]
@@ -236,6 +238,7 @@ def lighting(generation_id: str, services: StageServices, *,
         raise SystemExit(LIGHTING_SOURCE)
     _require_layers(services, generation_id, LAYER_ROLES)
 
+    tint_backdrop = scene is not None and not (kind == "stage" and parameters.get("photo"))
     prefix = f"light-{generation_id}"
     token = uuid.uuid4().hex[:8]
     layer_bytes = {role: management.fetch_asset(generation_id, role) for role in LAYER_ROLES}
@@ -243,20 +246,20 @@ def lighting(generation_id: str, services: StageServices, *,
                 for role, data in layer_bytes.items()}
     graph = services.lighting_graph(
         uploaded["layer-figure"], uploaded["layer-outline"], uploaded["layer-backdrop"],
-        prefix, direction=direction, strength=strength)
+        prefix, direction=direction, strength=strength, scene=scene,
+        tint_backdrop=tint_backdrop)
     prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
                      state_path=state_path)
     outputs = classify_lighting_outputs(services.comfyui.wait_for(prompt_id))
-    fetched = _fetch(services, outputs, ("lit", *FIGURE_ROLES), prefix)
-    layers = {role: fetched[role] for role in FIGURE_ROLES}
-    layers["layer-backdrop"] = (f"{prefix}-layer-backdrop.png", layer_bytes["layer-backdrop"])
+    fetched = _fetch(services, outputs, ("lit", *LAYER_ROLES), prefix)
+    layers = {role: fetched[role] for role in LAYER_ROLES}
     result = _record(
         services, generation_id=generation_id, context=context, key_prefix=key_prefix,
         request_id=request_id, prompt_id=prompt_id, graph=graph, picture=fetched["lit"],
         layers=layers,
         raw_instruction=f"{generation_id} に背景の光",
         parameters={"kind": "lighting", "base_generation": generation_id,
-                    "direction": direction, "strength": strength},
+                    "direction": direction, "strength": strength, "scene": scene},
         references=[{"source_generation_id": generation_id, "purpose": "rebuild",
                      "aspect": "composition", "instruction": "この絵を背景の光で照らす"}],
         title="lighting")

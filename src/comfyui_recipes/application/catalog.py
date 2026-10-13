@@ -246,6 +246,9 @@ def _lighting_block() -> dict:
                       "help": "also shade the figure from this side; null for "
                               "exposure and colour only"},
         "strength": LIGHTING_STRENGTH,
+        "scene": {"values": sorted(LIGHT_SCENES), "default": None,
+                  "help": "light the figure as this scene (default direction nw) and "
+                          "tint a pattern backdrop to it; a photo stays as it is"},
     }
 
 
