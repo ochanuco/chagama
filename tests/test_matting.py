@@ -148,5 +148,53 @@ class AlphaAndForegroundPngTest(unittest.TestCase):
             composed, np.clip(np.rint(expected), 0, 255).astype(np.uint8))
 
 
+KEY = np.array((120.0, 185.0, 119.0))
+WHITE = np.array((255.0, 255.0, 255.0))
+
+
+def film_scene(film=0.7, key=KEY, area=(20, 60, 20, 60)):
+    """A purple figure on `key` with a white film at coverage `film` over
+    the key inside it."""
+    px = np.zeros((96, 96, 3))
+    px[...] = key
+    px[8:88, 8:88] = (170.0, 140.0, 210.0)
+    top, bottom, left, right = area
+    px[top:bottom, left:right] = film * WHITE + (1 - film) * key
+    known = matting.trimap(figure_mask(96, (8, 88, 8, 88)), 4)
+    return px, known
+
+
+class SeeThroughTest(unittest.TestCase):
+    def test_a_film_over_the_key_is_capped_at_its_coverage(self):
+        px, known = film_scene()
+        alpha = matting.see_through(px, (known > 0).astype(float), known)
+        np.testing.assert_allclose(alpha[40, 40], 0.7, atol=1e-6)
+        self.assertEqual(alpha[12, 12], 1.0)
+        self.assertEqual(alpha[0, 0], 0.0)
+
+    def test_off_a_green_key_the_alpha_is_untouched(self):
+        grey = np.array((200.0, 200.0, 200.0))
+        px, known = film_scene(key=grey)
+        alpha = (known > 0).astype(float)
+        np.testing.assert_array_equal(matting.see_through(px, alpha, known), alpha)
+
+    def test_a_tinted_speck_under_the_minimum_area_stays_opaque(self):
+        px, known = film_scene(area=(40, 44, 40, 44))
+        alpha = (known > 0).astype(float)
+        np.testing.assert_array_equal(matting.see_through(px, alpha, known), alpha)
+
+    def test_a_pale_cyan_the_key_does_not_lead_is_not_see_through(self):
+        px, known = film_scene()
+        px[20:60, 20:60] = (200.0, 235.0, 245.0)
+        alpha = (known > 0).astype(float)
+        np.testing.assert_array_equal(matting.see_through(px, alpha, known), alpha)
+
+    def test_the_film_colour_is_unmixed_from_the_key(self):
+        px, known = film_scene()
+        alpha = matting.see_through(px, (known > 0).astype(float), known)
+        colour = matting.figure_colour(px, alpha, lambda rgb, a: np.zeros_like(rgb))
+        np.testing.assert_allclose(colour[40, 40], WHITE, atol=1e-6)
+
+
 if __name__ == "__main__":
     unittest.main()
