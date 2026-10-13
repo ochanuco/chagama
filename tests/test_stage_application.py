@@ -169,9 +169,22 @@ class LightingTest(unittest.TestCase):
         self.assertEqual((inputs["direction"], inputs["strength"]), ("ne", 0.5))
         self.assertEqual(management.asset_roles(),
                          ["layer-figure", "layer-outline", "layer-backdrop"])
-        backdrop = next(call for call in management.calls if call[3]
-                        and call[3][0].get("role") == "layer-backdrop")
-        self.assertEqual(backdrop[3][3], b"backdrop-png")
+        self.assertEqual((inputs["scene"], inputs["tint_backdrop"]), ("", False))
+
+    def test_a_scene_tints_a_pattern_backdrop_but_never_a_photo(self):
+        management = ManagementFake({
+            "stg": ({"kind": "stage", "base_generation": "dlv", "backdrop": "dots"}, LAYERS),
+            "pic": ({"kind": "stage", "base_generation": "dlv", "photo": "p",
+                     "place": [0.5, 1.0], "height": 0.8}, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            lighting("stg", services, direction=None, strength=0.5, scene="moon")
+            inputs = node(services, "YukariRelight")["inputs"]
+            self.assertEqual((inputs["scene"], inputs["tint_backdrop"]), ("moon", True))
+            self.assertEqual(management.resolution()["parameters"]["scene"], "moon")
+            lighting("pic", services, direction=None, strength=0.5, scene="sunset",
+                     key_prefix="photo")
+            self.assertFalse(node(services, "YukariRelight")["inputs"]["tint_backdrop"])
 
     def test_lighting_twice_and_a_transparent_delivery_are_refused(self):
         management = ManagementFake({

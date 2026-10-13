@@ -496,6 +496,9 @@ def parser() -> argparse.ArgumentParser:
         "lighting", help="light a staged picture's figure by its backdrop")
     lighting_parser.add_argument("generation_id")
     lighting_parser.add_argument(
+        "--scene", choices=sorted(LIGHT_SCENES),
+        help="light the figure as this scene (and tint a pattern backdrop to it)")
+    lighting_parser.add_argument(
         "--direction", choices=sorted(STROKE_LIGHTS),
         help="also shade the figure from this side (default: exposure and colour only)")
     lighting_parser.add_argument(
@@ -784,7 +787,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "lighting":
         services = build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata)
-        options = {"direction": args.direction,
+        options = {"direction": args.direction, "scene": args.scene,
                    **({"strength": args.strength} if args.strength is not None else {})}
         try:
             arguments = lighting_arguments(options)

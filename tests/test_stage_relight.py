@@ -87,10 +87,11 @@ class RelightTest(unittest.TestCase):
         self.figure, self.outline = figure[..., :3], outline[..., :3]
         self.figure_alpha, self.outline_alpha = figure[..., 3] / 255, outline[..., 3] / 255
 
-    def lit(self, backdrop, direction=None, strength=1.0):
-        return relight.relight(self.figure, self.figure_alpha, self.outline,
-                               self.outline_alpha, backdrop, direction=direction,
-                               strength=strength)
+    def lit(self, backdrop, direction=None, strength=1.0, **scene):
+        figure, outline, _, picture = relight.relight(
+            self.figure, self.figure_alpha, self.outline, self.outline_alpha, backdrop,
+            direction=direction, strength=strength, **scene)
+        return figure, outline, picture
 
     def test_a_dark_ambient_darkens_the_figure_and_the_outline(self):
         figure, outline, picture = self.lit(np.full((80, 60, 3), 20.0))
@@ -110,6 +111,18 @@ class RelightTest(unittest.TestCase):
         before = self.figure[40, 30] / self.figure[40, 30].sum()
         after = figure[40, 30] / figure[40, 30].sum()
         self.assertGreater(after[2], before[2])
+
+    def test_a_scene_lights_the_figure_and_tints_only_a_pattern_backdrop(self):
+        backdrop = np.full((80, 60, 3), 200.0)
+        args = (self.figure, self.figure_alpha, self.outline, self.outline_alpha, backdrop)
+        figure, _, tinted, _ = relight.relight(*args, direction=None, strength=0.0,
+                                               scene="sunset", tint_backdrop=True)
+        # Sunset warms the figure and the pattern behind it.
+        self.assertGreater(figure[40, 30][0] / figure[40, 30][2],
+                           self.figure[40, 30][0] / self.figure[40, 30][2])
+        self.assertGreater(tinted[2, 2][0], tinted[2, 2][2])
+        _, _, photo, _ = relight.relight(*args, direction="ne", strength=0.0, scene="moon")
+        np.testing.assert_allclose(photo, backdrop)
 
     def test_a_direction_shades_the_far_side(self):
         backdrop = np.full((80, 60, 3), 200.0)

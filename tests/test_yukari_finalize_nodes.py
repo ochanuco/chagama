@@ -367,7 +367,7 @@ class NodeRunTest(unittest.TestCase):
 
     def test_relight_returns_the_picture_and_its_layers(self):
         node = nodes.YukariRelight()
-        image, figure, outline = node.run(
+        image, figure, outline, backdrop = node.run(
             image_tensor(swatch()), mask_tensor(255 - matte_array()),
             image_tensor(np.zeros((64, 64, 3), np.uint8)),
             mask_tensor(np.full((64, 64), 255, np.uint8)),
@@ -375,6 +375,7 @@ class NodeRunTest(unittest.TestCase):
         self.assertEqual(image.array.shape, (1, 64, 64, 3))
         self.assertEqual(figure.array.shape, (1, 64, 64, 4))
         self.assertEqual(outline.array.shape, (1, 64, 64, 4))
+        self.assertEqual(backdrop.array.shape, (1, 64, 64, 3))
 
     def test_photo_depth_of_field_returns_the_backdrop_size_in_rgb(self):
         node = nodes.YukariPhotoDepthOfField()
