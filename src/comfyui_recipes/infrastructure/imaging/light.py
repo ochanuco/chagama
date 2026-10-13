@@ -48,7 +48,12 @@ def normals(depth: np.ndarray, matte: np.ndarray
 
 
 def _light_figure(rgb: np.ndarray, matte: np.ndarray, depth: np.ndarray,
-                  direction: str, scene: dict) -> np.ndarray:
+                  direction: str, scene: dict, form: bool = True) -> np.ndarray:
+    """`rgb` lit from `direction` in `scene`. `form` shades by the surface
+    normals; without a depth map they come from the silhouette alone, which
+    darkens whatever happens to face away from the nearest edge (a jaw by a
+    gap under the hair), so `form=False` keeps only the far-side gradient,
+    the tints and the rim."""
     elevation = delivery_style.LIGHT_ELEVATION
     lx, ly = delivery_style.STROKE_LIGHTS[direction]
     flat = np.sqrt(1 - elevation ** 2)
@@ -65,8 +70,10 @@ def _light_figure(rgb: np.ndarray, matte: np.ndarray, depth: np.ndarray,
     grad_k = delivery_style.LIGHT_GRADIENT * keep
     tint_k = scene["tint"] * keep
 
-    away = np.clip((elevation - ndl) / (1 + elevation), 0, 1)
-    out = lin * (1 - shade_k * away[..., None] * (1 - shadow))
+    out = lin
+    if form:
+        away = np.clip((elevation - ndl) / (1 + elevation), 0, 1)
+        out = lin * (1 - shade_k * away[..., None] * (1 - shadow))
 
     height, width = inside.shape
     yy, xx = np.mgrid[0:height, 0:width].astype(float)
@@ -77,8 +84,9 @@ def _light_figure(rgb: np.ndarray, matte: np.ndarray, depth: np.ndarray,
     near = 1 - far
     out = out * (1 - tint_k * near) + out * color * TINT_GAIN * tint_k * near
 
-    lit = np.clip((ndl - elevation * 0.5) / (1 - elevation * 0.5), 0, 1)[..., None]
-    out = out * (1 - tint_k * lit) + out * color * TINT_GAIN * tint_k * lit
+    if form:
+        lit = np.clip((ndl - elevation * 0.5) / (1 - elevation * 0.5), 0, 1)[..., None]
+        out = out * (1 - tint_k * lit) + out * color * TINT_GAIN * tint_k * lit
 
     band = max(height, width) * RIM_BAND
     edge = np.exp(-(dist / band) ** 2) * inside

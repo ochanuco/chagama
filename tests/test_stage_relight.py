@@ -124,6 +124,19 @@ class RelightTest(unittest.TestCase):
         _, _, photo, _ = relight.relight(*args, direction="ne", strength=0.0, scene="moon")
         np.testing.assert_allclose(photo, backdrop)
 
+    def test_without_depth_an_inner_edge_casts_no_local_shadow(self):
+        # A notch cut into the figure's right side faces the light's far side; the
+        # silhouette alone must not darken the flat area beside it.
+        figure = np.zeros((80, 60, 3)) + (230, 200, 190)
+        alpha = np.zeros((80, 60))
+        alpha[10:70, 10:50] = 1.0
+        alpha[38:42, 30:50] = 0.0
+        backdrop = np.full((80, 60, 3), 200.0)
+        lit, _, _, _ = relight.relight(figure, alpha, np.zeros_like(figure), np.zeros((80, 60)),
+                                       backdrop, direction="nw", strength=0.0, scene="sunset")
+        # Above and below the notch at the same distance from the light stay alike.
+        self.assertLess(abs(lit[36, 30].mean() - lit[44, 26].mean()), 6)
+
     def test_a_direction_shades_the_far_side(self):
         backdrop = np.full((80, 60, 3), 200.0)
         figure, _, _ = self.lit(backdrop, "w")

@@ -103,14 +103,14 @@ def relight(figure: np.ndarray, figure_alpha: np.ndarray, outline: np.ndarray,
         if inside.any():
             figure_colour = np.where(inside[..., None], _light_figure(
                 figure_colour, figure_alpha, np.zeros(figure_alpha.shape), direction,
-                delivery_style.LIGHT_SCENES[scene]), figure_colour)
+                delivery_style.LIGHT_SCENES[scene], form=False), figure_colour)
     elif direction is not None and inside.any() and strength > 0:
         scene = {"color": tuple(highlight(backdrop)), "tint": LIT_TINT * strength,
                  "shadow": tuple(1.0 - SHADOW_DEPTH * strength * np.ones(3)),
                  "skin_keep": SKIN_KEEP}
         figure_colour = np.where(inside[..., None], _light_figure(
-            figure_colour, figure_alpha, np.zeros(figure_alpha.shape), direction, scene),
-            figure_colour)
+            figure_colour, figure_alpha, np.zeros(figure_alpha.shape), direction, scene,
+            form=False), figure_colour)
     gain = adjustment(ambient(backdrop, card), strength)
     lit_figure = _srgb(_linear(figure_colour) * gain)
     lit_outline = _srgb(_linear(outline) * gain)
