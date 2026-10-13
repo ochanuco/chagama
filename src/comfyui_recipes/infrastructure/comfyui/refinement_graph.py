@@ -73,6 +73,16 @@ def foreground_node(graph: dict, allocate: Callable[[], str], image_ref: list,
     return [node_id, 0]
 
 
+def see_through_node(graph: dict, allocate: Callable[[], str], image_ref: list,
+                     alpha_ref: list, gain: float) -> list:
+    """The alpha with the key through the see-through inside scaled by
+    `gain`. Returns the alpha ref."""
+    node_id = allocate()
+    graph[node_id] = {"class_type": "YukariSeeThrough", "inputs": {
+        "image": image_ref, "alpha": alpha_ref, "gain": gain}}
+    return [node_id, 0]
+
+
 def _depth_nodes(graph: dict, allocate: Callable[[], str], image_ref: list
                  ) -> list:
     depth_id = allocate()
@@ -101,9 +111,11 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
                   keep_scene: bool, transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   deliver_size: int | None, canvas: tuple[int, int],
-                  light_scene: str | None, light_from: str | None) -> list:
+                  light_scene: str | None, light_from: str | None,
+                  silhouette_ref: list | None = None) -> list:
     """Appends the composite and downscale stages onto `graph` (mutated),
     saving the delivered picture and its layers at the delivered size.
+    `silhouette_ref` is the mask the bands follow when it is not the matte.
     Returns the delivered ref."""
     deliver_id = allocate()
     graph[deliver_id] = {"class_type": "YukariDeliver", "inputs": {
@@ -112,7 +124,8 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
         "backdrop": backdrop or "", "matted": not keep_scene,
         "outlines": json.dumps(outlines),
         **({"light_scene": light_scene, "light_from": light_from}
-           if light_scene else {})}}
+           if light_scene else {}),
+        **({"silhouette": silhouette_ref} if silhouette_ref is not None else {})}}
     delivered_ref = _scaled(graph, allocate, [deliver_id, 0], canvas, deliver_size)
     save_delivered = allocate()
     graph[save_delivered] = {"class_type": "SaveImage", "inputs": {

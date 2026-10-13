@@ -814,7 +814,7 @@ def _png(array: np.ndarray, mode: str) -> bytes:
 def clean_layers(data: bytes, matte: bytes, light: str | None = None,
                  backdrop: str | None = None, scene: str | None = None,
                  light_from: str | None = None, matted: bool = False,
-                 outlines=None) -> Layers:
+                 outlines=None, silhouette: bytes | None = None) -> Layers:
     """Frame the figure the matte cuts out, in the delivery's own colours.
 
     `light_from` is the scene light's direction: it tints the backdrop and
@@ -826,14 +826,15 @@ def clean_layers(data: bytes, matte: bytes, light: str | None = None,
     despilled from the figure's rim.
 
     `matted`: `matte` is the matting stage's alpha and `data` its
-    foreground, already cut and despilled; the alpha is the coverage as is.
+    foreground, already cut and despilled; the alpha is the coverage as is,
+    and `silhouette` (an L PNG, default the matte) is what the bands follow.
     """
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
     height, width = px.shape[:2]
     band = int(max(height, width) * delivery_style.MATTE_EDGE_BAND_PCT / 100)
     tolerance = delivery_style.MATTE_EDGE_TOLERANCE
-    figure = soft >= 128 if matted else cut_figure(px, soft)
+    figure = _matted_figure(soft, silhouette) if matted else cut_figure(px, soft)
     frame = frame_window(px, figure)
     window, key = frame if frame is not None else (None, _corner_seed(px))
     inner = None if window is None else ndimage.binary_erosion(
@@ -887,8 +888,15 @@ def clean_background(data: bytes, matte: bytes, light: str | None = None,
             layers.tag)
 
 
+def _matted_figure(soft: np.ndarray, silhouette: bytes | None) -> np.ndarray:
+    if silhouette is None:
+        return soft >= 128
+    return np.array(Image.open(io.BytesIO(silhouette)).convert("L")) >= 128
+
+
 def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
-                       matted: bool = False, outlines=None) -> Layers:
+                       matted: bool = False, outlines=None,
+                       silhouette: bytes | None = None) -> Layers:
     """Cut the figure out and frame it with the sticker bands on alpha 0.
 
     Same silhouette authority as `clean_layers`. The figure gets a
@@ -901,8 +909,8 @@ def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
     height, width = px.shape[:2]
     if matted:
-        return _transparent_over_bands(px, soft >= 128, soft / 255.0, light,
-                                       "-matted", outlines)
+        return _transparent_over_bands(px, _matted_figure(soft, silhouette),
+                                       soft / 255.0, light, "-matted", outlines)
     band = int(max(height, width) * delivery_style.MATTE_EDGE_BAND_PCT / 100)
     soft = fill_unkeyed_holes(px.astype(float), soft)
     figure = refine_matte(
@@ -965,7 +973,8 @@ def deliver_pngs(data: bytes, matte: bytes, *, keep_scene: bool = False,
                  transparent: bool = False, light: str | None = None,
                  backdrop: str | None = None, scene: str | None = None,
                  light_from: str | None = None, matted: bool = False,
-                 outlines=None) -> tuple[bytes, bytes, bytes, bytes | None, str]:
+                 outlines=None, silhouette: bytes | None = None
+                 ) -> tuple[bytes, bytes, bytes, bytes | None, str]:
     """The delivered picture and its `figure`, `outline` and `backdrop`
     layers as PNGs, and its tag. A kept scene is its own backdrop with the
     matte's figure over it and no outline; a transparent delivery has no
@@ -977,12 +986,13 @@ def deliver_pngs(data: bytes, matte: bytes, *, keep_scene: bool = False,
         return (data, _png(np.dstack([scene_rgb, alpha]), "RGBA"),
                 _png(empty, "RGBA"), _png(scene_rgb, "RGB"), "scene")
     if transparent:
-        layers = transparent_layers(data, matte, light, matted, outlines)
+        layers = transparent_layers(data, matte, light, matted, outlines,
+                                    silhouette)
         picture = _png(layers.picture, "RGBA")
         backdrop_png = None
     else:
         layers = clean_layers(data, matte, light, backdrop, scene, light_from,
-                              matted, outlines)
+                              matted, outlines, silhouette)
         picture = _png(np.clip(layers.picture, 0, 255).astype(np.uint8), "RGB")
         backdrop_png = _png(np.clip(np.rint(layers.backdrop), 0, 255)
                             .astype(np.uint8), "RGB")

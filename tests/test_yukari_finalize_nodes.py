@@ -130,7 +130,7 @@ class NodeMappingTest(unittest.TestCase):
     def test_node_class_mappings_cover_every_node(self):
         self.assertEqual(set(nodes.NODE_CLASS_MAPPINGS), {
             "YukariRepinSkin", "YukariRepin", "YukariRecolor", "YukariMatting",
-            "YukariForeground", "YukariDeliver", "YukariDepthOfField",
+            "YukariForeground", "YukariSeeThrough", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
             "YukariStage", "YukariRelight", "YukariPhotoDepthOfField",
         })
@@ -213,6 +213,12 @@ class NodeRunTest(unittest.TestCase):
         self.assertEqual(seen["alpha"].shape, (64, 64))
         np.testing.assert_allclose(
             (image.array[0] * 255.0).round(), pixels, atol=1)
+
+    def test_see_through_at_gain_one_returns_the_alpha_unchanged(self):
+        alpha = matte_array()
+        (out,) = nodes.YukariSeeThrough().run(
+            image_tensor(swatch()), mask_tensor(alpha), gain=1.0)
+        np.testing.assert_allclose((out.array[0] * 255.0).round(), alpha, atol=1)
 
     def test_deliver_matted_takes_the_alpha_as_coverage(self):
         node = nodes.YukariDeliver()
