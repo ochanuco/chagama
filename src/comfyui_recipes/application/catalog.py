@@ -232,7 +232,11 @@ def _stage_block() -> dict:
         "shadow_from": {"values": sorted(STROKE_LIGHTS),
                         "help": "without a photo: the light the drop shadow is "
                                 "thrown away from; null for none, absent for the "
-                                "delivery's own stroke light"},
+                                "delivery's own light"},
+        "light": {"values": sorted(LIGHT_SCENES),
+                  "help": "without a photo: {scene, from} tints the backdrop as a "
+                          "delivery in that scene does; null for none, absent for the "
+                          "nearest light redraw in the lineage"},
     }
 
 

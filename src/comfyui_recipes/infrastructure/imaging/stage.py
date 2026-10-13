@@ -18,7 +18,7 @@ from scipy import ndimage
 
 from ...domain.yukari import delivery_style
 from . import backdrops, photo_stage
-from .delivery import _band_widths, _shadow_coverage, _shadow_shift
+from .delivery import _band_widths, _shadow_coverage, _shadow_shift, scene_backdrop
 
 # The shadow's offset when the delivery has no outline bands to measure it by,
 # as a share of the longest side.
@@ -56,19 +56,27 @@ def composite(backdrop: np.ndarray, figure: np.ndarray, figure_alpha: np.ndarray
     return picture + figure_alpha[..., None] * (figure - picture)
 
 
-def _shadowed(outline: np.ndarray, outline_alpha: np.ndarray,
-              figure_alpha: np.ndarray, shadow_from: str, outlines
-              ) -> tuple[np.ndarray, np.ndarray]:
-    """The outline layer with the sticker's drop shadow, thrown away from
-    `shadow_from`, merged under it as translucent black."""
+def _shadow(outline_alpha: np.ndarray, figure_alpha: np.ndarray, shadow_from: str,
+            outlines) -> np.ndarray:
+    """The coverage (0..1) of the sticker's drop shadow, thrown away from
+    `shadow_from`, outside the outline bands."""
     height, width = figure_alpha.shape
     widths = _band_widths(height, width, outlines)
     outer_w = widths[-1] if widths else max(height, width) * BARE_SHADOW_WIDTH
     region = (figure_alpha >= 0.5) | (outline_alpha >= 0.5)
     shift = _shadow_shift(delivery_style.STROKE_LIGHTS[shadow_from], outer_w)
     shifted = ndimage.shift(region, shift, order=0, mode="constant", cval=False)
-    shadow = (_shadow_coverage(shifted, delivery_style.STROKE_CUT_EPS_PCT)
-              * delivery_style.STICKER_SHADOW_DARKEN * (1 - outline_alpha))
+    return (_shadow_coverage(shifted, delivery_style.STROKE_CUT_EPS_PCT)
+            * (1 - outline_alpha))
+
+
+def _shadowed(outline: np.ndarray, outline_alpha: np.ndarray,
+              figure_alpha: np.ndarray, shadow_from: str, outlines
+              ) -> tuple[np.ndarray, np.ndarray]:
+    """The outline layer with the sticker's drop shadow, thrown away from
+    `shadow_from`, merged under it as translucent black."""
+    shadow = (_shadow(outline_alpha, figure_alpha, shadow_from, outlines)
+              * delivery_style.STICKER_SHADOW_DARKEN)
     alpha = outline_alpha + shadow * (1 - outline_alpha)
     colour = (outline * outline_alpha[..., None]) / np.maximum(alpha, 1e-6)[..., None]
     colour[alpha <= 0.0] = 0.0
@@ -76,18 +84,28 @@ def _shadowed(outline: np.ndarray, outline_alpha: np.ndarray,
 
 
 def on_pattern(figure: np.ndarray, outline: np.ndarray, backdrop: str | None,
-               shadow_from: str | None = None, outlines=None) -> Staged:
+               shadow_from: str | None = None, outlines=None, scene: str | None = None,
+               light_from: str | None = None) -> Staged:
     """`figure` and `outline` (straight HxWx4 0..255) on the `backdrop`
     pattern or #RRGGBB colour (the delivery default when None) at their own
     canvas, with a drop shadow away from `shadow_from` when it names a
-    direction."""
+    direction. A light `scene` tints the backdrop toward its colour and
+    brightens it toward `light_from`, as a delivery in that scene does, and
+    its shadow takes the scene's cast colour, painted into the backdrop."""
     height, width = figure.shape[:2]
     figure_alpha = figure[..., 3] / 255.0
     outline_colour, outline_alpha = outline[..., :3].astype(float), outline[..., 3] / 255.0
-    if shadow_from is not None:
+    backdrop_rgb = backdrops.render(backdrop, height, width)
+    if scene is not None:
+        backdrop_rgb = scene_backdrop(backdrop_rgb, light_from, scene)
+        if shadow_from is not None:
+            cast = np.array(delivery_style.LIGHT_SCENES[scene]["cast"])
+            weight = (delivery_style.LIGHT_CAST_STRENGTH
+                      * _shadow(outline_alpha, figure_alpha, shadow_from, outlines))[..., None]
+            backdrop_rgb = backdrop_rgb * (1 - weight) + backdrop_rgb * cast * weight
+    elif shadow_from is not None:
         outline_colour, outline_alpha = _shadowed(
             outline_colour, outline_alpha, figure_alpha, shadow_from, outlines)
-    backdrop_rgb = backdrops.render(backdrop, height, width)
     figure_colour = figure[..., :3].astype(float)
     return Staged(composite(backdrop_rgb, figure_colour, figure_alpha,
                             outline_colour, outline_alpha),
@@ -151,7 +169,8 @@ def layer_pngs(staged: Staged) -> tuple[bytes, bytes, bytes, bytes]:
 def stage_pngs(figure_png: bytes, outline_png: bytes, *, photo_png: bytes | None = None,
                backdrop: str | None = None, shadow_from: str | None = None,
                outlines=None, place: tuple[float, float] = (0.5, 1.0),
-               height: float = 1.0) -> tuple[bytes, bytes, bytes, bytes]:
+               height: float = 1.0, scene: str | None = None,
+               light_from: str | None = None) -> tuple[bytes, bytes, bytes, bytes]:
     """`on_photo` when `photo_png` is given, `on_pattern` otherwise, over
     PNG bytes; returns `layer_pngs`."""
     figure, outline = _decode(figure_png, "RGBA"), _decode(outline_png, "RGBA")
@@ -159,7 +178,8 @@ def stage_pngs(figure_png: bytes, outline_png: bytes, *, photo_png: bytes | None
         staged = on_photo(_decode(photo_png, "RGB"), figure, outline,
                           place=place, height=height)
     else:
-        staged = on_pattern(figure, outline, backdrop, shadow_from, outlines)
+        staged = on_pattern(figure, outline, backdrop, shadow_from, outlines, scene,
+                            light_from)
     return layer_pngs(staged)
 
 

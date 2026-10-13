@@ -149,8 +149,11 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
   photo kind places it, at the photo's canvas, unblurred. Without it, the
   layers stay at their canvas on `backdrop` (pattern or `#RRGGBB`, default
   the deliver default) with the drop shadow thrown away from `shadow_from`
-  (null: none; absent: the transparent delivery's own light), merged into
-  the outline layer. The two sets of keys do not mix.
+  (null: none; absent: the transparent delivery's own light, else the
+  scene's), merged into the outline layer. `light` (`{scene, from}`; absent:
+  the nearest light redraw in the lineage; null: none) tints the backdrop
+  and casts the shadow in the scene's colour, as deliver does. The two sets
+  of keys do not mix.
 - The output (`-set`) is a delivered picture with canvas-sized
   `layer-figure`, `layer-outline` and `layer-backdrop`, recording
   `kind: "stage"` and its options.

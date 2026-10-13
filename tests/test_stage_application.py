@@ -110,9 +110,32 @@ class StageTest(unittest.TestCase):
         self.assertEqual(result, {"generation_ids": ["out-1"]})
         self.assertEqual(management.resolution()["parameters"], {
             "kind": "stage", "base_generation": "dlv", "backdrop": "stripes",
-            "shadow_from": "nw"})
+            "shadow_from": "nw", "light": None})
         self.assertEqual(management.asset_roles(),
                          ["layer-figure", "layer-outline", "layer-backdrop"])
+
+    def test_a_pattern_inherits_the_light_redraw_of_its_lineage(self):
+        management = ManagementFake({"dlv": (DELIVERY, LAYERS)})
+        light_redraw = {"request": {"parameters": {"kind": "redraw", "method": "light",
+                                                   "scene": "moon", "from": "ne"}}}
+        plain_request = management.request
+
+        def request(method, path, payload=None, multipart=None):
+            if method == "GET" and path == "/api/v1/generations/src":
+                return light_redraw
+            return plain_request(method, path, payload, multipart)
+
+        management.request = request
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            stage("dlv", services, backdrop="dots", inherit_shadow=True, inherit_light=True)
+            inputs = node(services, "YukariStage")["inputs"]
+            self.assertEqual((inputs["light_scene"], inputs["light_from"]), ("moon", "ne"))
+            # The delivery's own stroke light still throws the shadow.
+            self.assertEqual(inputs["shadow_from"], "nw")
+            stage("dlv", services, backdrop="dots", light=None, inherit_light=False,
+                  key_prefix="no-scene")
+            self.assertNotIn("light_scene", node(services, "YukariStage")["inputs"])
 
     def test_a_photo_places_the_layers_and_references_the_photo(self):
         management = ManagementFake({"dlv": (DELIVERY, LAYERS)})

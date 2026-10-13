@@ -353,11 +353,13 @@ class YukariStage:
             "place_x": _fraction(0.5),
             "place_y": ("FLOAT", {"default": 0.95, "min": 0.0, "max": 1.5, "step": 0.001}),
             "height": ("FLOAT", {"default": 0.7, "min": 0.05, "max": 1.5, "step": 0.01}),
+            "light_scene": ("STRING", {"default": ""}),
+            "light_from": ("STRING", {"default": ""}),
         }}
 
     def run(self, figure, figure_mask, outline, outline_mask, mode, photo=None,
             backdrop="", shadow_from="", outlines="", place_x=0.5, place_y=0.95,
-            height=0.7):
+            height=0.7, light_scene="", light_from=""):
         if mode == "photo" and photo is None:
             raise ValueError("YukariStage in photo mode needs a photo")
         picture, figure_png, outline_png, backdrop_png = staging.stage_pngs(
@@ -366,7 +368,8 @@ class YukariStage:
             photo_png=bridge.image_to_png(photo) if mode == "photo" else None,
             backdrop=backdrop or None, shadow_from=shadow_from or None,
             outlines=json.loads(outlines) if outlines else None,
-            place=(place_x, place_y), height=height)
+            place=(place_x, place_y), height=height, scene=light_scene or None,
+            light_from=light_from or None)
         return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
                 bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
 

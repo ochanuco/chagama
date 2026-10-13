@@ -8,10 +8,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..domain.yukari.delivery_style import STROKE_LIGHTS
+from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
 from ..infrastructure.comfyui.stage_graph import lighting_graph, stage_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
+from .deliver import inherited_light
 from .ingest import (
     asset_key,
     attach_asset,
@@ -150,10 +151,12 @@ def stage(generation_id: str, services: StageServices, *,
           photo_id: str | None = None, place: tuple[float, float] = (0.5, 0.95),
           height: float = 0.7, backdrop: str | None = None,
           shadow_from: str | None = None, inherit_shadow: bool = False,
+          light: Light | None = None, inherit_light: bool = False,
           key_prefix: str | None = None, request_id: str | None = None,
           context: dict | None = None) -> dict:
     """Set the delivery `generation_id` in the photo `photo_id`, or on the
-    `backdrop` pattern when there is none."""
+    `backdrop` pattern when there is none, in the `light` scene (inherited
+    from the lineage's light redraw when `inherit_light`)."""
     state_path, state = _load_state(services, "stage", key_prefix)
     if state.get("status") == "completed" and state.get("result"):
         return state["result"]
@@ -164,8 +167,13 @@ def stage(generation_id: str, services: StageServices, *,
     if parameters.get("kind") != "deliver":
         raise SystemExit(STAGE_SOURCE)
     _require_layers(services, generation_id, FIGURE_ROLES)
+    if photo_id is not None:
+        light = None
+    elif inherit_light:
+        light = inherited_light(management, generation_id, context)
     if photo_id is None and inherit_shadow:
-        shadow_from = inherited_shadow(parameters)
+        # A delivery in a scene throws its shadow away from the scene's light.
+        shadow_from = inherited_shadow(parameters) or (light.direction if light else None)
 
     prefix = f"set-{generation_id}"
     token = uuid.uuid4().hex[:8]
@@ -185,8 +193,10 @@ def stage(generation_id: str, services: StageServices, *,
     else:
         graph = services.stage_graph(uploaded["layer-figure"], uploaded["layer-outline"],
                                      prefix, backdrop=backdrop, shadow_from=shadow_from,
-                                     outlines=parameters.get("outlines"))
-        recorded = {"backdrop": backdrop, "shadow_from": shadow_from}
+                                     outlines=parameters.get("outlines"),
+                                     light=(light.scene, light.direction) if light else None)
+        recorded = {"backdrop": backdrop, "shadow_from": shadow_from,
+                    "light": {"scene": light.scene, "from": light.direction} if light else None}
         raw = f"{generation_id} に背景 {backdrop}"
         references = []
 
