@@ -34,7 +34,11 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
   A key pocket the figure encloses is cut where it is the key or the key in
   shadow (down to `ENCLOSED_KEY_MIN_SHADE` 0.75), and held known backdrop in
   the trimap, so a pocket narrower than the ±12 px band is not handed back
-  to ViTMatte as figure. The 1 px key alpha and `drawn_outline` remain only for graphs
+  to ViTMatte as figure. See-through clothing over the key (a figure
+  component reaching the known figure whose green excess is at least
+  `TRANSLUCENT_MIN_KEY_SHARE` of the key's) gets alpha 1 − that share and
+  its colour unmixed from the key, so a staged backdrop shows through it;
+  a material drawn opaque (pale cyan, no key in it) is left as is. The 1 px key alpha and `drawn_outline` remain only for graphs
   recorded before the matting stage. `[Anima]`
 - Depth of field is its own request (`dof`) on a delivered picture's layers:
   each layer blurred on its own and composited back to front, so an
