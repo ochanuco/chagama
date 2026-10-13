@@ -440,6 +440,14 @@ MATTING_TRIMAP_PX = 12
 # over a whole 2048-px picture does not fit the worker's GPU.
 MATTING_TILE_PX = 512
 MATTING_TILE_OVERLAP_PX = 64
+# See-through clothing on a green key: a figure pixel whose green excess is
+# at least MIN_KEY_SHARE of the key's own is a non-green material over the
+# key, its alpha capped at 1 - that share and its colour unmixed from the
+# key. Only components of at least MIN_AREA pixels reaching the trimap's
+# known figure count; the colour is solved only from MIN_SOLVE_ALPHA up.
+TRANSLUCENT_MIN_KEY_SHARE = 0.08
+TRANSLUCENT_MIN_AREA = 256
+TRANSLUCENT_MIN_SOLVE_ALPHA = 0.25
 
 # Lineart-preserving recolour (infrastructure/imaging/recolor.py). Where
 # repin only nudges the render's own saturation, recolor asserts a

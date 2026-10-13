@@ -26,6 +26,8 @@ def current_cut() -> dict:
             "tile_overlap_px": delivery_style.MATTING_TILE_OVERLAP_PX,
             "hole_key_share": delivery_style.MATTE_HOLE_MIN_KEY_SHARE,
             "enclosed_key_min_shade": delivery_style.ENCLOSED_KEY_MIN_SHADE,
+            "translucent_min_key_share": delivery_style.TRANSLUCENT_MIN_KEY_SHARE,
+            "translucent_min_area": delivery_style.TRANSLUCENT_MIN_AREA,
         },
         "depth": {"ckpt": DEPTH_CKPT, "resolution": DEPTH_RESOLUTION},
     }
