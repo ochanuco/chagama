@@ -54,9 +54,10 @@ _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 _KNOWN_PHOTO_OPTIONS = frozenset({
     "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh"})
 
-_KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from"})
+_KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from",
+                                  "light"})
 _STAGE_PHOTO_OPTIONS = frozenset({"photo", "place", "height"})
-_STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from"})
+_STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light"})
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength"})
 
@@ -612,8 +613,10 @@ def stage_arguments(options: Mapping) -> dict:
     `place` and `height`; without it the delivery is set on `backdrop`, a
     pattern or #RRGGBB (the deliver default when absent), with the drop
     shadow thrown away from `shadow_from` (a direction, null for none,
-    absent to take the delivery's own stroke light). The two sets of keys do
-    not mix.
+    absent to take the delivery's own light) and `light` ({scene, from}
+    tinting the backdrop as a delivery in that scene; null for none; absent
+    for the nearest light redraw in the picture's lineage). The two sets of
+    keys do not mix.
     """
     if not isinstance(options, Mapping):
         raise ValueError(
@@ -646,7 +649,9 @@ def stage_arguments(options: Mapping) -> dict:
             f"shadow_from must be null or one of {sorted(STROKE_LIGHTS)}, got {shadow_from!r}")
     return {"backdrop": backdrop,
             "shadow_from": None if shadow_from is _SHADOW_INHERITED else shadow_from,
-            "inherit_shadow": shadow_from is _SHADOW_INHERITED}
+            "inherit_shadow": shadow_from is _SHADOW_INHERITED,
+            "light": _light_argument(options.get("light")),
+            "inherit_light": "light" not in options}
 
 
 def lighting_arguments(options: Mapping) -> dict:

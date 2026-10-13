@@ -354,6 +354,9 @@ class NodeRunTest(unittest.TestCase):
         self.assertEqual(staged_figure.array.shape, (1, 64, 64, 4))
         self.assertEqual(staged_outline.array.shape, (1, 64, 64, 4))
         self.assertEqual(backdrop.array.shape, (1, 64, 64, 3))
+        image, *_ = node.run(figure, figure_mask, outline, outline_mask, mode="pattern",
+                             backdrop="stripes", light_scene="sunset", light_from="ne")
+        self.assertEqual(image.array.shape, (1, 64, 64, 3))
         photo = image_tensor(np.full((48, 80, 3), 120, np.uint8))
         image, staged_figure, _, backdrop = node.run(
             figure, figure_mask, outline, outline_mask, mode="photo", photo=photo,

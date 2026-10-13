@@ -324,15 +324,21 @@ class StageArgumentsTest(unittest.TestCase):
 
     def test_a_pattern_takes_backdrop_and_shadow(self):
         self.assertEqual(stage_arguments({}), {
-            "backdrop": "dots", "shadow_from": None, "inherit_shadow": True})
-        self.assertEqual(stage_arguments({"backdrop": "#102030", "shadow_from": None}), {
-            "backdrop": "#102030", "shadow_from": None, "inherit_shadow": False})
+            "backdrop": "dots", "shadow_from": None, "inherit_shadow": True,
+            "light": None, "inherit_light": True})
+        self.assertEqual(stage_arguments({"backdrop": "#102030", "shadow_from": None,
+                                          "light": None}), {
+            "backdrop": "#102030", "shadow_from": None, "inherit_shadow": False,
+            "light": None, "inherit_light": False})
+        self.assertEqual(stage_arguments({"light": {"scene": "moon"}})["light"],
+                         Light("moon", "nw"))
         self.assertEqual(stage_arguments({"shadow_from": "nw"})["shadow_from"], "nw")
 
     def test_the_two_sets_do_not_mix_and_bad_values_fail(self):
         for bad in ({"photo": "p", "backdrop": "dots"}, {"place": [0.5, 0.5]},
                     {"backdrop": "nope"}, {"shadow_from": "up"}, {"photo": ""},
-                    {"photo": "p", "height": 3}, {"zoom": 1}):
+                    {"photo": "p", "height": 3}, {"zoom": 1},
+                    {"photo": "p", "light": None}, {"light": {"scene": "noon"}}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 stage_arguments(bad)
 
