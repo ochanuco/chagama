@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.ingest import (
+from chagama.application.ingest import (
     attach_asset,
     classify_deliver_outputs,
     classify_dof_outputs,

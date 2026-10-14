@@ -192,7 +192,7 @@ def saved_files(outputs: dict) -> list[dict]:
 def _keep_awake() -> contextlib.AbstractContextManager:
     if sys.platform != "win32":
         return contextlib.nullcontext()
-    from comfyui_recipes.infrastructure.power.windows import keep_awake
+    from chagama.infrastructure.power.windows import keep_awake
     return keep_awake()
 
 
@@ -208,8 +208,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="split and write the graph, do not run ComfyUI")
     args = parser.parse_args(argv)
 
-    from comfyui_recipes.infrastructure.chimera.client import ChimeraClient
-    from comfyui_recipes.infrastructure.comfyui.client import ComfyUIClient
+    from chagama.infrastructure.chimera.client import ChimeraClient
+    from chagama.infrastructure.comfyui.client import ComfyUIClient
 
     views = parse_views(args.views)
     args.out.mkdir(parents=True, exist_ok=True)

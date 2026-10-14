@@ -26,7 +26,7 @@ RATING_CATEGORY = "9"
 GENERAL_CATEGORY = "0"
 RATING_KEYS = ("general", "sensitive", "questionable", "explicit")
 TAG_CUTOFF = 0.05
-USER_AGENT = "comfyui-recipes-safety/1.0"
+USER_AGENT = "chagama-safety/1.0"
 
 _lock = threading.Lock()
 _loaded: tuple | None = None

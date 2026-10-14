@@ -106,8 +106,8 @@ are.
 `scripts/worker/register-runner.ps1 -Token <registration token> -Version <x.y.z>`
 downloads the runner, registers it against this repository with the label
 `gpu-box`, and installs `run.cmd` as the per-user logon task `actions-runner`
-next to `comfyui` and `comfyui-recipes-watch`. The registration token comes
-from `gh api -X POST repos/ochanuco/comfyui-recipes/actions/runners/registration-token`
+next to `comfyui` and `chagama-watch`. The registration token comes
+from `gh api -X POST repos/ochanuco/chagama/actions/runners/registration-token`
 and is valid for an hour.
 
 Rows in chimera's requests queue default to `recipe_ref = production`; the

@@ -7,7 +7,7 @@ import unittest
 
 from PIL import Image
 
-from comfyui_recipes.infrastructure.imaging.viewfinder import FOCUS, viewfinder_png
+from chagama.infrastructure.imaging.viewfinder import FOCUS, viewfinder_png
 
 
 def png(mode: str, size: tuple[int, int], colour) -> bytes:

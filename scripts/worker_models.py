@@ -72,7 +72,7 @@ def load_manifest(path: Path) -> list[Model]:
 
 def _request(url: str, *, data: bytes | None = None,
              headers: dict[str, str] | None = None) -> urllib.request.Request:
-    merged = {"User-Agent": "comfyui-recipes-worker-models"}
+    merged = {"User-Agent": "chagama-worker-models"}
     token = os.environ.get("HF_TOKEN")
     if token:
         merged["Authorization"] = f"Bearer {token}"
@@ -169,7 +169,7 @@ def pending(models: list[Model], found: dict[str, Upstream],
 def _keep_awake() -> contextlib.AbstractContextManager:
     if sys.platform != "win32":
         return contextlib.nullcontext()
-    from comfyui_recipes.infrastructure.power.windows import keep_awake
+    from chagama.infrastructure.power.windows import keep_awake
     return keep_awake()
 
 

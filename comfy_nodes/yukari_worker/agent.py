@@ -58,7 +58,7 @@ def _await_server(base_url: str, deadline: float, sleep: Callable[[float], None]
 
 
 def _server_ready() -> bool:
-    from comfyui_recipes.infrastructure.comfyui.client import ComfyUIClient
+    from chagama.infrastructure.comfyui.client import ComfyUIClient
 
     # The same URL the worker will submit to, resolved the same way.
     return _await_server(ComfyUIClient().base_url,
@@ -113,7 +113,7 @@ def start(run: Callable[..., None] | None = None,
             # Imported here, not at module scope: a disabled pack must cost
             # ComfyUI nothing but this file, and an import that fails would
             # otherwise report on every start of an install not using it.
-            from comfyui_recipes.interfaces.agent import run as run
+            from chagama.interfaces.agent import run as run
         if ready is None:
             ready = _server_ready
         global _thread

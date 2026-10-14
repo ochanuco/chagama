@@ -1,10 +1,10 @@
 [project]
-name = "comfyui-recipes"
+name = "chagama"
 version = "0.1.0"
 requires-python = ">=3.12,<3.13"
 
 [project.scripts]
-comfy-recipes = "comfyui_recipes.interfaces.cli:main"
+chagama = "chagama.interfaces.cli:main"
 
 [build-system]
 requires = ["setuptools>=69"]

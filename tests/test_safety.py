@@ -8,9 +8,9 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.application import ingest
-from comfyui_recipes.application import safety as safety_application
-from comfyui_recipes.infrastructure.imaging import safety
+from chagama.application import ingest
+from chagama.application import safety as safety_application
+from chagama.infrastructure.imaging import safety
 
 
 class PreprocessTests(unittest.TestCase):

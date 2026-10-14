@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Pin a render's colour to the palette, leaving the brushwork alone.
 
-Thin CLI over `comfyui_recipes.infrastructure.imaging.palette.repin`; the
+Thin CLI over `chagama.infrastructure.imaging.palette.repin`; the
 windows and targets it applies live in the Yukari domain's `delivery_style`.
 
     uv run scripts/repin.py <in.png> <out.png>
@@ -11,7 +11,7 @@ import sys
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.infrastructure.imaging.palette import repin
+from chagama.infrastructure.imaging.palette import repin
 
 
 def main() -> None:

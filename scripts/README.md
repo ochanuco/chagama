@@ -4,10 +4,10 @@
 point is:
 
 ```bash
-uv run comfy-recipes --help
+uv run chagama --help
 ```
 
-The Python package under `src/comfyui_recipes/` owns the generation workflows,
+The Python package under `src/chagama/` owns the generation workflows,
 Yukari domain, external adapters, and CLI wiring. Files here are grouped by why
 they still need to exist:
 
@@ -24,5 +24,5 @@ they still need to exist:
   multi-view graph into a GLB, run on the GPU box by the `pixal3d` workflow.
 
 If a script starts coordinating a recorded batch, it belongs in
-`application/` behind `comfy-recipes`; if it expresses Yukari policy, it
+`application/` behind `chagama`; if it expresses Yukari policy, it
 belongs in `domain/yukari/`.

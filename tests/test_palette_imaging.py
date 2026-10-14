@@ -6,10 +6,10 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari.delivery_style import (
+from chagama.domain.yukari.delivery_style import (
     ACCENT_KEEP, REPIN_DARK, REPIN_LIGHT,
 )
-from comfyui_recipes.infrastructure.imaging.palette import (
+from chagama.infrastructure.imaging.palette import (
     measure, repin, repin_png, summarize,
 )
 

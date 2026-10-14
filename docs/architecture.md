@@ -13,7 +13,7 @@ interfaces -> application -> domain
 The maintained application layout is:
 
 ```text
-src/comfyui_recipes/
+src/chagama/
 ├── interfaces/          # argparse and dependency wiring
 ├── application/         # generate, redraw, repair, deliver and metadata workflows
 ├── domain/
@@ -43,7 +43,7 @@ delivery's `see_through` option, after the colour is solved.
 
 ## Domain
 
-`src/comfyui_recipes/domain/` owns pure generation values and the Yukari
+`src/chagama/domain/` owns pure generation values and the Yukari
 recipe: identity, costumes, poses, prompt edit order and delivery policy. It
 does not parse CLI arguments, read environment variables or files, make HTTP
 requests, open images, or know ComfyUI node ids.
@@ -62,19 +62,19 @@ each recipe's `dials` block.
 
 ## Application
 
-`src/comfyui_recipes/application/` owns use cases: generate and record a request,
+`src/chagama/application/` owns use cases: generate and record a request,
 redraw, repair or deliver a selected generation, and manage its metadata. It coordinates domain
 rules and concrete adapters without reimplementing either.
 
 ## Infrastructure
 
-`src/comfyui_recipes/infrastructure/` owns ComfyUI graphs and HTTP, Chimera,
+`src/chagama/infrastructure/` owns ComfyUI graphs and HTTP, Chimera,
 Discord, image processing and crash-resume persistence. External payload shapes
 stay here.
 
 ## Interfaces
 
-`src/comfyui_recipes/interfaces/` owns the single public `comfy-recipes` CLI.
+`src/chagama/interfaces/` owns the single public `chagama` CLI.
 Argument parsing stops at this boundary; commands call application use cases.
 
 The worker's composition root -- wiring the generate/redraw/deliver/repair/
@@ -89,6 +89,6 @@ also stops the render in flight, which is why the drain sentinel
 
 ## Migration rule
 
-`comfy-recipes` is the only public application entry point. Files under
+`chagama` is the only public application entry point. Files under
 `scripts/` are checks and manual utilities that import the package; none is
 an alternate entry point.

@@ -6,10 +6,10 @@ import json
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.domain.yukari.prompt_style import CFG, SAMPLER, SCHEDULER, STEPS
-from comfyui_recipes.infrastructure.comfyui.anima_graph import CLIP_NAME, VAE_NAME
-from comfyui_recipes.infrastructure.comfyui.repair_graph import repair_graph
-from comfyui_recipes.infrastructure.comfyui.repair_model import anima_model_hook
+from chagama.domain.yukari.prompt_style import CFG, SAMPLER, SCHEDULER, STEPS
+from chagama.infrastructure.comfyui.anima_graph import CLIP_NAME, VAE_NAME
+from chagama.infrastructure.comfyui.repair_graph import repair_graph
+from chagama.infrastructure.comfyui.repair_model import anima_model_hook
 
 FIXTURES = Path(__file__).parent / "fixtures"
 RAW = json.loads((FIXTURES / "repair-graph-raw.json").read_text())

@@ -8,7 +8,7 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.infrastructure.imaging import lens
+from chagama.infrastructure.imaging import lens
 
 
 def png(array: np.ndarray, mode: str) -> bytes:

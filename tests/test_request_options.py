@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import unittest
 
-from comfyui_recipes.application.deliver import RECIPE_DEFAULT
-from comfyui_recipes.application.request_options import (
+from chagama.application.deliver import RECIPE_DEFAULT
+from chagama.application.request_options import (
     deliver_arguments,
     dof_arguments,
     lens_arguments,
@@ -16,9 +16,9 @@ from comfyui_recipes.application.request_options import (
     redraw_arguments,
     repair_arguments,
 )
-from comfyui_recipes.domain.yukari.delivery_style import Light
-from comfyui_recipes.domain.repair.controlnet import DEFAULT_CONTROL_STRENGTH
-from comfyui_recipes.domain.repair.loras import DEFAULT_PART_LORA_WEIGHT
+from chagama.domain.yukari.delivery_style import Light
+from chagama.domain.repair.controlnet import DEFAULT_CONTROL_STRENGTH
+from chagama.domain.repair.loras import DEFAULT_PART_LORA_WEIGHT
 
 # Synthetic dial vocabularies for exercising resolve_dial()'s word lookup --
 # not any recipe's own published words.

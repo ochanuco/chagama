@@ -6,8 +6,8 @@ import json
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.infrastructure.comfyui.repair_controlnet import control_hook
-from comfyui_recipes.infrastructure.comfyui.repair_graph import repair_graph
+from chagama.infrastructure.comfyui.repair_controlnet import control_hook
+from chagama.infrastructure.comfyui.repair_graph import repair_graph
 
 FIXTURES = Path(__file__).parent / "fixtures"
 RAW = json.loads((FIXTURES / "repair-graph-raw.json").read_text())

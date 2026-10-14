@@ -8,10 +8,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.cut_assets import current_cut
-from comfyui_recipes.application.dof import DofServices, dof
-from comfyui_recipes.application.picture_source import is_delivered
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.application.cut_assets import current_cut
+from chagama.application.dof import DofServices, dof
+from chagama.application.picture_source import is_delivered
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 ALL = {"figure": True, "outline": True, "backdrop": True}
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",

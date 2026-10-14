@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from comfyui_recipes.infrastructure.imaging import photo_stage
+from chagama.infrastructure.imaging import photo_stage
 
 H, W = 120, 180
 
