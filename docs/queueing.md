@@ -191,10 +191,9 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
 - A picture whose lineage (through `lighting` and `stage`) set it in a
   photo is blurred as the photo kind blurs: the photo's depth, the card's
   `place` and `height` from the stage, and the options `stand_at`,
-  `nearer`, `tilt` and `bokeh` with the photo kind's defaults and meanings;
-  `scope` does not apply. Those four options are refused on any other
-  picture. A pattern stage (or a delivery) takes its delivery's source
-  depth as above.
+  `nearer`, `tilt`, `bokeh` and `focal_length` with the photo kind's
+  defaults and meanings; `scope` does not apply. Those options are refused
+  elsewhere; a pattern stage (or a delivery) takes its source depth as above.
 - The output Generation (`-dof`; `both` adds `-viewfinder`) refines the
   delivery, is itself a delivered picture, and records `kind: "dof"`,
   `base_generation` and the resolved options (the photo options in place of
@@ -254,12 +253,16 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
   smearing into the dark; in-focus pixels are left as they were.
 - `focus` is `"subject"` (the card; its middle when tilted, default) or
   `[x, y]` of the picture (a point on the card is the card's depth there);
-  `f_number` follows the dof's range. The photo is cut into 24 depth slices,
-  each blurred by the dof's lens disc of its depth and laid far to near (so a
-  near out-of-focus object's blur spreads over what stands behind it), and
-  the card is blurred row by row by the same disc, so a card standing at a
-  signboard's depth shares its focus. The card is
-  composited over the photo; nothing in the photo covers it.
+  `f_number` follows the dof's range; `focal_length` names the full-frame
+  lens (catalog `photo.focal_length`, default `85mm`). The card stands for a
+  1.5 m figure: the aperture (focal / f-number) at its pixels per mm is the
+  disc of an infinitely far point, and a point blurs by |depth − focus| /
+  focus of that (depth read as disparity, far end = infinity; focus floored
+  at 0.1, disc capped at 8% of the long side), so a closer-up card or a
+  longer lens blurs more. The photo is blurred in 24 depth slices laid far to
+  near (near blur spreads over what is behind) and the card row by row by
+  the same disc, so a card at a signboard's depth shares its focus. The card
+  is composited over the photo; nothing in the photo covers it.
 - The output Generation (`-staged`) refines the delivery, is itself a
   delivered picture (a lens may follow), and records `kind: "photo"`,
   `base_generation`, `photo` and the resolved options.

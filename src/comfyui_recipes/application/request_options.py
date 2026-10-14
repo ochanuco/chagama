@@ -23,6 +23,7 @@ from ..domain.yukari.delivery_style import (
     LIGHT_SCENES,
     LIGHTING_STRENGTH,
     PHOTO_BOKEH,
+    PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
@@ -49,13 +50,14 @@ _KNOWN_DELIVER_OPTIONS = frozenset({
 _SEE_THROUGH_RANGE = (1.0, 5.0)
 
 # The photo keys only apply to a delivery set in a photo (stage).
-_DOF_PHOTO_OPTIONS = frozenset({"stand_at", "nearer", "tilt", "bokeh"})
+_DOF_PHOTO_OPTIONS = frozenset({"stand_at", "nearer", "tilt", "bokeh", "focal_length"})
 _KNOWN_DOF_OPTIONS = frozenset({"focus", "f_number", "scope", "viewfinder"}) | _DOF_PHOTO_OPTIONS
 
 _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 
 _KNOWN_PHOTO_OPTIONS = frozenset({
-    "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh"})
+    "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh",
+    "focal_length"})
 
 _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from",
                                   "light"})
@@ -507,7 +509,8 @@ def dof_arguments(options: Mapping) -> dict:
         photo_blur = {"stand_at": _point(options, "stand_at", None),
                       "nearer": _ranged(options, "nearer", PHOTO_NEARER),
                       "tilt": _ranged(options, "tilt", PHOTO_TILT),
-                      "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH)}
+                      "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH),
+                      "focal_length": _focal_length(options)}
     return {"focus": (float(focus[0]), float(focus[1])),
             "f_number": float(f_number), "scope": scope, "viewfinder": viewfinder,
             "photo_blur": photo_blur}
@@ -583,6 +586,14 @@ def _ranged(options: Mapping, key: str, limits: Mapping) -> float:
     return float(value)
 
 
+def _focal_length(options: Mapping) -> str:
+    value = options.get("focal_length", PHOTO_FOCAL_LENGTH["default"])
+    if value not in PHOTO_FOCAL_LENGTH["values"]:
+        raise ValueError(
+            f"focal_length must be one of {PHOTO_FOCAL_LENGTH['values']}, got {value!r}")
+    return value
+
+
 def photo_arguments(options: Mapping) -> dict:
     """Validate a photo request's `options` and map it to photo() kwargs.
 
@@ -614,6 +625,7 @@ def photo_arguments(options: Mapping) -> dict:
         "f_number": _ranged(options, "f_number", DOF_F_NUMBER),
         "tilt": _ranged(options, "tilt", PHOTO_TILT),
         "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH),
+        "focal_length": _focal_length(options),
     }
 
 

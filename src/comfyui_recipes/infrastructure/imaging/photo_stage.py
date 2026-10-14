@@ -6,9 +6,15 @@ depth where its base is, pulled toward the camera by `nearer`. Upright, the
 whole card sits at that one depth; `tilt` leans it, its top that much farther
 than its base, so a focus on the face lets the body fall out of focus below.
 The photo keeps its own per-pixel depth. Both are blurred
-by the same lens-disc circle of confusion as the dof, so whatever shares the
-focus depth stays sharp (a signboard the card stands beside) and the rest
-falls out of focus."""
+by one lens-disc circle of confusion, so whatever shares the focus depth stays
+sharp (a signboard the card stands beside) and the rest falls out of focus.
+
+The disc is a real lens's: the card stands for a figure PHOTO_SUBJECT_MM tall,
+which sets how many pixels a millimetre at the focus plane takes, and the
+lens's aperture (focal length / f-number) imaged at that scale is the disc of
+an infinitely far background. The depth is read as disparity whose far end is
+infinity, so a point blurs by |depth - focus| / focus of that: a closer-up
+card blurs the same scene more, as stepping in with a camera does."""
 
 from __future__ import annotations
 
@@ -18,10 +24,14 @@ import cv2
 import numpy as np
 from PIL import Image
 
+from ...domain.yukari.delivery_style import (
+    PHOTO_FOCAL_LENGTH,
+    PHOTO_FOCAL_LENGTHS,
+    PHOTO_SUBJECT_MM,
+)
 from .depth_blur import (
     ALPHA_EPSILON,
     DEPTH_PERCENTILES,
-    K_FRACTION,
     _disc,
     _focus_depth,
     _gather,
@@ -45,6 +55,12 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
 # blur over what stands behind it instead of keeping a hard silhouette.
 DEPTH_SLICES = 24
 SUBJECT = "subject"
+# A focus this far back or farther counts as this far, so a card standing at
+# the far end does not blow the near scene up without bound.
+FOCUS_DEPTH_FLOOR = 0.1
+# No disc grows past this share of the photo's long side.
+MAX_RADIUS_FRACTION = 0.08
+DEFAULT_FOCAL_MM = PHOTO_FOCAL_LENGTHS[PHOTO_FOCAL_LENGTH["default"]]
 
 
 def normalised_depth(depth: np.ndarray) -> np.ndarray:
@@ -53,6 +69,18 @@ def normalised_depth(depth: np.ndarray) -> np.ndarray:
     if high - low < 1e-6:
         return np.zeros_like(depth, dtype=np.float32)
     return np.clip((depth - low) / (high - low), 0.0, 1.0).astype(np.float32)
+
+
+def blur_scale(card_height_px: float, focal_mm: float, f_number: float,
+               focus_depth: float, long_side: int) -> float:
+    """The disc radius in pixels per unit of normalised depth away from
+    `focus_depth`, for a lens of `focal_mm` (full frame) at `f_number`
+    framing a card `card_height_px` tall: half the aperture imaged at the
+    card's pixels per millimetre (the radius for an infinitely far point),
+    over the focus depth."""
+    infinity = focal_mm / f_number * card_height_px / PHOTO_SUBJECT_MM / 2
+    scale = infinity / max(focus_depth, FOCUS_DEPTH_FLOOR)
+    return min(scale, MAX_RADIUS_FRACTION * long_side)
 
 
 def lift_highlights(linear: np.ndarray, radius: np.ndarray, bokeh: float) -> np.ndarray:
@@ -140,7 +168,8 @@ def blur_card(photo: np.ndarray, depth: np.ndarray, placed: np.ndarray, *,
               place: tuple[float, float], height: float,
               stand_at: tuple[float, float] | None, nearer: float,
               focus: tuple[float, float] | str, f_number: float,
-              tilt: float = 0.0, bokeh: float = 0.0) -> np.ndarray:
+              tilt: float = 0.0, bokeh: float = 0.0,
+              focal_mm: float = DEFAULT_FOCAL_MM) -> np.ndarray:
     """`photo` HxWx3 0..255 with `depth` (higher = nearer) and the card
     already `placed` on it (HxWx4 premultiplied 0..1, its base on `place`,
     `height` tall), both blurred by depth. `stand_at` names the photo point
@@ -148,7 +177,8 @@ def blur_card(photo: np.ndarray, depth: np.ndarray, placed: np.ndarray, *,
     `tilt` puts the card's top that much farther (negative: nearer), in
     normalised scene depth. `focus` is a point of the picture (on the card,
     the card's depth there) or SUBJECT for the card's middle. `bokeh` (0..1)
-    opens the photo's out-of-focus highlights into bright discs. Returns
+    opens the photo's out-of-focus highlights into bright discs; `focal_mm`
+    is the full-frame focal length of the lens it is shot through. Returns
     the HxWx3 composite, 0..255."""
     height_px, width_px = photo.shape[:2]
     scene = normalised_depth(cv2.resize(depth.astype(np.float32), (width_px, height_px),
@@ -167,7 +197,8 @@ def blur_card(photo: np.ndarray, depth: np.ndarray, placed: np.ndarray, *,
         focus_depth = (float(row_depth[fy]) if card_alpha[fy, fx] > 0.5
                        else _focus_depth(scene, focus[0], focus[1]))
 
-    scale = K_FRACTION * max(width_px, height_px) / f_number
+    scale = blur_scale(card_height, focal_mm, f_number, focus_depth,
+                       max(width_px, height_px))
     photo_radius = (scale * np.abs(scene - focus_depth)).astype(np.float32)
     photo_linear = lift_highlights(_to_linear(photo.astype(np.float32)).astype(np.float32),
                                    photo_radius, bokeh)

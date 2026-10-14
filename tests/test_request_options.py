@@ -254,7 +254,10 @@ class DofArgumentsTest(unittest.TestCase):
     def test_photo_keys_fill_the_photo_blur_with_defaults(self):
         arguments = dof_arguments({"focus": [0.5, 0.25], "tilt": 0.5})
         self.assertEqual(arguments["photo_blur"], {
-            "stand_at": None, "nearer": 0.0, "tilt": 0.5, "bokeh": 0.0})
+            "stand_at": None, "nearer": 0.0, "tilt": 0.5, "bokeh": 0.0,
+            "focal_length": "85mm"})
+        with self.assertRaises(ValueError):
+            dof_arguments({"focus": [0.5, 0.25], "focal_length": "50mm"})
         with self.assertRaises(ValueError):
             dof_arguments({"focus": [0.5, 0.25], "bokeh": 2})
 
@@ -367,7 +370,7 @@ class PhotoArgumentsTest(unittest.TestCase):
         self.assertEqual(photo_arguments({"photo": "pic"}), {
             "photo_id": "pic", "place": (0.5, 0.95), "height": 0.7,
             "stand_at": None, "nearer": 0.0, "focus": "subject", "f_number": 2.8,
-            "tilt": 0.0, "bokeh": 0.0})
+            "tilt": 0.0, "bokeh": 0.0, "focal_length": "85mm"})
         arguments = photo_arguments({"photo": "pic", "focus": [0.2, 0.3],
                                      "stand_at": [0.8, 0.4], "nearer": 0.5})
         self.assertEqual((arguments["focus"], arguments["stand_at"], arguments["nearer"]),

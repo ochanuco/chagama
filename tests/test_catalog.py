@@ -297,6 +297,8 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertEqual((photo["tilt"]["min"], photo["tilt"]["max"],
                           photo["tilt"]["default"]), (-1.0, 1.0, 0.0))
         self.assertEqual(photo["f_number"]["default"], 2.8)
+        self.assertEqual(photo["focal_length"]["default"], "85mm")
+        self.assertIn("85mm", photo["focal_length"]["values"])
 
     def test_publishes_the_dof_section_at_the_catalog_root(self):
         dof = build_catalog(GIT)["dof"]
