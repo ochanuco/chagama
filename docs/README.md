@@ -40,7 +40,7 @@ the archive and lives in `experiments/`, chimera or the named PR.
 | File | ~tok | Covers |
 |---|---|---|
 | [queueing.md](queueing.md) | 2.7k | request kinds, where each option is defined, cross-file rules |
-| [release.md](release.md) | 1.4k | main → production, worker deploy |
+| [release.md](release.md) | 1.4k | manual deploy of main, worker deploy |
 | [remote.md](remote.md) | 1.3k | the GPU box: setup, logon tasks, fetching models |
 | [models.md](models.md) | 2.2k | model files and provenance |
 | [architecture.md](architecture.md) | 1k | layer dependency rule |

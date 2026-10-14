@@ -1,31 +1,27 @@
 # Release path
 
-`main` is where PRs land; `production` is what the GPU worker runs. The two
-are joined by a promotion PR, the same shape as ochanuco/webull-trading.
+`main` is where PRs land; a deploy moves the GPU worker to a commit on `main`.
+There is no release branch: the deploy is a manual run, approved before it
+reaches the box.
 
 ## Branches and rulesets
 
 - `main`: deletion and force-push blocked, PR required (no approval), merge
   commits only.
-- `production`: PR required with one approval from a code owner and every
-  thread resolved, the `production deploy preflight` check required, admins
-  may bypass. Nothing pushes to it except the promotion PR's merge.
 
 ## Workflows
 
-- `production release PR` runs on every push to `main`. It snapshots
-  `main`'s tree onto `release/production` (a `read-tree`, not a merge) and
-  opens or updates the PR into `production`. Merging that PR is the release.
-  It authenticates as a GitHub App (secrets `APP_ID`, `APP_PRIVATE_KEY`) so
-  the PR is not self-authored and its checks run.
-- `production preflight` is the required check on that PR: tests with
-  `PYTHONPATH=scripts`, then `scripts/delivery_check.py`.
-- `deploy worker` runs on `push` to `production` only, on the self-hosted
-  runner labelled `gpu-box`. It calls `scripts/worker/deploy.ps1` in the
-  standing checkout named by the repository variable `WORKER_CHECKOUT`,
-  which moves it to `origin/production` and refreshes the venv. The
-  repository is public; limiting the runner to `production` pushes is what
-  keeps fork PRs off the box. `deploy.ps1` also re-junctions our node packs
+- `deploy` is a `workflow_dispatch` with the input `ref` (`main`, the
+  default, or a commit SHA on main). Its job uses the Environment
+  `production`, whose required reviewer approves the run before the job is
+  handed to the self-hosted runner labelled `gpu-box`. The repository is
+  public; the approval and the main-only ref check
+  (`scripts/worker/resolve-ref.ps1`) are what keep other code off the box.
+  The job calls `scripts/worker/deploy.ps1` in the standing checkout named by
+  the repository variable `WORKER_CHECKOUT` with the resolved SHA. That
+  moves the checkout to that commit on the local branch `production` -- the
+  worker serves only requests whose `recipe_ref` equals the branch it is on,
+  so the name stays -- and refreshes the venv. `deploy.ps1` also re-junctions our node packs
   into the ComfyUI install named by the repository variable `COMFYUI_ROOT`,
   moves that install to the ComfyUI tag pinned in
   `manifests/worker-nodes.toml` (`scripts/worker/sync-comfyui.ps1`: fetch,
@@ -42,8 +38,9 @@ are joined by a promotion PR, the same shape as ochanuco/webull-trading.
   optimisation to skip: the drain below ends the claim loop, and the loop is
   a thread in that process, so nothing else brings the worker back. A deploy
   that skipped it would leave the box with no worker at all.
-- `fetch worker models` runs on a `production` push that changes
-  `manifests/worker-models.toml`, or by hand on `production`. It downloads
+- `fetch worker models` is a manual `workflow_dispatch` with the same `ref`
+  input and the same `production` approval. Run it after a deploy that
+  changes `manifests/worker-models.toml`. It downloads
   the listed Hugging Face models into the box's ComfyUI `models/`
   (`scripts/worker_models.py`) and does not restart anything.
 - `pixal3d` is a manual `workflow_dispatch` (any ref) that runs
@@ -111,5 +108,5 @@ from `gh api -X POST repos/ochanuco/chagama/actions/runners/registration-token`
 and is valid for an hour.
 
 Rows in chimera's requests queue default to `recipe_ref = production`; the
-worker serves only the branch it is checked out on, so the box stays on
-`production` between releases.
+worker serves only the branch it is checked out on, so the box stays on its
+local branch `production` between deploys.
