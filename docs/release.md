@@ -46,6 +46,12 @@ are joined by a promotion PR, the same shape as ochanuco/webull-trading.
   `manifests/worker-models.toml`, or by hand on `production`. It downloads
   the listed Hugging Face models into the box's ComfyUI `models/`
   (`scripts/worker_models.py`) and does not restart anything.
+- `pixal3d` is a manual `workflow_dispatch` (any ref) that runs
+  `scripts/pixal3d_run.py` on the box: it splits a chimera turnaround sheet
+  into its figures, sends four of them through the core Pixal3D multi-view
+  graph on the local ComfyUI, and keeps the GLB, the views and the base-color
+  texture as the run's artifact. It queues behind the worker's renders in the
+  same ComfyUI.
 - `restart worker comfyui` is a manual `workflow_dispatch` that runs the same
   restart on the box, for changes made outside a deploy.
 
