@@ -108,6 +108,26 @@ class StageTest(unittest.TestCase):
         self.assertLess(contrast(tilted, *base), 0.8 * contrast(upright, *base))
 
 
+class BlurScaleTest(unittest.TestCase):
+    def test_a_far_background_blurs_by_the_aperture_at_the_card_scale(self):
+        # 85mm at f/2 is a 42.5 mm aperture; a 1500 px card is 1 px per mm.
+        radius = photo_stage.blur_scale(1500, 85.0, 2.0, 1.0, 10_000)
+        self.assertAlmostEqual(radius, 42.5 / 2)
+
+    def test_a_closer_up_card_and_a_longer_lens_blur_more(self):
+        base = photo_stage.blur_scale(1000, 85.0, 2.8, 1.0, 10_000)
+        self.assertAlmostEqual(photo_stage.blur_scale(2000, 85.0, 2.8, 1.0, 10_000), 2 * base)
+        self.assertGreater(photo_stage.blur_scale(1000, 135.0, 2.8, 1.0, 10_000), base)
+
+    def test_the_scale_is_per_focus_depth_and_bounded(self):
+        near = photo_stage.blur_scale(1000, 85.0, 2.8, 1.0, 10_000)
+        self.assertAlmostEqual(photo_stage.blur_scale(1000, 85.0, 2.8, 0.5, 10_000), 2 * near)
+        self.assertAlmostEqual(photo_stage.blur_scale(1000, 85.0, 2.8, 0.0, 10_000),
+                               near / photo_stage.FOCUS_DEPTH_FLOOR)
+        self.assertAlmostEqual(photo_stage.blur_scale(100_000, 85.0, 1.4, 1.0, 1000),
+                               photo_stage.MAX_RADIUS_FRACTION * 1000)
+
+
 class LayeredBlurTest(unittest.TestCase):
     def test_a_near_out_of_focus_object_spreads_over_the_sharp_scene_behind(self):
         linear = np.full((60, 80, 3), 0.1, np.float32)
@@ -133,8 +153,9 @@ class BokehTest(unittest.TestCase):
         photo[20:24, 100:104] = 255.0
         depth = np.tile(np.linspace(0, 255, H, dtype=np.float32)[:, None], (1, W))
         figure, outline = layers()
+        # A long lens, so the small card in this tiny photo still blurs by pixels.
         options = {"place": (0.1, 1.0), "height": 0.3, "stand_at": None, "nearer": 0.0,
-                   "focus": photo_stage.SUBJECT, "f_number": 1.4}
+                   "focus": photo_stage.SUBJECT, "f_number": 1.4, "focal_mm": 600.0}
         plain = photo_stage.stage(photo, depth, figure, outline, **options)
         lifted = photo_stage.stage(photo, depth, figure, outline, bokeh=1.0, **options)
         around = (slice(14, 31), slice(94, 111))

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ...domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH, PHOTO_FOCAL_LENGTHS
 from .deliver_graph import depth_nodes
 
 DOF_SUFFIX = "-dof"
@@ -77,7 +78,8 @@ def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
                     place: tuple[float, float], height: float,
                     stand_at: tuple[float, float] | None, nearer: float,
                     focus: tuple[float, float] | str, f_number: float,
-                    tilt: float, bokeh: float, viewfinder: str) -> dict:
+                    tilt: float, bokeh: float, viewfinder: str,
+                    focal_length: str = PHOTO_FOCAL_LENGTH["default"]) -> dict:
     """The dof graph over the layers of a delivery set in a photo.
 
     The depth is the photo's uploaded `depth_image`, or is built from the
@@ -118,7 +120,7 @@ def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
         "stand_x": stand[0], "stand_y": stand[1], "nearer": nearer,
         "focus": "subject" if focus == "subject" else "point",
         "focus_x": point[0], "focus_y": point[1], "f_number": f_number,
-        "tilt": tilt, "bokeh": bokeh}}
+        "tilt": tilt, "bokeh": bokeh, "focal_mm": PHOTO_FOCAL_LENGTHS[focal_length]}}
     saved_ref = [blur_id, 0]
     if viewfinder != "off" and focus != "subject":
         view_id = allocate()
