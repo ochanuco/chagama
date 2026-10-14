@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH
 from ..infrastructure.comfyui.photo_graph import photo_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -54,20 +55,22 @@ def _request_parameters(generation_id: str, photo_id: str, *,
                         place: tuple[float, float], height: float,
                         stand_at: tuple[float, float] | None, nearer: float,
                         focus: tuple[float, float] | str, f_number: float,
-                        tilt: float, bokeh: float) -> dict:
+                        tilt: float, bokeh: float, focal_length: str) -> dict:
     return {"kind": "photo", "base_generation": generation_id, "photo": photo_id,
             "place": list(place), "height": height,
             "stand_at": list(stand_at) if stand_at is not None else None,
             "nearer": nearer,
             "focus": focus if isinstance(focus, str) else list(focus),
-            "f_number": f_number, "tilt": tilt, "bokeh": bokeh}
+            "f_number": f_number, "tilt": tilt, "bokeh": bokeh,
+            "focal_length": focal_length}
 
 
 def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
           place: tuple[float, float], height: float,
           stand_at: tuple[float, float] | None, nearer: float,
           focus: tuple[float, float] | str, f_number: float, tilt: float = 0.0,
-          bokeh: float = 0.0, key_prefix: str | None = None, request_id: str | None = None,
+          bokeh: float = 0.0, focal_length: str = PHOTO_FOCAL_LENGTH["default"],
+          key_prefix: str | None = None, request_id: str | None = None,
           context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "photo", key_prefix)
     if state_path:
@@ -98,7 +101,8 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
     graph = services.photo_graph(
         photo_image, layers["layer-figure"], layers["layer-outline"], prefix,
         depth_image=depth_image, place=place, height=height, stand_at=stand_at,
-        nearer=nearer, focus=focus, f_number=f_number, tilt=tilt, bokeh=bokeh)
+        nearer=nearer, focus=focus, f_number=f_number, tilt=tilt, bokeh=bokeh,
+        focal_length=focal_length)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -135,7 +139,7 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
             "parameters": _request_parameters(
                 generation_id, photo_id, place=place, height=height,
                 stand_at=stand_at, nearer=nearer, focus=focus, f_number=f_number,
-                tilt=tilt, bokeh=bokeh),
+                tilt=tilt, bokeh=bokeh, focal_length=focal_length),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [
                 {"source_generation_id": generation_id, "purpose": "rebuild",

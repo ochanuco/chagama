@@ -29,6 +29,7 @@ from ..domain.yukari.delivery_style import (
     LENS_STRENGTH,
     LIGHTING_STRENGTH,
     PHOTO_BOKEH,
+    PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
     PHOTO_PLACE_DEFAULT,
@@ -176,8 +177,9 @@ def _dof_block() -> dict:
         "guide_radius_per_f": round(sharp_reach_per_f(), 4),
         "photo": {"stand_at": {"default": None}, "nearer": PHOTO_NEARER,
                   "tilt": PHOTO_TILT, "bokeh": PHOTO_BOKEH,
+                  "focal_length": PHOTO_FOCAL_LENGTH,
                   "help": "only for a picture set in a photo by stage: the card's "
-                          "depth and lean and the photo's bokeh, as the photo "
+                          "depth and lean, the photo's bokeh and the lens, as the photo "
                           "block describes; scope does not apply there"},
     }
 
@@ -215,6 +217,10 @@ def _photo_block() -> dict:
                   "help": '"subject" focuses on the card (its middle when tilted); '
                           "[x, y] on that point of the picture"},
         "f_number": DOF_F_NUMBER,
+        "focal_length": {**PHOTO_FOCAL_LENGTH,
+                         "help": "the full-frame lens the composite is shot through; "
+                                 "the card stands for a 1.5 m figure, so a closer-up "
+                                 "card or a longer lens blurs the scene more"},
         "bokeh": {**PHOTO_BOKEH, "help": "how strongly the photo's out-of-focus "
                                          "highlights (street lamps) open into bright "
                                          "discs; 0 leaves them as they blur"},

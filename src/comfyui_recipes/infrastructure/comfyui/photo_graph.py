@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ...domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH, PHOTO_FOCAL_LENGTHS
 from .deliver_graph import depth_nodes
 
 STAGED_SUFFIX = "-staged"
@@ -12,7 +13,8 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
                 place: tuple[float, float], height: float,
                 stand_at: tuple[float, float] | None, nearer: float,
                 focus: tuple[float, float] | str, f_number: float,
-                tilt: float = 0.0, bokeh: float = 0.0) -> dict:
+                tilt: float = 0.0, bokeh: float = 0.0,
+                focal_length: str = PHOTO_FOCAL_LENGTH["default"]) -> dict:
     """The photo graph over the uploaded photo and layer images.
 
     The photo's depth is the uploaded `depth_image`, or is built from the
@@ -52,7 +54,7 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
         "stand_x": stand[0], "stand_y": stand[1], "nearer": nearer,
         "focus": "subject" if focus == "subject" else "point",
         "focus_x": point[0], "focus_y": point[1], "f_number": f_number,
-        "tilt": tilt, "bokeh": bokeh}}
+        "tilt": tilt, "bokeh": bokeh, "focal_mm": PHOTO_FOCAL_LENGTHS[focal_length]}}
     save = allocate()
     graph[save] = {"class_type": "SaveImage", "inputs": {
         "images": [stage_id, 0], "filename_prefix": prefix + STAGED_SUFFIX}}

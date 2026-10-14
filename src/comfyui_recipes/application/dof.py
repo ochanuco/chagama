@@ -7,7 +7,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..domain.yukari.delivery_style import PHOTO_BOKEH, PHOTO_NEARER, PHOTO_TILT
+from ..domain.yukari.delivery_style import (
+    PHOTO_BOKEH,
+    PHOTO_FOCAL_LENGTH,
+    PHOTO_NEARER,
+    PHOTO_TILT,
+)
 from ..infrastructure.comfyui.dof_graph import dof_graph, photo_dof_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -26,11 +31,13 @@ LENS_OUTPUT = ("lens の出力に dof はかけられません。dof を先に�
                "その絵に lens をかけてください")
 NOT_DELIVERED = "dof をかけられるのは納品の絵だけです。先に deliver してください"
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
-PHOTO_ONLY = "stand_at / nearer / tilt / bokeh は写真に置いた絵（stage の photo）の dof だけで使えます"
+PHOTO_ONLY = ("stand_at / nearer / tilt / bokeh / focal_length は"
+              "写真に置いた絵（stage の photo）の dof だけで使えます")
 LAYERED_KINDS = ("deliver", "stage", "lighting")
 SETTING_HOPS = 4
 PHOTO_BLUR_DEFAULTS = {"stand_at": None, "nearer": PHOTO_NEARER["default"],
-                       "tilt": PHOTO_TILT["default"], "bokeh": PHOTO_BOKEH["default"]}
+                       "tilt": PHOTO_TILT["default"], "bokeh": PHOTO_BOKEH["default"],
+                       "focal_length": PHOTO_FOCAL_LENGTH["default"]}
 
 
 @dataclass(frozen=True)
