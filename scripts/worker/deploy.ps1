@@ -1,8 +1,11 @@
-# Move the standing worker checkout to origin/<Ref>, refresh the venv and
-# restart the work task. Run by deploy-worker.yml on the self-hosted runner.
+# Move the standing worker checkout to the commit <Ref> (a SHA on main), refresh
+# the venv and restart the work task. Run by deploy.yml on the self-hosted runner.
+# The checkout lands on the local branch <Branch>: the worker serves only the
+# requests whose recipe_ref equals the branch it is checked out on.
 param(
     [Parameter(Mandatory = $true)][string]$Checkout,
-    [string]$Ref = "production",
+    [Parameter(Mandatory = $true)][string]$Ref,
+    [string]$Branch = "production",
     [string]$ComfyRoot = $env:COMFYUI_PORTABLE_ROOT,
     [int]$DrainSeconds = 300
 )
@@ -31,7 +34,7 @@ Get-CimInstance Win32_Process |
     ForEach-Object { cmd /c "taskkill /PID $($_.ProcessId) /T /F >nul 2>&1" }
 
 git fetch --quiet origin
-git checkout --quiet -B $Ref "origin/$Ref"
+git checkout --quiet -B $Branch $Ref
 git log --oneline -1
 $uv = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filter uv.exe |
     Select-Object -First 1 -ExpandProperty FullName

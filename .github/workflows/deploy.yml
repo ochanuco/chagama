@@ -1,0 +1,51 @@
+name: deploy
+
+# 本番（GPU 機）へのデプロイはこの手動実行だけ。Environment production の承認を通ってから
+# self-hosted runner に乗る。DB を持たないので migration は無い。
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: デプロイする ref（main、または main 上のコミット SHA）
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: update the GPU box checkout and restart work
+    runs-on: [self-hosted, gpu-box]
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The runner's own step script is unsigned, so the box's execution policy
+      # rejects `shell: powershell`; cmd hands the script to powershell with
+      # the policy bypassed instead. The same goes for every step below.
+      - name: Resolve ref
+        id: ref
+        shell: cmd
+        env:
+          REF: ${{ inputs.ref }}
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\resolve-ref.ps1"
+
+      # deploy.ps1 comes from the commit being deployed, not from the standing
+      # checkout it is about to move.
+      - name: Deploy
+        shell: cmd
+        env:
+          WORKER_CHECKOUT: ${{ vars.WORKER_CHECKOUT }}
+          COMFYUI_ROOT: ${{ vars.COMFYUI_ROOT }}
+          DEPLOY_SHA: ${{ steps.ref.outputs.sha }}
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\deploy.ps1" -Checkout "%WORKER_CHECKOUT%" -Ref "%DEPLOY_SHA%" -ComfyRoot "%COMFYUI_ROOT%"
