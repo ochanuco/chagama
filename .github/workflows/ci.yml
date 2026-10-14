@@ -16,26 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: tests and contracts
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.12"
-
-      - name: Install client deps
-        run: |
-          uv venv .venv
-          uv pip install --python .venv/bin/python -e . pillow numpy opencv-python scipy pytest onnxruntime websockets
-
-      - name: Tests
-        run: PYTHONPATH=scripts .venv/bin/pytest -q
-
-      - name: Delivery identity contract
-        run: .venv/bin/python scripts/delivery_check.py
+  ci:
+    uses: ochanuco/.github/.github/workflows/uv.yml@5dc4f2961ad12425cb2b3c6ab38cd52c9b8b6558 # main
+    with:
+      run: bash scripts/check.sh
