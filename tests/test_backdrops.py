@@ -6,15 +6,15 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.infrastructure.imaging.backdrops import (
+from chagama.domain.yukari import delivery_style
+from chagama.infrastructure.imaging.backdrops import (
     PATTERNS,
     is_backdrop,
     render,
     stripes,
     thumbnail,
 )
-from comfyui_recipes.infrastructure.imaging.delivery import parse_color
+from chagama.infrastructure.imaging.delivery import parse_color
 
 PATTERN_NAMES = (
     "stripes", "waveform", "ears", "phases", "hatching", "torn",

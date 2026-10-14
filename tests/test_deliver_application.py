@@ -12,16 +12,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.deliver import (
+from chagama.application.deliver import (
     DeliverServices,
     current_cut,
     deliver,
 )
-from comfyui_recipes.application.ingest import classify_deliver_outputs
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.domain.yukari.delivery_style import Light
-from comfyui_recipes.infrastructure.comfyui.deliver_graph import deliver_graph
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.application.ingest import classify_deliver_outputs
+from chagama.domain.yukari import delivery_style
+from chagama.domain.yukari.delivery_style import Light
+from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 LAYERS = ["dlv-g-layer-figure", "dlv-g-layer-outline", "dlv-g-layer-backdrop"]
 OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]

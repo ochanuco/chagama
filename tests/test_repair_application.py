@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.repair import RepairServices, repair
+from chagama.application.repair import RepairServices, repair
 
 SOURCE_GRAPH = {
     "3": {"class_type": "KSampler", "inputs": {

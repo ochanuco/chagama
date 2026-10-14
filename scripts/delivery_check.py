@@ -19,7 +19,7 @@ import json
 import sys
 from pathlib import Path
 
-from comfyui_recipes.domain.yukari import delivery_style as d
+from chagama.domain.yukari import delivery_style as d
 
 BASELINE = Path(__file__).resolve().parent.parent / "assets/delivery-fingerprint.json"
 

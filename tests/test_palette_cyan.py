@@ -5,10 +5,10 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari.delivery_style import (
+from chagama.domain.yukari.delivery_style import (
     REPIN_DARK, REPIN_LIGHT, REPIN_SKIN_CAP,
 )
-from comfyui_recipes.infrastructure.imaging.palette import palette_window, repin
+from chagama.infrastructure.imaging.palette import palette_window, repin
 
 KNEE, RATIO = REPIN_LIGHT
 DARK_KNEE, DARK_RATIO = REPIN_DARK

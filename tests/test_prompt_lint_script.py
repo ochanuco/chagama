@@ -4,7 +4,7 @@ import unittest
 
 import prompt_lint
 
-from comfyui_recipes.domain.yukari.recipe import negative, positive
+from chagama.domain.yukari.recipe import negative, positive
 
 
 class PromptLintScriptTest(unittest.TestCase):

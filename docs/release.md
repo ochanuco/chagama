@@ -86,7 +86,7 @@ come with the box and reinstalling them into a working ComfyUI is how it
 stops working.
 
 The claim loop is a thread inside ComfyUI's own process, started by
-`comfy_nodes/yukari_worker/` when `COMFYUI_RECIPES_WORKER` is set. The
+`comfy_nodes/yukari_worker/` when `CHAGAMA_WORKER` is set. The
 variable is a user environment variable on the box, written by
 `register-comfyui.ps1`, because a scheduled task inherits the user
 environment and not a shell's. The thread waits for ComfyUI's own HTTP to
@@ -106,8 +106,8 @@ are.
 `scripts/worker/register-runner.ps1 -Token <registration token> -Version <x.y.z>`
 downloads the runner, registers it against this repository with the label
 `gpu-box`, and installs `run.cmd` as the per-user logon task `actions-runner`
-next to `comfyui` and `comfyui-recipes-watch`. The registration token comes
-from `gh api -X POST repos/ochanuco/comfyui-recipes/actions/runners/registration-token`
+next to `comfyui` and `chagama-watch`. The registration token comes
+from `gh api -X POST repos/ochanuco/chagama/actions/runners/registration-token`
 and is valid for an hour.
 
 Rows in chimera's requests queue default to `recipe_ref = production`; the

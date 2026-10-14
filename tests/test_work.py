@@ -16,16 +16,16 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from comfyui_recipes.application.generate import GenerateServices
-from comfyui_recipes.application.work import (
+from chagama.application.generate import GenerateServices
+from chagama.application.work import (
     WorkServices,
     execute,
     release_claims,
     work,
     work_once,
 )
-from comfyui_recipes.application.worker_channels import Heartbeat, HubListener, ProgressRelay
-from comfyui_recipes.interfaces.agent import DEFAULT_KINDS
+from chagama.application.worker_channels import Heartbeat, HubListener, ProgressRelay
+from chagama.interfaces.agent import DEFAULT_KINDS
 
 
 class ManagementFake:
@@ -911,7 +911,7 @@ class WorkLoopTest(unittest.TestCase):
                 raise KeyboardInterrupt
 
             services = make_services(directory, management, sleep=interrupt)
-            with patch("comfyui_recipes.application.work.release_claims") as release:
+            with patch("chagama.application.work.release_claims") as release:
                 work(services, once=False, publish_catalog=False)
             self.assertEqual(release.call_count, 2)  # startup cleanup + shutdown cleanup
 

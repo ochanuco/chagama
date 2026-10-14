@@ -7,8 +7,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.lens import LensServices, lens
-from comfyui_recipes.application.picture_source import is_delivered
+from chagama.application.lens import LensServices, lens
+from chagama.application.picture_source import is_delivered
 
 
 class ManagementFake:
@@ -162,7 +162,7 @@ class LensUseCaseTest(unittest.TestCase):
 
 class DofAfterLensTest(unittest.TestCase):
     def test_dof_refuses_a_lens_picture_and_names_the_order(self):
-        from comfyui_recipes.application.dof import DofServices, dof
+        from chagama.application.dof import DofServices, dof
         management = ManagementFake(request_kind="lens",
                                     parameters={"kind": "lens", "base_generation": "d"})
         with tempfile.TemporaryDirectory() as directory:

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.masked_redraw import (
+from chagama.application.masked_redraw import (
     MaskedRedrawServices,
     masked_redraw,
 )

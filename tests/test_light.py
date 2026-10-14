@@ -10,13 +10,13 @@ from unittest import mock
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.infrastructure.comfyui.base_graph import base_roles
-from comfyui_recipes.infrastructure.comfyui.deliver_graph import deliver_graph
-from comfyui_recipes.infrastructure.comfyui.light_graph import light_graph, light_words
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import DEPTH_NODE
-from comfyui_recipes.infrastructure.imaging import light
-from comfyui_recipes.infrastructure.imaging.delivery import band_alphas, clean_background, sticker
+from chagama.domain.yukari import delivery_style
+from chagama.infrastructure.comfyui.base_graph import base_roles
+from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
+from chagama.infrastructure.comfyui.light_graph import light_graph, light_words
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.infrastructure.imaging import light
+from chagama.infrastructure.imaging.delivery import band_alphas, clean_background, sticker
 
 SOURCE = {
     "1": {"class_type": "UNETLoader", "inputs": {}},

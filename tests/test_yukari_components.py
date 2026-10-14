@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import unittest
 
-from comfyui_recipes.domain.yukari.components import (
+from chagama.domain.yukari.components import (
     PART_OF,
     Component,
     Framing,
@@ -14,9 +14,9 @@ from comfyui_recipes.domain.yukari.components import (
     Section,
     assemble,
 )
-from comfyui_recipes.domain.yukari.framing import FRAMING
-from comfyui_recipes.domain.yukari.poses import POSES
-from comfyui_recipes.domain.yukari.recipe import (
+from chagama.domain.yukari.framing import FRAMING
+from chagama.domain.yukari.poses import POSES
+from chagama.domain.yukari.recipe import (
     PART_GROUPS,
     PART_NAMES,
     _components,

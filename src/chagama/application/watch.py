@@ -1,7 +1,7 @@
 """Turn chimera's pending ExperimentRuns into generations.
 
 The bridge between a Cloudflare-hosted Agent (no render-host access) and a
-local `comfy-recipes generate`. Evaluation, decision and promotion are out
+local `chagama generate`. Evaluation, decision and promotion are out
 of scope here.
 """
 
@@ -46,7 +46,7 @@ def _fallback_summary(item: Mapping) -> str:
 
 
 def build_request(item: Mapping) -> dict:
-    """Build a comfy-recipes request.json body from one pending Run item.
+    """Build a chagama request.json body from one pending Run item.
 
     Raises SkipRun when the item's experiment names no base_recipe. Callers
     should also run the result through validate_request.

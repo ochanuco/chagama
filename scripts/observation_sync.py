@@ -11,8 +11,8 @@ import argparse
 import json
 from pathlib import Path
 
-from comfyui_recipes.infrastructure.chimera.client import ChimeraClient
-from comfyui_recipes.infrastructure.repository import discover_repository
+from chagama.infrastructure.chimera.client import ChimeraClient
+from chagama.infrastructure.repository import discover_repository
 
 # Manual overrides for records whose character/component can't be derived
 # from the file path alone.
