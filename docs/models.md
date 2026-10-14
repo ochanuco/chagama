@@ -17,7 +17,7 @@ The code names the files; this is where to look.
 | Repair part LoRAs | `feet-xl-ill`, `hands-xl-ill` | `domain/repair/loras.py` |
 | Repair ControlNet | `noob-lineart-anime-fp16` | `domain/repair/controlnet.py` |
 | Stage 1 reserve, opt-in by `render.model` patch | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | — |
-| Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | `Comfy-Org/Pixal3D` files | `manifests/worker-models.toml` |
+| Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | Comfy-Org Pixal3D, TRELLIS.2, MoGe and BiRefNet files | `manifests/worker-models.toml` |
 
 `silvermoonmixAnimaEvolved_v2329BTurbo` is sampled with `render.guided_steps`:
 the leading steps at the recipe's own CFG, the rest at CFG 1.0 off the same
