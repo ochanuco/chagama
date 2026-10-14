@@ -214,6 +214,7 @@ class StagedDofTest(unittest.TestCase):
                          (0.6, 1.1, 0.9))
         self.assertEqual((inputs["tilt"], inputs["bokeh"], inputs["focus"]),
                          (0.5, 1.0, "point"))
+        self.assertEqual(inputs["focal_mm"], 85.0)
         self.assertIn(("dof-lit-source-", b"image:pic"),
                       [(name[:15], data) for name, data in services.comfyui.uploaded])
         parameters = management.resolution()["parameters"]

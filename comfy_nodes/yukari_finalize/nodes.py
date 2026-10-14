@@ -332,11 +332,13 @@ class YukariPhotoStage:
         }, "optional": {
             "tilt": ("FLOAT", {"default": 0.0, "min": -1.0, "max": 1.0, "step": 0.01}),
             "bokeh": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "focal_mm": _focal_mm(),
         }}
 
     def run(self, photo, depth, figure, figure_mask, outline, outline_mask,
             place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
-            focus_x, focus_y, f_number, tilt=0.0, bokeh=0.0):
+            focus_x, focus_y, f_number, tilt=0.0, bokeh=0.0,
+            focal_mm=photo_stage.DEFAULT_FOCAL_MM):
         data = photo_stage.stage_png(
             bridge.image_to_png(photo), bridge.image_to_png(depth),
             bridge.loaded_rgba_png(figure, figure_mask),
@@ -345,8 +347,13 @@ class YukariPhotoStage:
             stand_at=(stand_x, stand_y) if stand == "point" else None,
             nearer=nearer,
             focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
-            f_number=f_number, tilt=tilt, bokeh=bokeh)
+            f_number=f_number, tilt=tilt, bokeh=bokeh, focal_mm=focal_mm)
         return (bridge.png_to_image(data),)
+
+
+def _focal_mm():
+    return ("FLOAT", {"default": photo_stage.DEFAULT_FOCAL_MM, "min": 8.0,
+                      "max": 800.0, "step": 1.0})
 
 
 def _fraction(default):
@@ -456,11 +463,14 @@ class YukariPhotoDepthOfField:
             "f_number": ("FLOAT", {"default": 2.8, "min": 1.4, "max": 22.0, "step": 0.1}),
             "tilt": ("FLOAT", {"default": 0.0, "min": -1.0, "max": 1.0, "step": 0.01}),
             "bokeh": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+        }, "optional": {
+            "focal_mm": _focal_mm(),
         }}
 
     def run(self, backdrop, depth, figure, figure_mask, outline, outline_mask,
             place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
-            focus_x, focus_y, f_number, tilt, bokeh):
+            focus_x, focus_y, f_number, tilt, bokeh,
+            focal_mm=photo_stage.DEFAULT_FOCAL_MM):
         data = staging.blur_on_photo_png(
             bridge.image_to_png(backdrop), bridge.image_to_png(depth),
             bridge.loaded_rgba_png(figure, figure_mask),
@@ -469,7 +479,7 @@ class YukariPhotoDepthOfField:
             stand_at=(stand_x, stand_y) if stand == "point" else None,
             nearer=nearer,
             focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
-            f_number=f_number, tilt=tilt, bokeh=bokeh)
+            f_number=f_number, tilt=tilt, bokeh=bokeh, focal_mm=focal_mm)
         return (bridge.png_to_image(data),)
 
 

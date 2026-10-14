@@ -158,6 +158,7 @@ class PhotoUseCaseTest(unittest.TestCase):
         self.assertEqual((inputs["focus"], inputs["focus_x"], inputs["focus_y"]),
                          ("point", 0.8, 0.35))
         self.assertEqual((inputs["nearer"], inputs["tilt"]), (0.2, 0.0))
+        self.assertEqual(inputs["focal_mm"], 85.0)
         services, _ = run()
         inputs = stage_node(services.comfyui.submitted[0])["inputs"]
         self.assertEqual((inputs["stand"], inputs["focus"]), ("base", "subject"))
@@ -169,7 +170,8 @@ class PhotoUseCaseTest(unittest.TestCase):
         self.assertEqual(resolution["parameters"], {
             "kind": "photo", "base_generation": "dlv", "photo": "pic",
             "place": [0.3, 0.9], "height": 0.6, "stand_at": [0.8, 0.4],
-            "nearer": 0.0, "focus": "subject", "f_number": 2.0, "tilt": 0.0, "bokeh": 0.0})
+            "nearer": 0.0, "focus": "subject", "f_number": 2.0, "tilt": 0.0, "bokeh": 0.0,
+            "focal_length": "85mm"})
         self.assertEqual([ref["source_generation_id"] for ref in resolution["references"]],
                          ["dlv", "pic"])
 

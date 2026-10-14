@@ -567,6 +567,16 @@ PHOTO_NEARER = {"min": 0.0, "max": 1.0, "default": 0.0}
 PHOTO_TILT = {"min": -1.0, "max": 1.0, "default": 0.0}
 # How strongly the photo's out-of-focus highlights open into bright discs.
 PHOTO_BOKEH = {"min": 0.0, "max": 1.0, "default": 0.0}
+# The lens a photo composite (and a dof on a photo-set picture) is shot
+# through, by name: its full-frame focal length in mm. The card's framing is
+# fixed, so a longer lens stands farther back with a wider aperture at one
+# f-number and blurs the scene more. Add a lens here to offer it.
+PHOTO_FOCAL_LENGTHS = {"85mm": 85.0}
+PHOTO_FOCAL_LENGTH = {"values": list(PHOTO_FOCAL_LENGTHS), "default": "85mm"}
+# The real height the card stands for: a standing Yukari, about 1.5 m. A
+# seated or cropped figure is smaller, so it blurs a little less than the
+# same framing would through a real lens.
+PHOTO_SUBJECT_MM = 1500.0
 # A stage request sets a delivery's figure and outline layers on a backdrop of
 # their own: a pattern (or #RRGGBB) at the delivery's canvas, optionally with
 # the drop shadow thrown away from `shadow_from`, or a photo, the card's base

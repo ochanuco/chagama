@@ -51,6 +51,7 @@ from ..domain.yukari.delivery_style import (
     LIGHTING_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
+    PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     STROKE_CHOICES,
     STROKE_LIGHTS,
@@ -143,6 +144,7 @@ def _dof_options_from_args(args) -> dict:
         **({"nearer": args.nearer} if args.nearer is not None else {}),
         **({"tilt": args.tilt} if args.tilt is not None else {}),
         **({"bokeh": args.bokeh} if args.bokeh is not None else {}),
+        **({"focal_length": args.focal_length} if args.focal_length is not None else {}),
     }
 
 
@@ -188,6 +190,8 @@ def _photo_options_from_args(args) -> dict:
         options["tilt"] = args.tilt
     if args.bokeh is not None:
         options["bokeh"] = args.bokeh
+    if args.focal_length is not None:
+        options["focal_length"] = args.focal_length
     return options
 
 
@@ -410,6 +414,10 @@ def parser() -> argparse.ArgumentParser:
     dof_parser.add_argument(
         "--bokeh", type=float, default=None,
         help="photo-set pictures only: open out-of-focus highlights into discs, 0..1")
+    dof_parser.add_argument(
+        "--focal-length", choices=PHOTO_FOCAL_LENGTH["values"], default=None,
+        help="photo-set pictures only: the full-frame lens it is shot through "
+             f"(default {PHOTO_FOCAL_LENGTH['default']})")
 
     lens_parser = commands.add_parser(
         "lens", help="distort one delivered picture through a fisheye or its inverse")
@@ -464,6 +472,10 @@ def parser() -> argparse.ArgumentParser:
         "--f-number", type=float, default=None,
         help=f"{DOF_F_NUMBER['min']}..{DOF_F_NUMBER['max']} "
              f"(default {DOF_F_NUMBER['default']})")
+    photo_parser.add_argument(
+        "--focal-length", choices=PHOTO_FOCAL_LENGTH["values"], default=None,
+        help="the full-frame lens the photo is shot through; a longer lens "
+             f"blurs the scene more (default {PHOTO_FOCAL_LENGTH['default']})")
 
     stage_parser = commands.add_parser(
         "stage", help="set one delivered picture on a backdrop pattern or in a photo")
