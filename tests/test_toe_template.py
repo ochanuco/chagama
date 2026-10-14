@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 from scipy import ndimage
 
-from comfyui_recipes.infrastructure.imaging.toe_template import reference_hint
+from chagama.infrastructure.imaging.toe_template import reference_hint
 
 
 class ReferenceHintTest(unittest.TestCase):

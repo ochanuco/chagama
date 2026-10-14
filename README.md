@@ -1,23 +1,23 @@
-# comfyui-recipes
+# chagama
 
 A command-line front end for [ComfyUI](https://github.com/Comfy-Org/ComfyUI).
 No web UI and no custom nodes of its own. The public entry point is
-`comfy-recipes`; it builds a graph, records the run in Chimera, submits it to
+`chagama`; it builds a graph, records the run in Chimera, submits it to
 ComfyUI, and pulls the result back.
 
 Two things make it more than a thin API wrapper:
 
 **The defaults are the recipe.** The Yukari domain owns the checkpoint,
 sampler, resolution and prompt blocks that took many rounds of rendering to find.
-`comfy-recipes yukari prompt --pose bust` inspects the exact prompt without
+`chagama yukari prompt --pose bust` inspects the exact prompt without
 queueing; actual generation always uses a recorded request.
 
-**The GPU box is the only executor.** `comfy-recipes work` runs there next to
+**The GPU box is the only executor.** `chagama work` runs there next to
 ComfyUI, claims request rows from chimera, and renders them; a session on any
 other machine queues rows and reads results, and never talks to ComfyUI.
 
 ```bash
-uv run comfy-recipes work                # on the GPU box: serve chimera's queue
+uv run chagama work                # on the GPU box: serve chimera's queue
 ```
 
 ## Finding your way
@@ -59,9 +59,9 @@ model these recipes were tuned against.
 
 A round is queued on [chimera](https://chimera.chanu.co) — through its MCP
 tools (`derive_request`, `redraw_generation`, `deliver_generation`, `repair_generation`) or
-`POST /api/v1/requests` — and `comfy-recipes work` on the GPU box is the one
+`POST /api/v1/requests` — and `chagama work` on the GPU box is the one
 command that executes it. Inside the worker, a `generate` row runs the same
-code as `comfy-recipes generate --request`: it validates the request, submits
+code as `chagama generate --request`: it validates the request, submits
 the graph, and records the request in the Management API on the way through —
 the resolved values, Job registration, image ingest into R2, and a Discord notification
 that carries the generation's canonical URL. Running `generate` by hand is a
@@ -69,8 +69,8 @@ worker-box operation for replaying a recorded request file, not a way to
 queue work.
 
 ```bash
-uv run comfy-recipes work                                        # serve the queue (GPU box)
-uv run comfy-recipes generate --request request.json --dry-run   # validate a request file, nothing sent
+uv run chagama work                                        # serve the queue (GPU box)
+uv run chagama generate --request request.json --dry-run   # validate a request file, nothing sent
 ```
 
 `request.json` follows the contract in the chimera repository's
@@ -94,7 +94,7 @@ makes re-running the same command safe — it holds the idempotency keys, reques
 and job ids, and the seeds, so a retry resumes from wherever the last run
 stopped instead of creating duplicates.
 
-`comfy-recipes import IMAGE... --recipe R --parameters JSON` registers existing image
+`chagama import IMAGE... --recipe R --parameters JSON` registers existing image
 files as an import request with one job, idempotent by `--idempotency-key`.
 
 ## What this is, and what it is not

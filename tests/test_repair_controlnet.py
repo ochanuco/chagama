@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from comfyui_recipes.domain.repair.controlnet import (
+from chagama.domain.repair.controlnet import (
     CONTROL_MODELS,
     DEFAULT_CONTROL_STRENGTH,
     control_model,

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from comfyui_recipes.domain.yukari import delivery_style
+from chagama.domain.yukari import delivery_style
 
 _loaded: dict = {}
 

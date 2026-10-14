@@ -7,14 +7,14 @@ import math
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.domain.repair.loras import PART_LORAS, part_loras
-from comfyui_recipes.domain.repair.prompt import (
+from chagama.domain.repair.loras import PART_LORAS, part_loras
+from chagama.domain.repair.prompt import (
     PART_TAGS,
     REPAIR_DROP_WORDS,
     masked_redraw_prompt,
     repair_prompt,
 )
-from comfyui_recipes.domain.repair.regions import (
+from chagama.domain.repair.regions import (
     Circle,
     Rect,
     rects_from_fractions,

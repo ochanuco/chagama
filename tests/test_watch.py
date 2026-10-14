@@ -11,8 +11,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.generate import GenerateServices, validate_request
-from comfyui_recipes.application.watch import (
+from chagama.application.generate import GenerateServices, validate_request
+from chagama.application.watch import (
     SkipRun,
     WatchServices,
     build_request,

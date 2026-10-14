@@ -18,7 +18,7 @@ function Wait-ComfyUI {
 while ($true) {
     Wait-ComfyUI
     "$(Get-Date -Format s) start" | Out-File -Append -Encoding utf8 $log
-    & "$repo\.venv\Scripts\comfy-recipes.exe" work --interval 30 2>&1 |
+    & "$repo\.venv\Scripts\chagama.exe" work --interval 30 2>&1 |
         Out-File -Append -Encoding utf8 $log
     "$(Get-Date -Format s) exit $LASTEXITCODE" | Out-File -Append -Encoding utf8 $log
     Start-Sleep -Seconds 10

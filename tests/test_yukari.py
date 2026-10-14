@@ -10,11 +10,11 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from comfyui_recipes.application.generate import request_graph, validate_request
-from comfyui_recipes.domain.generation.models import PromptPair
-from comfyui_recipes.domain.generation.prompt_lint import tags as prompt_tags
-from comfyui_recipes.domain.yukari import prompt_style as ps
-from comfyui_recipes.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
+from chagama.application.generate import request_graph, validate_request
+from chagama.domain.generation.models import PromptPair
+from chagama.domain.generation.prompt_lint import tags as prompt_tags
+from chagama.domain.yukari import prompt_style as ps
+from chagama.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
                                                     OFF_LEGWEAR,
                                                     OFF_LEGWEAR_BAN,
                                                     REMOVING_LEGWEAR,
@@ -22,16 +22,16 @@ from comfyui_recipes.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
                                                     SHEER_GLOSS_LEGWEAR,
                                                     SHEER_LEGWEAR,
                                                     LegwearState)
-from comfyui_recipes.domain.yukari.expressions import (
+from chagama.domain.yukari.expressions import (
     EXPRESSIONS, EYE_QUALITY, Expression, EyeQuality)
-from comfyui_recipes.domain.yukari.poses import POSES
-from comfyui_recipes.domain.yukari.recipe import (
+from chagama.domain.yukari.poses import POSES
+from chagama.domain.yukari.recipe import (
     PART_NAMES, identity_tags, negative, positive, positive_parts,
     refinement_prompt, render_spec,
 )
-from comfyui_recipes.infrastructure.comfyui import anima_graph
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import redraw_graph
-from comfyui_recipes.interfaces import cli
+from chagama.infrastructure.comfyui import anima_graph
+from chagama.infrastructure.comfyui.refinement_graph import redraw_graph
+from chagama.interfaces import cli
 
 FIXTURES = Path(__file__).parent / "fixtures"
 DANCE_FIXTURE = json.loads((FIXTURES / "dance-legwear-t4qwab.json").read_text())
@@ -1063,7 +1063,7 @@ class GuidedStepsTest(unittest.TestCase):
         self.assertEqual(graph["8"]["inputs"]["samples"], ["13", 0])
 
     def test_render_guided_steps_patch_applies(self):
-        from comfyui_recipes.domain.generation.patches import (
+        from chagama.domain.generation.patches import (
             apply_patches, parse_patches,
         )
         spec = render_spec("coffee", 42, "p")
@@ -1076,7 +1076,7 @@ class GuidedStepsTest(unittest.TestCase):
         self.assertEqual(graph["3"]["class_type"], "KSampler")
 
     def test_render_guided_steps_patch_rejects_negative_and_non_int(self):
-        from comfyui_recipes.domain.generation.patches import parse_patches
+        from chagama.domain.generation.patches import parse_patches
         for value in (-1, 2.5, True):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):

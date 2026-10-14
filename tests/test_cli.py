@@ -7,9 +7,9 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
-from comfyui_recipes.application.deliver import RECIPE_DEFAULT
-from comfyui_recipes.domain.yukari.delivery_style import Light
-from comfyui_recipes.interfaces import cli
+from chagama.application.deliver import RECIPE_DEFAULT
+from chagama.domain.yukari.delivery_style import Light
+from chagama.interfaces import cli
 
 
 class CliTest(unittest.TestCase):

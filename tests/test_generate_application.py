@@ -11,8 +11,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from comfyui_recipes.application import ingest
-from comfyui_recipes.application.generate import (
+from chagama.application import ingest
+from chagama.application.generate import (
     GenerateServices,
     _image_output_path,
     _output_directory,
@@ -354,7 +354,7 @@ class GenerateApplicationTest(unittest.TestCase):
         self.assertEqual(generation["patches"], own_patches)
 
     def test_request_graph_applies_experiment_override_patches(self):
-        from comfyui_recipes.domain.generation.models import PromptPair, RenderSpec
+        from chagama.domain.generation.models import PromptPair, RenderSpec
 
         def builder(*args, **kwargs):
             return RenderSpec(
@@ -501,7 +501,7 @@ class GenerateApplicationTest(unittest.TestCase):
         self.assertEqual(original["a"]["inputs"]["seed"], 1)
 
     def test_request_graph_builds_yukari_and_applies_overrides(self):
-        from comfyui_recipes.domain.generation.models import PromptPair, RenderSpec
+        from chagama.domain.generation.models import PromptPair, RenderSpec
 
         seen = {}
 
@@ -532,7 +532,7 @@ class GenerateApplicationTest(unittest.TestCase):
         self.assertEqual(graph["7"]["inputs"]["text"], "override-neg")
 
     def test_request_graph_forwards_only_present_optional_parameters(self):
-        from comfyui_recipes.domain.generation.models import PromptPair, RenderSpec
+        from chagama.domain.generation.models import PromptPair, RenderSpec
 
         seen = {}
 
@@ -1040,7 +1040,7 @@ class GenerateApplicationTest(unittest.TestCase):
         before rendering, and must render -- with the loss recorded -- once
         `identity_override` states why.
         """
-        from comfyui_recipes.interfaces.agent import (
+        from chagama.interfaces.agent import (
             _build_generation_graph, _identity_tags,
         )
 

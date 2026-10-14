@@ -10,15 +10,15 @@ behind the values are in [`docs/findings/`](../findings/).
 ## Read the prompt, not the source
 
 ```bash
-uv run comfy-recipes yukari prompt --pose bust                          # assembled positive/negative
-uv run comfy-recipes yukari prompt --pose bust --costume standard --expression gao --json
-uv run comfy-recipes catalog                                            # every pose, part, dial
+uv run chagama yukari prompt --pose bust                          # assembled positive/negative
+uv run chagama yukari prompt --pose bust --costume standard --expression gao --json
+uv run chagama catalog                                            # every pose, part, dial
 ```
 
 On the MCP, `get_catalog_pose yukari <pose>` returns the same thing as the
 production worker sees it.
 
-## Where things are (`src/comfyui_recipes/domain/yukari/`)
+## Where things are (`src/chagama/domain/yukari/`)
 
 | File | Holds |
 |---|---|

@@ -13,9 +13,9 @@ import unittest
 
 from PIL import Image
 
-from comfyui_recipes.application.catalog import build_catalog, publish_catalog
-from comfyui_recipes.application.generate import validate_request
-from comfyui_recipes.application.request_options import (
+from chagama.application.catalog import build_catalog, publish_catalog
+from chagama.application.generate import validate_request
+from chagama.application.request_options import (
     _KNOWN_DELIVER_OPTIONS,
     _KNOWN_REDRAW_OPTIONS,
     _KNOWN_REPAIR_OPTIONS,
@@ -23,14 +23,14 @@ from comfyui_recipes.application.request_options import (
     redraw_arguments,
     repair_arguments,
 )
-from comfyui_recipes.domain.generation.patches import (
+from chagama.domain.generation.patches import (
     NUMBER_TARGETS,
     STRING_TARGETS,
     TEXT_TARGETS,
     parse_patches,
 )
-from comfyui_recipes.domain.yukari.delivery_style import BACKDROP_LABELS
-from comfyui_recipes.infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
+from chagama.domain.yukari.delivery_style import BACKDROP_LABELS
+from chagama.infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 
 GIT = {"commit": "abc123", "branch": "dev/catalog-publish", "dirty": False}
 

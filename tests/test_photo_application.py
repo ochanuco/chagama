@@ -8,9 +8,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.cut_assets import current_cut
-from comfyui_recipes.application.photo import PhotoServices, photo
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.application.cut_assets import current_cut
+from chagama.application.photo import PhotoServices, photo
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
           "layer-backdrop": b"backdrop-png"}
@@ -119,7 +119,7 @@ class PhotoSourceTest(unittest.TestCase):
 
 class PhotoOutputTest(unittest.TestCase):
     def test_photo_outputs_count_as_delivered(self):
-        from comfyui_recipes.application.picture_source import is_delivered
+        from chagama.application.picture_source import is_delivered
         self.assertTrue(is_delivered({"kind": "photo"}))
 
 

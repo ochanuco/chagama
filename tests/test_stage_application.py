@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.dof import DofServices, dof
-from comfyui_recipes.application.stage import StageServices, lighting, stage
+from chagama.application.dof import DofServices, dof
+from chagama.application.stage import StageServices, lighting, stage
 
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
           "layer-backdrop": b"backdrop-png"}

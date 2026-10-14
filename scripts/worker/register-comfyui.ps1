@@ -3,7 +3,8 @@
 param([Parameter(Mandatory = $true)][string]$PortableRoot)
 # The claim loop runs inside this process (comfy_nodes/yukari_worker), and a
 # scheduled task inherits the user environment rather than a shell's.
-[Environment]::SetEnvironmentVariable("COMFYUI_RECIPES_WORKER", "1", "User")
+[Environment]::SetEnvironmentVariable("CHAGAMA_WORKER", "1", "User")
+[Environment]::SetEnvironmentVariable("COMFYUI_RECIPES_WORKER", $null, "User")
 $python = Join-Path $PortableRoot "python_embeded\python.exe"
 if (-not (Test-Path $python)) { throw "not found: $python" }
 $arguments = @(

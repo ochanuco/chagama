@@ -6,16 +6,16 @@
 This is the acceptance gate: run it on every arm the moment it is ingested,
 and do not present a FAIL as a candidate. A pass is not approval -- the
 human still judges -- but a FAIL never goes forward. `measure`/`verdict`
-live in `comfyui_recipes.infrastructure.imaging.palette`; this is the CLI.
+live in `chagama.infrastructure.imaging.palette`; this is the CLI.
 """
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
 
-from comfyui_recipes.infrastructure.chimera.client import ChimeraClient
-from comfyui_recipes.infrastructure.imaging.palette import measure, verdict
-from comfyui_recipes.infrastructure.repository import discover_repository
+from chagama.infrastructure.chimera.client import ChimeraClient
+from chagama.infrastructure.imaging.palette import measure, verdict
+from chagama.infrastructure.repository import discover_repository
 
 
 def main() -> None:

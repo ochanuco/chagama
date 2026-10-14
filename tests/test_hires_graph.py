@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import unittest
 
-from comfyui_recipes.infrastructure.comfyui.base_graph import base_roles, hires_graph
+from chagama.infrastructure.comfyui.base_graph import base_roles, hires_graph
 
 PORTRAIT_2048 = 1280 * 2048
 

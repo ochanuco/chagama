@@ -8,7 +8,7 @@ Every render is a row on chimera's `requests` queue, posted through the MCP
 `dof_generation`, `lens_generation`, `photo_generation`, `stage_generation`,
 `lighting_generation`, `repair_generation`, `masked_redraw_generation`,
 `create_request`) or `POST /api/v1/requests`.
-`comfy-recipes work` on the GPU box claims a row, runs it, and ingests the
+`chagama work` on the GPU box claims a row, runs it, and ingests the
 result back into chimera. Nothing else submits to ComfyUI.
 
 ## Where the details are
@@ -19,10 +19,10 @@ Options, defaults and ranges live here:
 | Question | Source |
 |---|---|
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
-| Every option of a kind, its default and range | `uv run comfy-recipes <generate\|work\|redraw\|deliver\|stage\|lighting\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
-| Poses, costumes, parts, patch targets, dials, redraw, deliver, stage, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run comfy-recipes catalog` |
+| Every option of a kind, its default and range | `uv run chagama <generate\|work\|redraw\|deliver\|stage\|lighting\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
+| Poses, costumes, parts, patch targets, dials, redraw, deliver, stage, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run chagama catalog` |
 | Patch targets and their ops | `domain/generation/patches.py` |
-| What a request would render, without rendering | `uv run comfy-recipes generate --request r.json --dry-run` |
+| What a request would render, without rendering | `uv run chagama generate --request r.json --dry-run` |
 
 ## Kinds
 

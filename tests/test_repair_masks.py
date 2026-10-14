@@ -8,8 +8,8 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.repair.regions import Circle, Rect
-from comfyui_recipes.infrastructure.imaging.masks import (
+from chagama.domain.repair.regions import Circle, Rect
+from chagama.infrastructure.imaging.masks import (
     mask_bbox_fraction,
     render_mask_png,
     render_soft_mask_png,

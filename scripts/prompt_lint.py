@@ -7,8 +7,8 @@ import argparse
 import json
 from pathlib import Path
 
-from comfyui_recipes.domain.generation.prompt_lint import conflicts
-from comfyui_recipes.domain.yukari.recipe import negative, positive
+from chagama.domain.generation.prompt_lint import conflicts
+from chagama.domain.yukari.recipe import negative, positive
 
 
 def request_prompts(request: dict) -> tuple[str, str]:

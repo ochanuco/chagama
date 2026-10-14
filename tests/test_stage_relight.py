@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from comfyui_recipes.infrastructure.imaging import photo_stage, relight, stage
+from chagama.infrastructure.imaging import photo_stage, relight, stage
 
 
 def layers(height=80, width=60):

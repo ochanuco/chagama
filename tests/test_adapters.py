@@ -15,13 +15,13 @@ from unittest.mock import MagicMock, call, patch
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari.recipe import render_spec
-from comfyui_recipes.infrastructure.chimera.client import ChimeraClient
-from comfyui_recipes.infrastructure.comfyui import anima_graph
-from comfyui_recipes.infrastructure.comfyui.client import ComfyUIClient, as_png
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import redraw_graph
-from comfyui_recipes.infrastructure.notifications.discord import DiscordNotifier
-from comfyui_recipes.infrastructure.persistence.run_state import JsonRunState
+from chagama.domain.yukari.recipe import render_spec
+from chagama.infrastructure.chimera.client import ChimeraClient
+from chagama.infrastructure.comfyui import anima_graph
+from chagama.infrastructure.comfyui.client import ComfyUIClient, as_png
+from chagama.infrastructure.comfyui.refinement_graph import redraw_graph
+from chagama.infrastructure.notifications.discord import DiscordNotifier
+from chagama.infrastructure.persistence.run_state import JsonRunState
 
 
 class AdapterTest(unittest.TestCase):
@@ -709,7 +709,7 @@ class AdapterTest(unittest.TestCase):
 
             failed = root / "failed.json"
             with patch(
-                    "comfyui_recipes.infrastructure.persistence.run_state.os.replace",
+                    "chagama.infrastructure.persistence.run_state.os.replace",
                     side_effect=OSError("no replace")), self.assertRaises(OSError):
                 state.save(failed, {"value": 2})
             self.assertEqual(sorted(item.name for item in root.iterdir()),
