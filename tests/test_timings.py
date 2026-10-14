@@ -11,11 +11,11 @@ from unittest.mock import MagicMock
 
 from websockets.exceptions import ConnectionClosedError
 
-from comfyui_recipes.application.work import work_once
-from comfyui_recipes.application.worker_channels import ProgressRelay
-from comfyui_recipes.infrastructure.comfyui.client import ComfyUIClient
-from comfyui_recipes.infrastructure.comfyui.progress import FeedClosed, ProgressFeed
-from comfyui_recipes.infrastructure.comfyui.timings import (
+from chagama.application.work import work_once
+from chagama.application.worker_channels import ProgressRelay
+from chagama.infrastructure.comfyui.client import ComfyUIClient
+from chagama.infrastructure.comfyui.progress import FeedClosed, ProgressFeed
+from chagama.infrastructure.comfyui.timings import (
     AttemptTimings,
     EnvCollector,
     TimingRecorder,

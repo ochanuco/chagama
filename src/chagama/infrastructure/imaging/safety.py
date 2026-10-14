@@ -13,6 +13,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from chagama.envcompat import getenv
+
 MODEL_REPO = "SmilingWolf/wd-swinv2-tagger-v3"
 MODEL_REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
 MODEL_ID = f"wd-swinv2-tagger-v3@{MODEL_REVISION}"
@@ -21,12 +23,12 @@ FILES = {
     "selected_tags.csv":
         "298633d94d0031d2081c0893f29c82eab7f0df00b08483ba8f29d1e979441217",
 }
-MODEL_DIR_ENV = "COMFY_RECIPES_MODEL_DIR"
+MODEL_DIR_ENV = "CHAGAMA_MODEL_DIR"
 RATING_CATEGORY = "9"
 GENERAL_CATEGORY = "0"
 RATING_KEYS = ("general", "sensitive", "questionable", "explicit")
 TAG_CUTOFF = 0.05
-USER_AGENT = "comfyui-recipes-safety/1.0"
+USER_AGENT = "chagama-safety/1.0"
 
 _lock = threading.Lock()
 _loaded: tuple | None = None
@@ -37,7 +39,7 @@ class SafetyUnavailable(RuntimeError):
 
 
 def model_dir() -> Path:
-    override = os.environ.get(MODEL_DIR_ENV)
+    override = getenv(MODEL_DIR_ENV)
     if override:
         return Path(override)
     return Path(__file__).resolve().parents[4] / ".local/_nogit/models/wd-tagger"

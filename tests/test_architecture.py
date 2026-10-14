@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DOMAIN = ROOT / "src/comfyui_recipes/domain"
+DOMAIN = ROOT / "src/chagama/domain"
 FORBIDDEN_DOMAIN_IMPORTS = {
     "argparse",
     "numpy",

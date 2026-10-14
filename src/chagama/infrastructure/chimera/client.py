@@ -12,7 +12,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-USER_AGENT = "comfyui-recipes-generate/1.0 (+local)"
+USER_AGENT = "chagama-generate/1.0 (+local)"
 OP_ITEM = "yml6r5qgx3zt57pryokgi3xdqy"
 
 

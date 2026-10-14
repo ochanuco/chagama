@@ -1,6 +1,6 @@
 ---
 name: illustration-color-coordination
-description: "イラストの服の配色を決める手順（yukari recipe 向けの project skill）。キャラクターの設計言語から色の役割（ベース/サブ/差し色）を割り当て、prompt の色タグと negative の色 ban に落とす。結月ゆかり（comfyui-recipes の yukari recipe）が既定の対象。"
+description: "イラストの服の配色を決める手順（yukari recipe 向けの project skill）。キャラクターの設計言語から色の役割（ベース/サブ/差し色）を割り当て、prompt の色タグと negative の色 ban に落とす。結月ゆかり（chagama の yukari recipe）が既定の対象。"
 ---
 
 # Illustration Color Coordination
@@ -67,7 +67,7 @@ description: "イラストの服の配色を決める手順（yukari recipe 向�
 | 有彩色の服 | `(mustard yellow t-shirt:1.35)`, `(navy blue skirt:1.3)` のように色名 + 服。くすませたい時は `dusty` / `muted` / `sage` を色名に含める | — |
 | 入れない色 | 書かない | `(brown:1.2), (beige:1.2)` など色名で ban |
 
-yukari recipe（comfyui-recipes）の前提:
+yukari recipe（chagama）の前提:
 - `VIVID_BAN` が magenta / bright purple / red / maroon / neon を既に禁止している。赤系の差し色は入らない。
 - `standard` costume だけ `GARMENT_BLACK_BAN`（black jacket / black clothes / black hoodie）が入る。standard 上で黒い服を足すと衝突するので、costume を変えるか patch で ban を外す。
 - `sheer-gloss` legwear の see-through 語は長いスカートに漏れて透けさせる。丈を伸ばす服では opaque legwear で確認してから戻す。

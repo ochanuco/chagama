@@ -2,7 +2,7 @@
 
 Each node's body is: tensors in, PNG bytes out, call the existing function,
 PNG bytes back to tensors. The imaging logic itself lives in
-``comfyui_recipes.infrastructure.imaging`` and is not duplicated here.
+``chagama.infrastructure.imaging`` and is not duplicated here.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import json
 
 import numpy as np
 
-from comfyui_recipes.infrastructure.imaging import (
+from chagama.infrastructure.imaging import (
     delivery,
     depth_blur,
     lens,
@@ -22,8 +22,8 @@ from comfyui_recipes.infrastructure.imaging import (
     relight,
     viewfinder,
 )
-from comfyui_recipes.infrastructure.imaging import light as lighting
-from comfyui_recipes.infrastructure.imaging import stage as staging
+from chagama.infrastructure.imaging import light as lighting
+from chagama.infrastructure.imaging import stage as staging
 
 from . import bridge, vitmatte
 

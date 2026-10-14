@@ -1,6 +1,6 @@
 # delivery_style
 
-`src/comfyui_recipes/domain/yukari/delivery_style.py` holds what happens to a
+`src/chagama/domain/yukari/delivery_style.py` holds what happens to a
 render after the model: the delivery identity and the redraw settings.
 Every tool reads its values from there, and `scripts/delivery_check.py`
 fingerprints them. The values live in the code; the reasons behind them are

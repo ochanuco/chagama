@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Token,
     [Parameter(Mandatory = $true)][string]$Version,
     [string]$Root = "C:\actions-runner",
-    [string]$Repo = "https://github.com/ochanuco/comfyui-recipes"
+    [string]$Repo = "https://github.com/ochanuco/chagama"
 )
 $ErrorActionPreference = "Stop"
 if (-not (Test-Path (Join-Path $Root "config.cmd"))) {

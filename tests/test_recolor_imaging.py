@@ -6,8 +6,8 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari.delivery_style import RECOLOR_TARGETS
-from comfyui_recipes.infrastructure.imaging.recolor import (
+from chagama.domain.yukari.delivery_style import RECOLOR_TARGETS
+from chagama.infrastructure.imaging.recolor import (
     lines, recolor, recolor_png,
 )
 

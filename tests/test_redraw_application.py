@@ -13,13 +13,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.application.cut_assets import current_cut
-from comfyui_recipes.application.redraw import HIRES_DENOISE, hires_pixels
-from comfyui_recipes.application.ingest import classify_redraw_outputs
-from comfyui_recipes.application.redraw import RedrawServices, redraw
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.domain.yukari.delivery_style import Light
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.application.cut_assets import current_cut
+from chagama.application.redraw import HIRES_DENOISE, hires_pixels
+from chagama.application.ingest import classify_redraw_outputs
+from chagama.application.redraw import RedrawServices, redraw
+from chagama.domain.yukari import delivery_style
+from chagama.domain.yukari.delivery_style import Light
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 ANIMA_GRAPH = {
     "1": {"class_type": "UNETLoader", "inputs": {}},

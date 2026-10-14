@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from comfyui_recipes.infrastructure.chimera.hub import encode, hub_url
+from chagama.infrastructure.chimera.hub import encode, hub_url
 
 
 class HubUrlTest(unittest.TestCase):

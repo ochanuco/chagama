@@ -1,4 +1,4 @@
-"""The single public command-line interface for comfyui-recipes."""
+"""The single public command-line interface for chagama."""
 
 from __future__ import annotations
 
@@ -239,7 +239,7 @@ def _positive_finite_seconds(raw: str) -> float:
 
 
 def parser() -> argparse.ArgumentParser:
-    root = argparse.ArgumentParser(prog="comfy-recipes")
+    root = argparse.ArgumentParser(prog="chagama")
     commands = root.add_subparsers(dest="command", required=True)
 
     generate_parser = commands.add_parser("generate", help="run and record a request")

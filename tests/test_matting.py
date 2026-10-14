@@ -8,8 +8,8 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.infrastructure.imaging import delivery, matting
+from chagama.domain.yukari import delivery_style
+from chagama.infrastructure.imaging import delivery, matting
 
 
 def rgb_png(pixels: np.ndarray) -> bytes:

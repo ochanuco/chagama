@@ -24,10 +24,10 @@ if (Test-Path $drain) {
     Write-Output "drain: worker left on its own"
 }
 
-Stop-ScheduledTask -TaskName "comfyui-recipes-watch" -ErrorAction SilentlyContinue
+Stop-ScheduledTask -TaskName "chagama-watch" -ErrorAction SilentlyContinue
 Get-CimInstance Win32_Process |
     Where-Object { $_.ProcessId -ne $PID -and
-        $_.CommandLine -match "comfy-recipes\.exe.* work|[\\/]watch\.ps1" } |
+        $_.CommandLine -match "(chagama|comfy-recipes)\.exe.* work|[\\/]watch\.ps1" } |
     ForEach-Object { cmd /c "taskkill /PID $($_.ProcessId) /T /F >nul 2>&1" }
 
 git fetch --quiet origin
@@ -38,7 +38,7 @@ $uv = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Recurse -Filt
 & $uv pip install --python .venv\Scripts\python.exe -q -e . pillow numpy opencv-python scipy pytest onnxruntime "websockets>=12"
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 # Fetched here so the first upload after a deploy doesn't stall on a 445 MiB download.
-& .venv\Scripts\python.exe -c "from comfyui_recipes.infrastructure.imaging.safety import ensure_files; print('wd tagger:', ensure_files())"
+& .venv\Scripts\python.exe -c "from chagama.infrastructure.imaging.safety import ensure_files; print('wd tagger:', ensure_files())"
 if ($LASTEXITCODE) { "wd tagger: download failed, uploads will retry it" }
 if ($ComfyRoot) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\worker\register-nodes.ps1 `
@@ -76,7 +76,7 @@ if ($ComfyRoot) {
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
     }
     # Fetched here so the first deliver after a deploy doesn't stall on the download.
-    & $embedded -c "import sys; sys.path.insert(0, 'src'); from comfyui_recipes.domain.yukari.delivery_style import MATTING_MODEL, MATTING_REVISION; from huggingface_hub import snapshot_download; print('matting model:', snapshot_download(MATTING_MODEL, revision=MATTING_REVISION))" 2>$null
+    & $embedded -c "import sys; sys.path.insert(0, 'src'); from chagama.domain.yukari.delivery_style import MATTING_MODEL, MATTING_REVISION; from huggingface_hub import snapshot_download; print('matting model:', snapshot_download(MATTING_MODEL, revision=MATTING_REVISION))" 2>$null
     if ($LASTEXITCODE) { "matting model: download failed, the first deliver will retry it" }
     $ErrorActionPreference = "Stop"
     "embedded python: $(if ($pip -match '^Successfully installed') { 'installed' } else { 'ok' })"

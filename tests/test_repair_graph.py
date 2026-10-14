@@ -14,10 +14,10 @@ import unittest
 from dataclasses import replace
 from pathlib import Path
 
-from comfyui_recipes.domain.yukari.recipe import render_spec
-from comfyui_recipes.infrastructure.comfyui import anima_graph
-from comfyui_recipes.infrastructure.comfyui.base_graph import base_roles, source_prompts
-from comfyui_recipes.infrastructure.comfyui.repair_graph import (
+from chagama.domain.yukari.recipe import render_spec
+from chagama.infrastructure.comfyui import anima_graph
+from chagama.infrastructure.comfyui.base_graph import base_roles, source_prompts
+from chagama.infrastructure.comfyui.repair_graph import (
     masked_redraw_graph,
     repair_graph,
 )

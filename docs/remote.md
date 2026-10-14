@@ -7,7 +7,7 @@ and reads chimera. The box's address and ssh alias are in the untracked
 ## Setting it up
 
 ```powershell
-git clone https://github.com/ochanuco/comfyui-recipes.git
+git clone https://github.com/ochanuco/chagama.git
 uv venv --python <uv-managed 3.12 python.exe> .venv
 uv pip install --python .venv\Scripts\python.exe -e . pillow numpy opencv-python scipy websockets pytest
 $env:PYTHONPATH = "scripts"; .\.venv\Scripts\pytest.exe -q
@@ -19,11 +19,13 @@ powershell -ExecutionPolicy Bypass -File .\scripts\worker\register-comfyui.ps1 -
 `comfy_nodes/yukari_worker` into ComfyUI's `custom_nodes/`.
 `register-comfyui.ps1` registers the portable ComfyUI as the logon task
 `comfyui` with the launch arguments the script holds and
-`COMFYUI_RECIPES_WORKER=1`, so the worker runs as a thread inside ComfyUI
+`CHAGAMA_WORKER=1`, so the worker runs as a thread inside ComfyUI
 and a reboot brings both back once the user logs on. Changing an argument
-means editing the script and re-running it; `run_nvidia_gpu.bat` is not
+means editing the script and re-running it (it also removes the old
+`COMFYUI_RECIPES_WORKER` user variable; `src/chagama/envcompat.py` still reads
+the pre-rename names until the box is migrated); `run_nvidia_gpu.bat` is not
 used. `register-watch.ps1` / `watch.ps1` still register a standalone
-`comfy-recipes work` loop for running it by hand; the deploy does not use
+`chagama work` loop for running it by hand; the deploy does not use
 them. `.local/chimera-token` and `.local/discord-webhook` are copied onto
 the box by hand; they are never tracked. The box must stay on a checkout
 whose branch matches the `recipe_ref` of the rows it should serve (see
@@ -48,9 +50,9 @@ probabilities are PUT to `/api/v1/generations/{id}/safety`. Thresholds and
 badges are chimera's. A failure -- no `onnxruntime`, no network for the first
 download, chimera not yet serving the endpoint -- is only logged and never
 fails the job. The model downloads on first use into
-`.local/_nogit/models/wd-tagger` (override with `COMFY_RECIPES_MODEL_DIR`),
-sha256-checked against the pinned revision. `comfy-recipes safety rate <short_id>...`
-and `comfy-recipes safety backfill [--published] [--limit N]` rate existing
+`.local/_nogit/models/wd-tagger` (override with `CHAGAMA_MODEL_DIR`),
+sha256-checked against the pinned revision. `chagama safety rate <short_id>...`
+and `chagama safety backfill [--published] [--limit N]` rate existing
 generations.
 
 ## Getting models onto it

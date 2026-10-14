@@ -8,9 +8,9 @@ import unittest
 import numpy as np
 from PIL import Image
 
-from comfyui_recipes.infrastructure.comfyui.dof_graph import dof_graph
-from comfyui_recipes.infrastructure.comfyui.refinement_graph import DEPTH_NODE
-from comfyui_recipes.infrastructure.imaging.depth_blur import (
+from chagama.infrastructure.comfyui.dof_graph import dof_graph
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.infrastructure.imaging.depth_blur import (
     blur_layers,
     blur_layers_png,
     sharp_reach_per_f,

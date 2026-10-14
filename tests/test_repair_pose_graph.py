@@ -6,7 +6,7 @@ import json
 import unittest
 from pathlib import Path
 
-from comfyui_recipes.infrastructure.comfyui.pose_graph import (
+from chagama.infrastructure.comfyui.pose_graph import (
     pose_from_outputs,
     pose_graph,
 )

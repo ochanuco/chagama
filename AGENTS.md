@@ -1,4 +1,4 @@
-# comfyui-recipes — agent brief
+# chagama — agent brief
 
 Read this before the first tool call. It is the stuff that is not in the code
 and costs a session an hour to rediscover.
@@ -13,14 +13,14 @@ something serves them better.
 
 ## What you are working on
 
-The recipe and the worker behind chimera. `comfy-recipes` is the executor
+The recipe and the worker behind chimera. `chagama` is the executor
 that runs on the GPU box: `work` claims request rows from chimera, builds and
 records a graph, submits it to ComfyUI, and ingests the result. Nothing renders
 from this Mac. A session here drives rounds through chimera's MCP (see
 "Renders reach the user through chimera") and edits the recipe in this repo.
 **The defaults are the recipe** — every preset was arrived at by rendering, and
 the exact prompt can be inspected with `get_catalog_pose` on the MCP or
-`comfy-recipes <recipe> prompt` locally.
+`chagama <recipe> prompt` locally.
 
 ## The pipeline is two stages, and it is the user's
 
@@ -73,7 +73,7 @@ rejects an empty list; a zero-strength LoRA is left out of the graph) and
 remove `(sketch style:1.2), ` from `prompt.positive.style`. The recipe's
 plain `stand` still wears the pre-official costume.
 
-One recipe is live, `yukari` under `src/comfyui_recipes/domain/`: the Anima
+One recipe is live, `yukari` under `src/chagama/domain/`: the Anima
 Turbo checkpoint's identity, costumes, poses and prompt edit order.
 `docs/yukari/anima.md` maps where each part lives. `domain/yukari/delivery_style.py`
 holds both the delivery identity (backdrop, purple stroke, acceptance band)
@@ -86,7 +86,7 @@ graph). A source drawn by any other recipe is delivered as it is and never
 redrawn, and a LayerDiffuse base is refused by both `redraw` and `deliver`.
 
 The ComfyUI node encoding is under `infrastructure/comfyui/`.
-`comfy-recipes yukari prompt --pose …` prints what the recipe sends.
+`chagama yukari prompt --pose …` prints what the recipe sends.
 
 Everything measured is recorded — see "Where information lives" below for
 which store. The records are the point of the repository; the scripts are how
@@ -176,8 +176,8 @@ uv run scripts/atlas.py docs               # every doc with its size            
 uv run scripts/atlas.py notes              # findings headings, archive file sizes (~0.5k)
 uv run scripts/atlas.py notes <pattern>    # just the sections that match, archive included
 uv run scripts/atlas.py find <regex>       # matching lines, each under its heading
-uv run comfy-recipes yukari prompt --pose bust                    # ~0.6k, not the whole recipe
-uv run comfy-recipes catalog                                     # what `work` would publish
+uv run chagama yukari prompt --pose bust                    # ~0.6k, not the whole recipe
+uv run chagama catalog                                     # what `work` would publish
 uv run scripts/delivery_check.py                                  # the delivery identity, verified
 ```
 
@@ -190,7 +190,7 @@ is not, adding one to `atlas.py` is cheaper than the read you were about to do.
 ## Where the GPU is
 
 **ComfyUI does not run on this Mac, and this Mac no longer talks to it.** The
-GPU box runs ComfyUI and `comfy-recipes work`; chimera is the only thing a
+GPU box runs ComfyUI and `chagama work`; chimera is the only thing a
 session here submits to. `COMFYUI_HOST` / `COMFYUI_PORT` matter on the box
 only.
 
@@ -267,7 +267,7 @@ tracked file.
 ## chimera 連携の不変条件
 
 - 生成の記録は chimera（https://chimera.chanu.co）。実行経路は chimera の
-  requests 行を worker（GPU 機の `comfy-recipes work`）が実行する一本のみ。
+  requests 行を worker（GPU 機の `chagama work`）が実行する一本のみ。
   Mac 側の入口は MCP（`derive_request` / `redraw_generation` /
   `deliver_generation` / `repair_generation` / `create_request`）か `POST /api/v1/requests`。
   semantic 判断（prompt 組み立て、reference の意味付け、検品）は呼び出し元
@@ -293,14 +293,14 @@ tracked file.
   の `semantic.summary` は必須で、ingest 直後に各 generation へ自動 PUT
   される。作業途中の評価はユーザーが chimera の semantics を見て行う。
   semantics/tag は AI が書いてよい（rating だけが人間専用）。
-- 納品した generation は `comfy-recipes metadata publish <generation_id>`
+- 納品した generation は `chagama metadata publish <generation_id>`
   （MCP なら `record_publication`）で記録し、`look:<pose>` タグを付ける。次の
   セッションが起点 ID を引く索引は `list_generations published=true` と
   この `look:<pose>` タグで、prose とメモリは索引にならない。`look:` の値は
   レシピの pose 名（焼き込み前なら焼き込む予定の名前）。
-- 事後の追記・上書きは `comfy-recipes metadata semantic <generation_id>
-  <file.json>`、tag は `comfy-recipes metadata tag <generation_id> <name>`、
-  納品記録は `comfy-recipes metadata publish <generation_id> [--url URL]
+- 事後の追記・上書きは `chagama metadata semantic <generation_id>
+  <file.json>`、tag は `chagama metadata tag <generation_id> <name>`、
+  納品記録は `chagama metadata publish <generation_id> [--url URL]
   [--idempotency-key KEY]`（key 省略時は呼び出しごとに新しい key）。
   semantic の API は `PUT /api/v1/generations/{id}/semantic`（schema_version:1、
   部分ペイロード可、再 PUT で全置換）。generation_id には short_id も使える。

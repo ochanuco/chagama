@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from comfyui_recipes.domain.generation.fingerprint import prompt_fingerprint
+from chagama.domain.generation.fingerprint import prompt_fingerprint
 
 
 class PromptFingerprintTest(unittest.TestCase):

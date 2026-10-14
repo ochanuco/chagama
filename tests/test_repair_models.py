@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from comfyui_recipes.domain.repair.models import MODELS, resolve_model
+from chagama.domain.repair.models import MODELS, resolve_model
 
 
 class ResolveModelTest(unittest.TestCase):

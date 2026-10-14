@@ -13,9 +13,9 @@ from PIL import Image
 from PIL.PngImagePlugin import PngInfo
 from scipy import ndimage
 
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.infrastructure.imaging.palette import repin_skin_png
-from comfyui_recipes.infrastructure.imaging.delivery import (
+from chagama.domain.yukari import delivery_style
+from chagama.infrastructure.imaging.palette import repin_skin_png
+from chagama.infrastructure.imaging.delivery import (
     background_mask,
     band_alphas,
     clean_background,

@@ -5,11 +5,11 @@ from __future__ import annotations
 import copy
 import unittest
 
-from comfyui_recipes.domain.yukari import delivery_style
-from comfyui_recipes.infrastructure.comfyui.base_graph import base_roles, hires_graph
-from comfyui_recipes.infrastructure.comfyui.deliver_graph import deliver_graph
-from comfyui_recipes.infrastructure.comfyui.pose_graph import pose_graph
-from comfyui_recipes.infrastructure.comfyui.roles import label_roles, snake_case
+from chagama.domain.yukari import delivery_style
+from chagama.infrastructure.comfyui.base_graph import base_roles, hires_graph
+from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
+from chagama.infrastructure.comfyui.pose_graph import pose_graph
+from chagama.infrastructure.comfyui.roles import label_roles, snake_case
 
 from test_hires_graph import guided_graph, plain_graph
 from test_deliver_application import GRAPH_KWARGS
