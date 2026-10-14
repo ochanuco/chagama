@@ -6,7 +6,8 @@
 # on the box. Files not listed here are fetched by hand (docs/remote.md).
 
 # Pixal3D image-to-3D in ComfyUI core: the native template loads both the
-# Pixal3D and the TRELLIS.2 diffusion model, so both are listed.
+# Pixal3D and the TRELLIS.2 diffusion model, so both are listed. Comfy-Org
+# repackages each model in its own repo; the TRELLIS.2 VAEs ship with Pixal3D.
 [[model]]
 dest = "diffusion_models/pixal3d_multiview_int8_convrot.safetensors"
 repo = "Comfy-Org/Pixal3D"
@@ -21,7 +22,7 @@ revision = "main"
 
 [[model]]
 dest = "diffusion_models/trellis_2_int8_convrot.safetensors"
-repo = "Comfy-Org/Pixal3D"
+repo = "Comfy-Org/TRELLIS.2"
 file = "diffusion_models/trellis_2_int8_convrot.safetensors"
 revision = "main"
 
@@ -45,12 +46,12 @@ revision = "main"
 
 [[model]]
 dest = "geometry_estimation/moge_2_vitl_normal_fp16.safetensors"
-repo = "Comfy-Org/Pixal3D"
+repo = "Comfy-Org/MoGe"
 file = "geometry_estimation/moge_2_vitl_normal_fp16.safetensors"
 revision = "main"
 
 [[model]]
 dest = "background_removal/birefnet.safetensors"
-repo = "Comfy-Org/Pixal3D"
+repo = "Comfy-Org/BiRefNet"
 file = "background_removal/birefnet.safetensors"
 revision = "main"
