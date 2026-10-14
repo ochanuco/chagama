@@ -1,6 +1,6 @@
 """Starts the worker's claim loop as a thread inside ComfyUI's own process.
 
-Off unless ``COMFYUI_RECIPES_WORKER`` is set: importing a custom node pack
+Off unless ``CHAGAMA_WORKER`` is set: importing a custom node pack
 must never start background work on its own, and this is the switch that
 keeps a plain ComfyUI install unaffected.
 """
@@ -15,6 +15,8 @@ import urllib.request
 from collections.abc import Callable
 from pathlib import Path
 
+from chagama.envcompat import getenv
+
 _STARTUP_TIMEOUT = 600.0
 
 _lock = threading.Lock()
@@ -22,12 +24,11 @@ _thread: threading.Thread | None = None
 
 
 def _enabled() -> bool:
-    return os.environ.get(
-        "COMFYUI_RECIPES_WORKER", "").strip().lower() in {"1", "true", "yes"}
+    return (getenv("CHAGAMA_WORKER") or "").strip().lower() in {"1", "true", "yes"}
 
 
 def _worker_id() -> str | None:
-    return os.environ.get("COMFYUI_RECIPES_WORKER_ID") or None
+    return getenv("CHAGAMA_WORKER_ID") or None
 
 
 def _repository() -> Path:
@@ -36,7 +37,7 @@ def _repository() -> Path:
     ComfyUI runs from its own directory, so asking git about the working
     directory finds nothing; the pack's own path is what knows the checkout.
     """
-    override = os.environ.get("COMFYUI_RECIPES_REPOSITORY")
+    override = getenv("CHAGAMA_REPOSITORY")
     return Path(override) if override else Path(__file__).resolve().parents[2]
 
 

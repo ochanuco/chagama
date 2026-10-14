@@ -73,7 +73,8 @@ class WorkerAgentStartTest(unittest.TestCase):
     def setUp(self):
         worker_agent._thread = None
         self._env_patch = {}
-        for key in ("COMFYUI_RECIPES_WORKER", "COMFYUI_RECIPES_WORKER_ID"):
+        for key in ("CHAGAMA_WORKER", "CHAGAMA_WORKER_ID",
+                    "COMFYUI_RECIPES_WORKER", "COMFYUI_RECIPES_WORKER_ID"):
             self._env_patch[key] = os.environ.pop(key, None)
 
     def tearDown(self):
@@ -94,8 +95,17 @@ class WorkerAgentStartTest(unittest.TestCase):
         self.assertFalse(started.wait(timeout=0.2))
         self.assertIsNone(worker_agent._thread)
 
-    def test_start_with_env_var_set_starts_exactly_one_thread(self):
+    def test_legacy_env_var_still_enables_the_worker(self):
         os.environ["COMFYUI_RECIPES_WORKER"] = "1"
+        self.assertTrue(worker_agent._enabled())
+
+    def test_new_env_var_wins_over_the_legacy_one(self):
+        os.environ["COMFYUI_RECIPES_WORKER"] = "1"
+        os.environ["CHAGAMA_WORKER"] = "0"
+        self.assertFalse(worker_agent._enabled())
+
+    def test_start_with_env_var_set_starts_exactly_one_thread(self):
+        os.environ["CHAGAMA_WORKER"] = "1"
         calls = []
         release = threading.Event()
 
@@ -111,8 +121,8 @@ class WorkerAgentStartTest(unittest.TestCase):
         self.assertEqual(len(calls), 1)
 
     def test_worker_id_env_var_is_threaded_through(self):
-        os.environ["COMFYUI_RECIPES_WORKER"] = "yes"
-        os.environ["COMFYUI_RECIPES_WORKER_ID"] = "box-7"
+        os.environ["CHAGAMA_WORKER"] = "yes"
+        os.environ["CHAGAMA_WORKER_ID"] = "box-7"
         seen = []
         done = threading.Event()
 
@@ -125,7 +135,7 @@ class WorkerAgentStartTest(unittest.TestCase):
         self.assertEqual(seen, ["box-7"])
 
     def test_a_run_that_raises_does_not_propagate_or_kill_the_process(self):
-        os.environ["COMFYUI_RECIPES_WORKER"] = "true"
+        os.environ["CHAGAMA_WORKER"] = "true"
         done = threading.Event()
 
         def run(repository=None, **kwargs):
@@ -146,7 +156,7 @@ class WorkerAgentStartTest(unittest.TestCase):
             def __exit__(self, *exc_info):
                 return False
 
-        os.environ["COMFYUI_RECIPES_WORKER"] = "1"
+        os.environ["CHAGAMA_WORKER"] = "1"
         original_lock = worker_agent._lock
         worker_agent._lock = BrokenLock()
         try:
@@ -195,7 +205,7 @@ class AwaitServerTest(unittest.TestCase):
         self.assertFalse(ready)
 
     def test_the_checkout_comes_from_the_pack_not_the_working_directory(self):
-        os.environ["COMFYUI_RECIPES_WORKER"] = "1"
+        os.environ["CHAGAMA_WORKER"] = "1"
         worker_agent._thread = None
         seen = []
         done = threading.Event()
@@ -208,12 +218,12 @@ class AwaitServerTest(unittest.TestCase):
             worker_agent.start(run=run, ready=lambda: True)
             self.assertTrue(done.wait(timeout=2))
         finally:
-            os.environ.pop("COMFYUI_RECIPES_WORKER", None)
+            os.environ.pop("CHAGAMA_WORKER", None)
             worker_agent._thread = None
         self.assertEqual(seen, [ROOT])
 
     def test_a_worker_that_never_sees_comfyui_does_not_claim(self):
-        os.environ["COMFYUI_RECIPES_WORKER"] = "1"
+        os.environ["CHAGAMA_WORKER"] = "1"
         worker_agent._thread = None
         ran = threading.Event()
         try:
@@ -221,7 +231,7 @@ class AwaitServerTest(unittest.TestCase):
                                ready=lambda: False)
             worker_agent._thread.join(2)
         finally:
-            os.environ.pop("COMFYUI_RECIPES_WORKER", None)
+            os.environ.pop("CHAGAMA_WORKER", None)
             worker_agent._thread = None
         self.assertFalse(ran.is_set())
 

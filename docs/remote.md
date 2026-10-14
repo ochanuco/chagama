@@ -19,9 +19,11 @@ powershell -ExecutionPolicy Bypass -File .\scripts\worker\register-comfyui.ps1 -
 `comfy_nodes/yukari_worker` into ComfyUI's `custom_nodes/`.
 `register-comfyui.ps1` registers the portable ComfyUI as the logon task
 `comfyui` with the launch arguments the script holds and
-`COMFYUI_RECIPES_WORKER=1`, so the worker runs as a thread inside ComfyUI
+`CHAGAMA_WORKER=1`, so the worker runs as a thread inside ComfyUI
 and a reboot brings both back once the user logs on. Changing an argument
-means editing the script and re-running it; `run_nvidia_gpu.bat` is not
+means editing the script and re-running it (it also removes the old
+`COMFYUI_RECIPES_WORKER` user variable; `src/chagama/envcompat.py` still reads
+the pre-rename names until the box is migrated); `run_nvidia_gpu.bat` is not
 used. `register-watch.ps1` / `watch.ps1` still register a standalone
 `chagama work` loop for running it by hand; the deploy does not use
 them. `.local/chimera-token` and `.local/discord-webhook` are copied onto
@@ -48,7 +50,7 @@ probabilities are PUT to `/api/v1/generations/{id}/safety`. Thresholds and
 badges are chimera's. A failure -- no `onnxruntime`, no network for the first
 download, chimera not yet serving the endpoint -- is only logged and never
 fails the job. The model downloads on first use into
-`.local/_nogit/models/wd-tagger` (override with `COMFY_RECIPES_MODEL_DIR`),
+`.local/_nogit/models/wd-tagger` (override with `CHAGAMA_MODEL_DIR`),
 sha256-checked against the pinned revision. `chagama safety rate <short_id>...`
 and `chagama safety backfill [--published] [--limit N]` rate existing
 generations.

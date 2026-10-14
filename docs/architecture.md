@@ -85,7 +85,7 @@ identical claim loop as a thread inside ComfyUI's own process, so a restart
 becomes one process instead of two -- at the cost that stopping ComfyUI now
 also stops the render in flight, which is why the drain sentinel
 (`docs/release.md`) exists. This hosting is off unless
-`COMFYUI_RECIPES_WORKER` is set; a plain ComfyUI install is unaffected.
+`CHAGAMA_WORKER` is set; a plain ComfyUI install is unaffected.
 
 ## Migration rule
 

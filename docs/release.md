@@ -86,7 +86,7 @@ come with the box and reinstalling them into a working ComfyUI is how it
 stops working.
 
 The claim loop is a thread inside ComfyUI's own process, started by
-`comfy_nodes/yukari_worker/` when `COMFYUI_RECIPES_WORKER` is set. The
+`comfy_nodes/yukari_worker/` when `CHAGAMA_WORKER` is set. The
 variable is a user environment variable on the box, written by
 `register-comfyui.ps1`, because a scheduled task inherits the user
 environment and not a shell's. The thread waits for ComfyUI's own HTTP to
