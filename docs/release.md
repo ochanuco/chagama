@@ -42,6 +42,10 @@ are joined by a promotion PR, the same shape as ochanuco/webull-trading.
   optimisation to skip: the drain below ends the claim loop, and the loop is
   a thread in that process, so nothing else brings the worker back. A deploy
   that skipped it would leave the box with no worker at all.
+- `fetch worker models` runs on a `production` push that changes
+  `manifests/worker-models.toml`, or by hand on `production`. It downloads
+  the listed Hugging Face models into the box's ComfyUI `models/`
+  (`scripts/worker_models.py`) and does not restart anything.
 - `restart worker comfyui` is a manual `workflow_dispatch` that runs the same
   restart on the box, for changes made outside a deploy.
 

@@ -1,8 +1,9 @@
 # Models
 
-No models are included in this repository, and nothing here downloads them
-automatically. They live on the GPU box; [remote.md](remote.md) covers
-fetching them.
+No models are included in this repository. They live on the GPU box. The
+Hugging Face files listed in `manifests/worker-models.toml` are fetched there
+by the `fetch worker models` workflow; everything else is fetched by hand
+([remote.md](remote.md) covers both).
 
 ## In use now
 
@@ -16,10 +17,11 @@ The code names the files; this is where to look.
 | Repair part LoRAs | `feet-xl-ill`, `hands-xl-ill` | `domain/repair/loras.py` |
 | Repair ControlNet | `noob-lineart-anime-fp16` | `domain/repair/controlnet.py` |
 | Stage 1 reserve, opt-in by `render.model` patch | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | — |
+| Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | `Comfy-Org/Pixal3D` files | `manifests/worker-models.toml` |
 
 `silvermoonmixAnimaEvolved_v2329BTurbo` is sampled with `render.guided_steps`:
 the leading steps at the recipe's own CFG, the rest at CFG 1.0 off the same
-noise. It needs a ComfyUI build that loads a 2.9B UNET; the pinned v0.37.0
+noise. It needs a ComfyUI build that loads a 2.9B UNET; the pinned v0.40.0
 does. `anima-turbo-v1.1`, the previous stage-1 model, stays on the box. It
 is not in the verified inventory below, and neither are the three repair
 checkpoints. Everything else in the
