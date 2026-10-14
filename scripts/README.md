@@ -20,6 +20,8 @@ they still need to exist:
 - `worker_models.py` — the Hugging Face models in
   `manifests/worker-models.toml`, fetched onto the GPU box by the
   `fetch worker models` workflow.
+- `pixal3d_run.py` — a chimera turnaround sheet through the core Pixal3D
+  multi-view graph into a GLB, run on the GPU box by the `pixal3d` workflow.
 
 If a script starts coordinating a recorded batch, it belongs in
 `application/` behind `comfy-recipes`; if it expresses Yukari policy, it
