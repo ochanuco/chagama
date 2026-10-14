@@ -1,0 +1,44 @@
+name: fetch worker models
+
+# manifests/worker-models.toml を GPU 機の ComfyUI models/ に揃える。deploy worker と
+# 同じく production だけを契機にする（手動実行も production ref のときだけ走る）。
+# ComfyUI はモデル一覧をリクエストごとに読むので再起動はしない。
+on:
+  push:
+    branches: [production]
+    paths: [manifests/worker-models.toml]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: check Hugging Face and the disk, download nothing
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: worker-models
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    name: fetch the pinned models onto the GPU box
+    if: github.ref == 'refs/heads/production'
+    runs-on: [self-hosted, gpu-box]
+    # A download resumes from its .part, so a run cut off here picks up where
+    # it stopped on the next one.
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Fetch
+        shell: cmd
+        env:
+          WORKER_CHECKOUT: ${{ vars.WORKER_CHECKOUT }}
+          COMFYUI_ROOT: ${{ vars.COMFYUI_ROOT }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: '"%WORKER_CHECKOUT%\.venv\Scripts\python.exe" "%GITHUB_WORKSPACE%\scripts\worker_models.py" --manifest "%GITHUB_WORKSPACE%\manifests\worker-models.toml" --comfy-root "%COMFYUI_ROOT%" %DRY_RUN%'

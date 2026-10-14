@@ -55,6 +55,16 @@ generations.
 
 ## Getting models onto it
 
+A Hugging Face file listed in `manifests/worker-models.toml` gets there by
+code: the `fetch worker models` workflow runs `scripts/worker_models.py` on
+the box's runner when the manifest changes on `production`, or by hand
+(`workflow_dispatch` on `production`, with `dry_run` to only check). It
+checks every file upstream before downloading any, resumes from `.part`,
+keeps the box awake while it runs, and renames a file into place only when
+its SHA256 matches the one Hugging Face publishes (and `sha256` in the
+manifest, when pinned). `HF_TOKEN` (repository secret) is needed only for a
+gated repo. The rest of this section is for files outside that manifest.
+
 They have to be on that machine's disk, and nothing in the ComfyUI HTTP API can
 put them there. `/experiment/models` is read-only, there is no download
 endpoint, and no standard node fetches a URL. Short of ComfyUI-Manager, that
