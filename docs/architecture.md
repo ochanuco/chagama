@@ -60,6 +60,17 @@ and `application/generate.py` resolve a request's word against the source
 generation's recipe; `application/catalog.py` publishes the vocabulary as
 each recipe's `dials` block.
 
+`generation/patches.py` holds the patch grammar as tables (`TARGET_KINDS`,
+`TEXT_OP_KEYS`, `PATCH_KEYS`); `parse_patches` dispatches on them and
+`application/catalog.py` publishes them as the catalog's `patches` block,
+which chimera checks patches against when a request or run is created. The
+block lists every target `parse_patches` accepts. `text.ops[op]` names which
+of `value` / `old` that op takes: each listed key must be a non-empty string,
+and the unlisted one is rejected. Every patch needs a non-empty `reason`.
+`number`, `string` and `loras` targets take `op: "set"`; the value itself is
+checked only here (`number[target].constraints` describes the range for
+people).
+
 ## Application
 
 `src/chagama/application/` owns use cases: generate and record a request,

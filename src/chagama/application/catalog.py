@@ -9,10 +9,13 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 from ..domain.generation.patches import (
+    LORAS_TARGETS,
     NUMBER_CONSTRAINTS,
     NUMBER_TARGETS,
+    PART_TARGET_PREFIX,
+    PATCH_KEYS,
     STRING_TARGETS,
-    TEXT_OPS,
+    TEXT_OP_KEYS,
     TEXT_TARGETS,
 )
 from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
@@ -126,19 +129,13 @@ def _yukari_recipe() -> dict:
     }
 
 
-_TEXT_OP_KEYS = {
-    "append": ["value"], "prepend": ["value"],
-    "replace": ["old", "value"], "remove": ["old"],
-}
-
-
 def _patches_block() -> dict:
     return {
-        "keys": ["target", "op", "value", "old", "reason"],
+        "keys": list(PATCH_KEYS),
         "text": {
             "targets": list(TEXT_TARGETS),
-            "part_target": "prompt.positive.<part>",
-            "ops": {op: _TEXT_OP_KEYS[op] for op in TEXT_OPS},
+            "part_target": PART_TARGET_PREFIX + "<part>",
+            "ops": {op: list(keys) for op, keys in TEXT_OP_KEYS.items()},
         },
         "number": {
             target: {"op": "set", "constraints": NUMBER_CONSTRAINTS[target]}
@@ -148,6 +145,7 @@ def _patches_block() -> dict:
             target: {"op": "set", "values": None}
             for target in STRING_TARGETS
         },
+        "loras": {target: {"op": "set"} for target in LORAS_TARGETS},
         "overrides": {
             "identity_override": (
                 "non-empty reason string; required when patches or a prompt "

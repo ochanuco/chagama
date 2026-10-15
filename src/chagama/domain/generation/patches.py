@@ -17,8 +17,20 @@ NUMBER_TARGETS = ("render.cfg", "render.steps", "render.width",
                   "render.height", "render.guided_steps", "hires.denoise")
 STRING_TARGETS = ("render.model", "render.sampler", "render.scheduler")
 LORAS_TARGETS = ("render.loras",)
-TEXT_OPS = ("append", "prepend", "replace", "remove")
-_KNOWN_KEYS = frozenset({"target", "op", "value", "old", "reason"})
+TARGET_KINDS = {
+    **dict.fromkeys(TEXT_TARGETS, "text"),
+    **dict.fromkeys(NUMBER_TARGETS, "number"),
+    **dict.fromkeys(STRING_TARGETS, "string"),
+    **dict.fromkeys(LORAS_TARGETS, "loras"),
+}
+# Of `value` / `old`, the keys each text op takes. Every listed key must be a
+# non-empty string; the unlisted one is rejected.
+TEXT_OP_KEYS = {
+    "append": ("value",), "prepend": ("value",),
+    "replace": ("old", "value"), "remove": ("old",),
+}
+TEXT_OPS = tuple(TEXT_OP_KEYS)
+PATCH_KEYS = ("target", "op", "value", "old", "reason")
 
 NUMBER_CONSTRAINTS = {
     "render.steps": "an int >= 1",
@@ -55,19 +67,12 @@ def _parse_text_patch(patch: dict, target: str) -> Patch:
     if op not in TEXT_OPS:
         _fail(target, f"op must be one of {TEXT_OPS}, got {op!r}")
     reason = _require_str(patch, "reason", target)
-    if op in ("append", "prepend"):
-        if "old" in patch:
-            _fail(target, f"op {op!r} does not take 'old'")
-        value = _require_str(patch, "value", target)
-        return Patch(target, op, value, None, reason)
-    if op == "replace":
-        old = _require_str(patch, "old", target)
-        value = _require_str(patch, "value", target)
-        return Patch(target, op, value, old, reason)
-    old = _require_str(patch, "old", target)
-    if "value" in patch:
-        _fail(target, "op 'remove' does not take 'value'")
-    return Patch(target, op, None, old, reason)
+    taken = TEXT_OP_KEYS[op]
+    for key in ("old", "value"):
+        if key not in taken and key in patch:
+            _fail(target, f"op {op!r} does not take {key!r}")
+    fields = {key: _require_str(patch, key, target) for key in taken}
+    return Patch(target, op, fields.get("value"), fields.get("old"), reason)
 
 
 def _parse_number_patch(patch: dict, target: str,
@@ -149,7 +154,7 @@ def parse_patches(raw: object,
     for patch in raw:
         if not isinstance(patch, dict):
             _fail(patch, "patch must be an object")
-        unknown = set(patch) - _KNOWN_KEYS
+        unknown = set(patch) - set(PATCH_KEYS)
         if unknown:
             _fail(patch.get("target"),
                   f"unknown patch keys: {sorted(unknown)}")
@@ -158,15 +163,15 @@ def parse_patches(raw: object,
             _fail(target, "'target' must be a string")
         part_name = (target[len(PART_TARGET_PREFIX):]
                     if target.startswith(PART_TARGET_PREFIX) else "")
-        if target in TEXT_TARGETS:
+        kind = ("text" if part_name and "." not in part_name
+                else TARGET_KINDS.get(target))
+        if kind == "text":
             patches.append(_parse_text_patch(patch, target))
-        elif part_name and "." not in part_name:
-            patches.append(_parse_text_patch(patch, target))
-        elif target in NUMBER_TARGETS:
+        elif kind == "number":
             patches.append(_parse_number_patch(patch, target, dials))
-        elif target in STRING_TARGETS:
+        elif kind == "string":
             patches.append(_parse_string_patch(patch, target))
-        elif target in LORAS_TARGETS:
+        elif kind == "loras":
             patches.append(_parse_loras_patch(patch, target))
         else:
             allowed = (TEXT_TARGETS + (PART_TARGET_PREFIX + "<part>",)
