@@ -8,6 +8,7 @@ keeps a plain ComfyUI install unaffected.
 from __future__ import annotations
 
 import os
+import socket
 import threading
 import time
 import urllib.error
@@ -27,8 +28,9 @@ def _enabled() -> bool:
     return (getenv("CHAGAMA_WORKER") or "").strip().lower() in {"1", "true", "yes"}
 
 
-def _worker_id() -> str | None:
-    return getenv("CHAGAMA_WORKER_ID") or None
+def _worker_id() -> str:
+    """``CHAGAMA_WORKER_ID``, else ``<host>:comfyui``, the same across restarts."""
+    return getenv("CHAGAMA_WORKER_ID") or f"{socket.gethostname()}:comfyui"
 
 
 def _repository() -> Path:
