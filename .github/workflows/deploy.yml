@@ -19,8 +19,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  plan:
+    uses: ochanuco/.github/.github/workflows/deploy-plan.yml@62a64c6573161d5f0e94c187b9fe07e9eca43fbc # v1.4.0
+    permissions:
+      contents: read
+      actions: read
+    with:
+      ref: ${{ inputs.ref }}
+      notices: |
+        manifests/worker-models.toml=デプロイの後に fetch worker models を実行する
+        scripts/worker/register-comfyui.ps1=GPU 機で register-comfyui.ps1 を手で実行し直す
+        scripts/worker/register-runner.ps1=GPU 機で register-runner.ps1 を手で実行し直す
+
   deploy:
     name: update the GPU box checkout and restart work
+    needs: plan
     runs-on: [self-hosted, gpu-box]
     environment: production
     timeout-minutes: 15
@@ -38,7 +51,7 @@ jobs:
         id: ref
         shell: cmd
         env:
-          REF: ${{ inputs.ref }}
+          REF: ${{ needs.plan.outputs.sha }}
         run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\resolve-ref.ps1"
 
       # deploy.ps1 comes from the commit being deployed, not from the standing
