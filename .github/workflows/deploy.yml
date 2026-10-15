@@ -1,42 +1,94 @@
 name: deploy
-run-name: deploy chagama @ ${{ inputs.ref }}
+run-name: deploy chagama @ ${{ inputs.ref || github.sha }}
 
-# 本番（GPU 機）へのデプロイはこの手動実行だけ。Environment production の承認を通ってから
-# self-hosted runner に乗る。DB を持たないので migration は無い。
+# 本番（GPU 機）へのデプロイ。main への push で出し、承認は plan が要ると判定したときだけ
+# Environment production-approval で止まる。workflow_dispatch はロールバックと出し直し用。
+# 出す前に GPU 機を WoL で起こし、self-hosted runner に乗る。DB を持たないので migration は無い。
 on:
+  push:
+    branches: [main]
+    # worker の動作に関わらないパスだけの push では出さない（ComfyUI を再起動しない）
+    paths-ignore:
+      - "docs/**"
+      - "research/**"
+      - "experiments/**"
+      - "tests/**"
+      - ".claude/**"
+      - ".github/**"
+      - "**/*.md"
+      - "renovate.json5"
   workflow_dispatch:
     inputs:
       ref:
-        description: デプロイする ref（main、または main 上のコミット SHA）
+        description: デプロイする ref（main、または main 上のコミット SHA。古い SHA はロールバック）
         required: true
         default: main
 
 permissions:
   contents: read
 
+# run 全体を直列にする。deploy ジョブの concurrency（restart worker comfyui と共有）とは名前を変える
 concurrency:
-  group: deploy-production
+  group: deploy-run-production
   cancel-in-progress: false
 
 jobs:
   plan:
-    uses: ochanuco/.github/.github/workflows/deploy-plan.yml@62a64c6573161d5f0e94c187b9fe07e9eca43fbc # v1.4.0
+    uses: ochanuco/.github/.github/workflows/deploy-plan.yml@737e6affb5e43803670afb13376dded4731e3388 # v1.5.0
     permissions:
       contents: read
       actions: read
     with:
-      ref: ${{ inputs.ref }}
+      ref: ${{ inputs.ref || 'main' }}
+      approval-environment: production-approval
       notices: |
         manifests/worker-models.toml=デプロイの後に fetch worker models を実行する
         scripts/worker/register-comfyui.ps1=GPU 機で register-comfyui.ps1 を手で実行し直す
         scripts/worker/register-runner.ps1=GPU 機で register-runner.ps1 を手で実行し直す
 
+  approve:
+    needs: plan
+    if: needs.plan.outputs.approval-environment != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: ${{ needs.plan.outputs.approval-environment }}
+    steps:
+      - env:
+          APPROVAL_ENVIRONMENT: ${{ needs.plan.outputs.approval-environment }}
+        run: echo "approved in $APPROVAL_ENVIRONMENT"
+
+  wake:
+    name: wake the GPU box
+    needs: [plan, approve]
+    # approve が飛ばされた（承認が要らない）ときも起こす。plan の失敗と承認の拒否では起こさない
+    if: ${{ !cancelled() && needs.plan.result == 'success' && (needs.approve.result == 'success' || needs.approve.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          sparse-checkout: .github/deploy
+          persist-credentials: false
+
+      - uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
+
+      - name: Wake
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SA_DEPLOY }}
+        run: op run --env-file=.github/deploy/wake.env.op -- bash .github/deploy/wake.sh
+
   deploy:
     name: update the GPU box checkout and restart work
-    needs: plan
+    needs: [plan, approve, wake]
+    if: ${{ !cancelled() && needs.wake.result == 'success' }}
     runs-on: [self-hosted, gpu-box]
     environment: production
     timeout-minutes: 15
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:

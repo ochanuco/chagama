@@ -59,8 +59,8 @@ generations.
 
 A Hugging Face file listed in `manifests/worker-models.toml` gets there by
 code: the `fetch worker models` workflow runs `scripts/worker_models.py` on
-the box's runner by hand (`workflow_dispatch` with a ref on main, approved
-in the `production` Environment, with `dry_run` to only check). It
+the box's runner by hand (`workflow_dispatch` with a ref on main, with
+`dry_run` to only check). It
 checks every file upstream before downloading any, resumes from `.part`,
 keeps the box awake while it runs, and renames a file into place only when
 its SHA256 matches the one Hugging Face publishes (and `sha256` in the

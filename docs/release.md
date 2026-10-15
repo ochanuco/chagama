@@ -1,8 +1,8 @@
 # Release path
 
-`main` is where PRs land; a deploy moves the GPU worker to a commit on `main`.
-There is no release branch: the deploy is a manual run, approved before it
-reaches the box.
+`main` is where PRs land, and a merge is a release: the push to `main`
+deploys that commit to the GPU worker. There is no release branch. A deploy
+stops for approval only when its plan finds a reason to (below).
 
 ## Branches and rulesets
 
@@ -11,19 +11,37 @@ reaches the box.
 
 ## Workflows
 
-- `deploy` is a `workflow_dispatch` with the input `ref` (`main`, the
-  default, or a commit SHA on main). Its job uses the Environment
-  `production`, whose required reviewer approves the run before the job is
-  handed to the self-hosted runner labelled `gpu-box`. The repository is
-  public; the approval and the main-only ref check
-  (`scripts/worker/resolve-ref.ps1`) are what keep other code off the box.
-  A `plan` job (`deploy-plan.yml` in ochanuco/.github) runs before the
-  approval: it pins the ref to a SHA (`main` to the commit the run started
-  on), and writes to the Job Summary the PRs since the last deploy, what a
-  rollback drops, the changed files, and a notice for a change that needs a
-  step by hand (the `notices` list in `deploy.yml`). The deploy job deploys
-  that SHA.
-  The job calls `scripts/worker/deploy.ps1` in the standing checkout named by
+- `deploy` runs on every push to `main` except one that touches only paths
+  the worker never reads (`paths-ignore` in `deploy.yml`: docs, tests,
+  experiments, Markdown, `.github/`), and as a `workflow_dispatch` with the
+  input `ref` (`main`, the default, or a commit SHA on main; an older one is
+  a rollback). Runs go one at a time, and of the runs waiting behind one only
+  the newest is kept. Its jobs, in order:
+  - `plan` (`deploy-plan.yml` in ochanuco/.github) pins the ref to a SHA
+    (`main` to the commit the run started on) and writes to the Job Summary
+    the PRs since the last deploy, what a rollback drops, the changed files,
+    and a notice for a change that needs a step by hand (the `notices` list
+    in `deploy.yml`). It asks for approval when there is no earlier deploy
+    to compare with, when the run is a rollback or the last deployed commit
+    is not an ancestor of this one, and when a `notices` path changed. The
+    last deploy is the latest successful run's name, `deploy chagama @ <ref>`.
+  - `approve` runs only when `plan` asked, in the Environment
+    `production-approval`, whose required reviewer approves after reading
+    that summary. The Environment holds no secrets.
+  - `wake` asks the Wake-on-LAN service to wake the box
+    (`.github/deploy/wake.sh`). It runs in the Environment `production`,
+    which has no reviewers and holds the 1Password service account token
+    `OP_SA_DEPLOY`; the service's address and Cloudflare Access token come
+    from 1Password through `.github/deploy/wake.env.op`. It does not wait for
+    the box to come up: the next job stays queued until the box's runner
+    connects.
+  - `deploy` runs on the self-hosted runner labelled `gpu-box`, in the same
+    Environment. It deploys the SHA `plan` pinned, and shares its
+    concurrency group with `restart worker comfyui`.
+  The repository is public. Both Environments accept only `main`, and the
+  main-only ref check (in `plan` and `scripts/worker/resolve-ref.ps1`)
+  refuses any other commit; together they keep other code off the box.
+  The `deploy` job calls `scripts/worker/deploy.ps1` in the standing checkout named by
   the repository variable `WORKER_CHECKOUT` with the resolved SHA. That
   moves the checkout to that commit on the local branch `production` -- the
   worker serves only requests whose `recipe_ref` equals the branch it is on,
@@ -45,8 +63,9 @@ reaches the box.
   a thread in that process, so nothing else brings the worker back. A deploy
   that skipped it would leave the box with no worker at all.
 - `fetch worker models` is a manual `workflow_dispatch` with the same `ref`
-  input and the same `production` approval. Run it after a deploy that
-  changes `manifests/worker-models.toml`. It downloads
+  input, in the Environment `production`. Run it after a deploy that
+  changes `manifests/worker-models.toml`; it does not wake the box, so run
+  it while the box is still up from that deploy. It downloads
   the listed Hugging Face models into the box's ComfyUI `models/`
   (`scripts/worker_models.py`) and does not restart anything.
 - `pixal3d` is a manual `workflow_dispatch` (any ref) that runs
@@ -74,11 +93,11 @@ A sketch seed takes about 45 seconds, a redraw about 90, a four-seed request a
 few minutes. The ceiling above it is the deploy job's own `timeout-minutes:
 15`, which also has to hold `git fetch` and the `uv pip install`.
 
-Today a killed worker was not losing renders -- ComfyUI is a separate process
-that survives the deploy, and a re-claimed request rejoins the running job
-through the `comfy_prompt_id` in its state file. What it lost was the wait.
-Draining matters for its own sake once the worker runs inside ComfyUI, because
-then the restart takes the render with it.
+The drain is what keeps the render in flight. The worker runs inside
+ComfyUI, and `deploy.ps1` restarts ComfyUI on every deploy, so a render still
+going when the restart comes dies with the process and its request has to be
+claimed and drawn again. A drain that times out leaves that request `running`
+until it is handed back to the queue.
 
 ## Where the worker runs
 
