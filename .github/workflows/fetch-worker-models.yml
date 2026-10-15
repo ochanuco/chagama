@@ -1,7 +1,7 @@
 name: fetch worker models
 
-# manifests/worker-models.toml を GPU 機の ComfyUI models/ に揃える。deploy と同じく
-# 手動実行だけで、Environment production の承認を通る。
+# manifests/worker-models.toml を GPU 機の ComfyUI models/ に揃える。手動実行だけ。
+# Environment production（main だけを受ける）で GPU 機に乗る。GPU 機は起こさない。
 # ComfyUI はモデル一覧をリクエストごとに読むので再起動はしない。
 on:
   workflow_dispatch:
