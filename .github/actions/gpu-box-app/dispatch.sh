@@ -14,7 +14,17 @@ body=$(jq -n --arg action "$ACTION" --arg version "$VERSION" --arg op "$OP" --ar
     + (if $op != "" then {op: $op} else {} end))
 }')
 dispatched_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-run_id=$(gh api -X POST "repos/$repo/actions/workflows/$workflow/dispatches" --input - --jq '.workflow_run_id // empty' <<<"$body")
+for attempt in 1 2 3; do
+  if run_id=$(gh api -X POST "repos/$repo/actions/workflows/$workflow/dispatches" --input - \
+      --jq '.workflow_run_id // empty' <<<"$body" 2>"$RUNNER_TEMP/dispatch.err"); then
+    break
+  fi
+  cat "$RUNNER_TEMP/dispatch.err" >&2
+  if ! grep -q "HTTP 422" "$RUNNER_TEMP/dispatch.err" || (( attempt == 3 )); then
+    exit 1
+  fi
+  sleep 10
+done
 
 if [[ -z "$run_id" ]]; then
   for _ in $(seq 12); do
