@@ -16,10 +16,10 @@ if ($running) { throw "ComfyUI is running (pid $($running.ProcessId -join ', '))
 New-Item -ItemType Directory -Force -Path $data, $config | Out-Null
 "created: $data"
 "created: $config"
-$user = "$env:USERDOMAIN\$env:USERNAME"
-icacls $config /inheritance:r /grant:r "${user}:(OI)(CI)M" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" | Out-Null
+$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+icacls $config /inheritance:r /grant:r "*$($identity.User.Value):(OI)(CI)M" "*S-1-5-32-544:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" | Out-Null
 if ($LASTEXITCODE) { throw "icacls failed" }
-"acl: $config (inheritance off; $user Modify; Administrators, SYSTEM FullControl)"
+"acl: $config (inheritance off; $($identity.Name) Modify; Administrators, SYSTEM FullControl)"
 
 $nogit = Join-Path $Clone ".local\_nogit"
 if (Test-Path $nogit) {
