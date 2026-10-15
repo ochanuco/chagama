@@ -1,14 +1,15 @@
-# Bring the portable ComfyUI checkout to the tag pinned in manifests/worker-nodes.toml.
-#   sync-comfyui.ps1 -Checkout <dir> -ComfyRoot <dir>
-# Prints "changed: True" on its last line when the checkout moved.
+# Bring the ComfyUI checkout to the tag pinned in a worker-nodes manifest.
+#   sync-comfyui.ps1 -Manifest <file> -ComfyRoot <ComfyUI dir> -Python <python.exe> [-FetchOnly]
+# -FetchOnly only makes the tag present locally. Otherwise the checkout moves
+# to the tag and its requirements are installed.
 param(
-    [Parameter(Mandatory = $true)][string]$Checkout,
-    [Parameter(Mandatory = $true)][string]$ComfyRoot
+    [Parameter(Mandatory = $true)][string]$Manifest,
+    [Parameter(Mandatory = $true)][string]$ComfyRoot,
+    [Parameter(Mandatory = $true)][string]$Python,
+    [switch]$FetchOnly
 )
-$ErrorActionPreference = "Stop"
-$manifest = Join-Path $Checkout "manifests\worker-nodes.toml"
-$python = Join-Path (Split-Path $ComfyRoot -Parent) "python_embeded\python.exe"
-if (-not (Test-Path $python)) { throw "not found: $python" }
+$ErrorActionPreference = "Continue"
+if (-not (Test-Path $Python)) { throw "not found: $Python" }
 if (-not (Test-Path (Join-Path $ComfyRoot ".git"))) { throw "not a git checkout: $ComfyRoot" }
 
 $reader = @'
@@ -17,21 +18,27 @@ print(tomllib.loads(open(sys.argv[1], encoding="utf-8").read())["comfyui"]["tag"
 '@
 $readerPath = Join-Path $env:TEMP "worker-comfyui-reader.py"
 Set-Content -Path $readerPath -Value $reader -Encoding ASCII
-$tag = & (Join-Path $Checkout ".venv\Scripts\python.exe") $readerPath $manifest
+$tag = & $Python $readerPath $Manifest
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+if ($FetchOnly) {
+    git -C $ComfyRoot rev-parse -q --verify "refs/tags/$tag" 2>&1 | Out-Null
+    if ($LASTEXITCODE) {
+        git -C $ComfyRoot fetch --quiet --tags origin 2>&1 | Out-Host
+        if ($LASTEXITCODE) { exit $LASTEXITCODE }
+    }
+    "ComfyUI $tag fetched"
+    exit 0
+}
 
 $current = git -C $ComfyRoot describe --tags --exact-match 2>$null
 $moved = $false
 if ($current -ne $tag) {
-    git -C $ComfyRoot fetch --quiet --tags origin
+    git -C $ComfyRoot fetch --quiet --tags origin 2>&1 | Out-Host
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
-    git -C $ComfyRoot checkout --quiet --detach --force $tag
+    git -C $ComfyRoot checkout --quiet --detach --force $tag 2>&1 | Out-Host
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
-    Stop-ScheduledTask -TaskName "comfyui" -ErrorAction SilentlyContinue
-    Get-CimInstance Win32_Process |
-        Where-Object { $_.CommandLine -match "ComfyUI[\\/]main\.py" } |
-        ForEach-Object { cmd /c "taskkill /PID $($_.ProcessId) /T /F >nul 2>&1" }
-    & $python -m pip install --quiet -r (Join-Path $ComfyRoot "requirements.txt")
+    & $Python -m pip install --quiet -r (Join-Path $ComfyRoot "requirements.txt") 2>&1 | Out-Host
     if ($LASTEXITCODE) { exit $LASTEXITCODE }
     $moved = $true
 }
