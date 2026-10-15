@@ -1,15 +1,11 @@
 name: fetch worker models
 
-# manifests/worker-models.toml を GPU 機の ComfyUI models/ に揃える。手動実行だけ。
-# Environment production（main だけを受ける）で GPU 機に乗る。GPU 機は起こさない。
+# GPU 機で動いている版の manifests/worker-models.toml に、ComfyUI の models/ を揃える。手動実行だけ。
+# 実行は chabatake の gpu-box-app の運用コマンド fetch-models（dry_run なら fetch-models-dry-run）。
 # ComfyUI はモデル一覧をリクエストごとに読むので再起動はしない。
 on:
   workflow_dispatch:
     inputs:
-      ref:
-        description: マニフェストを読む ref（main、または main 上のコミット SHA）
-        required: true
-        default: main
       dry_run:
         description: check Hugging Face and the disk, download nothing
         type: boolean
@@ -18,36 +14,22 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: worker-models
-  cancel-in-progress: false
-
 jobs:
   fetch:
-    name: fetch the pinned models onto the GPU box
-    runs-on: [self-hosted, gpu-box]
+    name: fetch the pinned models onto the GPU box through chabatake
+    runs-on: ubuntu-latest
     environment: production
-    # A download resumes from its .part, so a run cut off here picks up where
-    # it stopped on the next one.
-    timeout-minutes: 180
+    timeout-minutes: 240
+    concurrency:
+      group: gpu-box-chagama
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          ref: main
-          fetch-depth: 0
+          sparse-checkout: .github/actions
           persist-credentials: false
-
-      - name: Resolve ref
-        shell: cmd
-        env:
-          REF: ${{ inputs.ref }}
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\resolve-ref.ps1"
-
-      - name: Fetch
-        shell: cmd
-        env:
-          WORKER_CHECKOUT: ${{ vars.WORKER_CHECKOUT }}
-          COMFYUI_ROOT: ${{ vars.COMFYUI_ROOT }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
-        run: '"%WORKER_CHECKOUT%\.venv\Scripts\python.exe" "%GITHUB_WORKSPACE%\scripts\worker_models.py" --manifest "%GITHUB_WORKSPACE%\manifests\worker-models.toml" --comfy-root "%COMFYUI_ROOT%" %DRY_RUN%'
+      - uses: ./.github/actions/gpu-box-app
+        with:
+          action: op
+          op: ${{ inputs.dry_run && 'fetch-models-dry-run' || 'fetch-models' }}
+          op-service-account-token: ${{ secrets.OP_SA_DEPLOY }}

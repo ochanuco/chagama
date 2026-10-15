@@ -3,7 +3,7 @@ run-name: deploy chagama @ ${{ inputs.ref || github.sha }}
 
 # 本番（GPU 機）へのデプロイ。main への push で出し、承認は plan が要ると判定したときだけ
 # Environment production-approval で止まる。workflow_dispatch はロールバックと出し直し用。
-# 出す前に GPU 機を WoL で起こし、self-hosted runner に乗る。DB を持たないので migration は無い。
+# zip を Release として公開し、GPU 機への配備は chabatake の gpu-box-app に任せる。
 on:
   push:
     branches: [main]
@@ -27,7 +27,6 @@ on:
 permissions:
   contents: read
 
-# run 全体を直列にする。deploy ジョブの concurrency（restart worker comfyui と共有）とは名前を変える
 concurrency:
   group: deploy-run-production
   cancel-in-progress: false
@@ -44,7 +43,6 @@ jobs:
       notices: |
         manifests/worker-models.toml=デプロイの後に fetch worker models を実行する
         scripts/worker/register-comfyui.ps1=GPU 機で register-comfyui.ps1 を手で実行し直す
-        scripts/worker/register-runner.ps1=GPU 機で register-runner.ps1 を手で実行し直す
 
   approve:
     needs: plan
@@ -57,38 +55,13 @@ jobs:
           APPROVAL_ENVIRONMENT: ${{ needs.plan.outputs.approval-environment }}
         run: echo "approved in $APPROVAL_ENVIRONMENT"
 
-  wake:
-    name: wake the GPU box
-    needs: [plan, approve]
-    # approve が飛ばされた（承認が要らない）ときも起こす。plan の失敗と承認の拒否では起こさない
-    if: ${{ !cancelled() && needs.plan.result == 'success' && (needs.approve.result == 'success' || needs.approve.result == 'skipped') }}
+  build:
+    name: build the release zip
+    needs: plan
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    environment: production
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: main
-          sparse-checkout: .github/deploy
-          persist-credentials: false
-
-      - uses: 1password/install-cli-action@1a3160d5e9de1ae0803eaa08a88746f5ae3daa50 # v4.1.0
-
-      - name: Wake
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SA_DEPLOY }}
-        run: op run --env-file=.github/deploy/wake.env.op -- bash .github/deploy/wake.sh
-
-  deploy:
-    name: update the GPU box checkout and restart work
-    needs: [plan, approve, wake]
-    if: ${{ !cancelled() && needs.wake.result == 'success' }}
-    runs-on: [self-hosted, gpu-box]
-    environment: production
-    timeout-minutes: 15
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.zip.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -96,22 +69,59 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # The runner's own step script is unsigned, so the box's execution policy
-      # rejects `shell: powershell`; cmd hands the script to powershell with
-      # the policy bypassed instead. The same goes for every step below.
-      - name: Resolve ref
-        id: ref
-        shell: cmd
+      - id: zip
         env:
-          REF: ${{ needs.plan.outputs.sha }}
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\resolve-ref.ps1"
+          SHA: ${{ needs.plan.outputs.sha }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          version="r${RUN_NUMBER}-${SHA:0:7}"
+          bash scripts/release/build.sh "$version" "$SHA" chagama.zip
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      # deploy.ps1 comes from the commit being deployed, not from the standing
-      # checkout it is about to move.
-      - name: Deploy
-        shell: cmd
-        env:
-          WORKER_CHECKOUT: ${{ vars.WORKER_CHECKOUT }}
-          COMFYUI_ROOT: ${{ vars.COMFYUI_ROOT }}
-          DEPLOY_SHA: ${{ steps.ref.outputs.sha }}
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\deploy.ps1" -Checkout "%WORKER_CHECKOUT%" -Ref "%DEPLOY_SHA%" -ComfyRoot "%COMFYUI_ROOT%"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chagama-zip
+          path: chagama.zip
+          if-no-files-found: error
+
+  deploy:
+    name: publish the release and deploy it through chabatake
+    needs: [plan, approve, build]
+    # approve が飛ばされた（承認が要らない）ときも出す。plan の失敗と承認の拒否では出さない
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.build.result == 'success' && (needs.approve.result == 'success' || needs.approve.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 240
+    permissions:
+      contents: write
+    concurrency:
+      group: gpu-box-chagama
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      SHA: ${{ needs.plan.outputs.sha }}
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          sparse-checkout: |
+            .github/actions
+            scripts/release
+          persist-credentials: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: chagama-zip
+
+      - id: release
+        run: bash scripts/release/publish.sh
+
+      - uses: ./.github/actions/gpu-box-app
+        with:
+          action: deploy
+          version: ${{ steps.release.outputs.version }}
+          op-service-account-token: ${{ secrets.OP_SA_DEPLOY }}
+
+      - run: bash scripts/release/prune.sh 3

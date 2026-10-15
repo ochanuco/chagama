@@ -6,19 +6,21 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: deploy-production
-  cancel-in-progress: false
-
 jobs:
   restart:
-    name: restart the GPU box's ComfyUI
-    runs-on: [self-hosted, gpu-box]
-    timeout-minutes: 5
+    name: restart the GPU box's ComfyUI through chabatake
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 240
+    concurrency:
+      group: gpu-box-chagama
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          sparse-checkout: .github/actions
           persist-credentials: false
-      - name: Restart
-        shell: cmd
-        run: powershell -NoProfile -ExecutionPolicy Bypass -File "%GITHUB_WORKSPACE%\scripts\worker\restart-comfyui.ps1"
+      - uses: ./.github/actions/gpu-box-app
+        with:
+          action: restart
+          op-service-account-token: ${{ secrets.OP_SA_DEPLOY }}
