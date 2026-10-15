@@ -36,11 +36,13 @@ from ..infrastructure.imaging.delivery import graph_from_png, graph_from_png_or_
 from ..infrastructure.imaging.palette import summarize
 from ..infrastructure.notifications.discord import DiscordNotifier
 from ..infrastructure.persistence.run_state import JsonRunState
+from ..infrastructure.locations import data_dir
 from ..infrastructure.repository import discover_repository, git_metadata
+from ..infrastructure.worker_status import status_writer
 
 # deploy writes this file to ask for a drain and waits for it to go; the
 # worker removes it as its last act.
-DRAIN_FILE = ".local/_nogit/worker/drain"
+DRAIN_FILE = "worker/drain"
 
 # Must track the `work` subparser's own defaults in interfaces/cli.py by
 # hand -- no single source both can read.
@@ -98,7 +100,7 @@ def build_generate_services(chimera: ChimeraClient, comfyui: ComfyUIClient, noti
         graph_builder=_build_generation_graph,
         git_metadata=repository_metadata,
         conflicts=conflicts,
-        output_root=repository / ".local/_nogit/chimera",
+        output_root=data_dir(repository) / "chimera",
         measure=summarize,
         presets=chimera.get_preset,
         pose_fingerprint=_pose_fingerprint,
@@ -114,7 +116,7 @@ def build_redraw_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifi
         graph_from_png=graph_from_png_or_none,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/redraw",
+        output_root=data_dir(repository) / "redraw",
     )
 
 
@@ -127,7 +129,7 @@ def build_deliver_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notif
         image_size=image_size,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/deliver",
+        output_root=data_dir(repository) / "deliver",
         measure=summarize,
     )
 
@@ -139,7 +141,7 @@ def build_dof_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
         comfyui=comfyui,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/dof",
+        output_root=data_dir(repository) / "dof",
     )
 
 
@@ -150,7 +152,7 @@ def build_lens_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier
         comfyui=comfyui,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/lens",
+        output_root=data_dir(repository) / "lens",
     )
 
 
@@ -161,7 +163,7 @@ def build_photo_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifie
         comfyui=comfyui,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/photo",
+        output_root=data_dir(repository) / "photo",
     )
 
 
@@ -172,7 +174,7 @@ def build_stage_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifie
         comfyui=comfyui,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/stage",
+        output_root=data_dir(repository) / "stage",
     )
 
 
@@ -185,7 +187,7 @@ def build_repair_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifi
         image_size=image_size,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/repair",
+        output_root=data_dir(repository) / "repair",
     )
 
 
@@ -198,7 +200,7 @@ def build_masked_redraw_services(chimera: ChimeraClient, comfyui: ComfyUIClient,
         image_size=image_size,
         git_metadata=repository_metadata,
         notifier=notifier,
-        output_root=repository / ".local/_nogit/masked-redraw",
+        output_root=data_dir(repository) / "masked-redraw",
     )
 
 
@@ -229,7 +231,7 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
         comfyui.timings = AttemptTimings(
             env_provider=EnvCollector(comfyui, repository_metadata))
 
-    drain_file = repository / DRAIN_FILE
+    drain_file = data_dir(repository) / DRAIN_FILE
     return WorkServices(
         management=chimera,
         generate_services=build_generate_services(
@@ -256,6 +258,7 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
         hub=hub_factory,
         progress_feed=progress_factory,
         timings=comfyui.timings,
+        status=status_writer(repository, repository_metadata),
         draining=drain_file.exists,
         drained=lambda: drain_file.unlink(missing_ok=True),
         emit=emit,

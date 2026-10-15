@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -15,7 +16,23 @@ def discover_repository(cwd: Path | None = None) -> Path:
     return Path(result.stdout.strip())
 
 
+def release_info(repository: Path) -> dict | None:
+    """The `release.json` at the release root, or None outside a release."""
+    path = repository / "release.json"
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def git_metadata(repository: Path) -> dict:
+    release = release_info(repository)
+    if release is not None:
+        return {
+            "commit": release["commit"],
+            "branch": release["ref"],
+            "dirty": False,
+        }
+
     def output(*args: str) -> str:
         return subprocess.run(
             ["git", *args], cwd=repository, check=True,

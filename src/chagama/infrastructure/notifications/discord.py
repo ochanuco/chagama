@@ -11,11 +11,12 @@ import uuid
 from pathlib import Path
 
 from ..chimera.client import USER_AGENT
+from ..locations import config_dir
 
 
 class DiscordNotifier:
     def __init__(self, repository: Path) -> None:
-        self.webhook_file = repository / ".local/discord-webhook"
+        self.webhook_file = config_dir(repository) / "discord-webhook"
 
     def _webhook(self) -> str:
         url = os.environ.get("DISCORD_WEBHOOK", "").strip()

@@ -6,29 +6,30 @@ and reads chimera. The box's address and ssh alias are in the untracked
 
 ## Setting it up
 
+The box runs releases under `C:\apps\chagama` (see [release.md](release.md)).
+`scripts/worker/setup-apps.ps1`, run once by hand, elevated, with the worker
+stopped, prepares it:
+
 ```powershell
-git clone https://github.com/ochanuco/chagama.git
-uv venv --python <uv-managed 3.12 python.exe> .venv
-uv pip install --python .venv\Scripts\python.exe -e . pillow numpy opencv-python scipy websockets pytest
-$env:PYTHONPATH = "scripts"; .\.venv\Scripts\pytest.exe -q
-powershell -ExecutionPolicy Bypass -File .\scripts\worker\register-nodes.ps1
-powershell -ExecutionPolicy Bypass -File .\scripts\worker\register-comfyui.ps1 -PortableRoot <dir>
+powershell -ExecutionPolicy Bypass -File .\scripts\worker\setup-apps.ps1 [-HfTokenFile <file>]
 ```
 
-`register-nodes.ps1` junctions `comfy_nodes/yukari_finalize` and
-`comfy_nodes/yukari_worker` into ComfyUI's `custom_nodes/`.
-`register-comfyui.ps1` registers the portable ComfyUI as the logon task
-`comfyui` with the launch arguments the script holds and
-`CHAGAMA_WORKER=1`, so the worker runs as a thread inside ComfyUI
-and a reboot brings both back once the user logs on. Changing an argument
-means editing the script and re-running it (it also removes the old
-`COMFYUI_RECIPES_WORKER` user variable; `src/chagama/envcompat.py` still reads
-the pre-rename names until the box is migrated); `run_nvidia_gpu.bat` is not
-used. `register-watch.ps1` / `watch.ps1` still register a standalone
-`chagama work` loop for running it by hand; the deploy does not use
-them. `.local/chimera-token` and `.local/discord-webhook` are copied onto
-the box by hand; they are never tracked. The box must stay on a checkout
-whose branch matches the `recipe_ref` of the rows it should serve (see
+It creates the data directory `C:\apps\chagama\data` and the config
+directory `C:\ProgramData\chagama` (Modify for the user, Full for
+Administrators and SYSTEM, no inheritance), moves the old checkout's
+`.local\_nogit\*` into data, copies `chimera-token` and `discord-webhook`
+into config (plus `hf-token` when given), writes `worker.json` with the
+portable ComfyUI root, and runs `register-comfyui.ps1`. The secrets are never
+tracked.
+
+`register-comfyui.ps1 -PortableRoot <dir>` registers `run-comfyui.ps1` as the
+logon task `comfyui`, so the worker runs as a thread inside ComfyUI and a
+reboot brings both back once the user logs on. The launch arguments live in
+the script; changing one means editing it and re-running it (it also removes
+the old `COMFYUI_RECIPES_WORKER` user variable; `src/chagama/envcompat.py`
+still reads the pre-rename names until the box is migrated);
+`run_nvidia_gpu.bat` is not used. The box serves the rows whose `recipe_ref`
+equals the ref of the release it runs (see
 [queueing.md](queueing.md#worker)).
 
 Two things that only show up over `ssh comfyui-worker`:
@@ -50,7 +51,7 @@ probabilities are PUT to `/api/v1/generations/{id}/safety`. Thresholds and
 badges are chimera's. A failure -- no `onnxruntime`, no network for the first
 download, chimera not yet serving the endpoint -- is only logged and never
 fails the job. The model downloads on first use into
-`.local/_nogit/models/wd-tagger` (override with `CHAGAMA_MODEL_DIR`),
+`models/wd-tagger` in the data directory (override with `CHAGAMA_MODEL_DIR`),
 sha256-checked against the pinned revision. `chagama safety rate <short_id>...`
 and `chagama safety backfill [--published] [--limit N]` rate existing
 generations.
@@ -59,12 +60,11 @@ generations.
 
 A Hugging Face file listed in `manifests/worker-models.toml` gets there by
 code: the `fetch worker models` workflow runs `scripts/worker_models.py` on
-the box's runner by hand (`workflow_dispatch` with a ref on main, with
-`dry_run` to only check). It
+the box by hand (`workflow_dispatch`, with `dry_run` to only check). It
 checks every file upstream before downloading any, resumes from `.part`,
 keeps the box awake while it runs, and renames a file into place only when
 its SHA256 matches the one Hugging Face publishes (and `sha256` in the
-manifest, when pinned). `HF_TOKEN` (repository secret) is needed only for a
+manifest, when pinned). `HF_TOKEN`, read from `hf-token` in the config directory, is needed only for a
 gated repo. The rest of this section is for files outside that manifest.
 
 They have to be on that machine's disk, and nothing in the ComfyUI HTTP API can

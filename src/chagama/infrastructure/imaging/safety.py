@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 
 from chagama.envcompat import getenv
+from chagama.infrastructure.locations import data_dir
 
 MODEL_REPO = "SmilingWolf/wd-swinv2-tagger-v3"
 MODEL_REVISION = "627aef95638667ddcaa3ac8ae625e88ea5b02f51"
@@ -42,7 +43,7 @@ def model_dir() -> Path:
     override = getenv(MODEL_DIR_ENV)
     if override:
         return Path(override)
-    return Path(__file__).resolve().parents[4] / ".local/_nogit/models/wd-tagger"
+    return data_dir(Path(__file__).resolve().parents[4]) / "models/wd-tagger"
 
 
 def _sha256(path: Path) -> str:

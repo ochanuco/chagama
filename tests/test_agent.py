@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from chagama.infrastructure.locations import data_dir  # noqa: E402
 from chagama.interfaces.agent import (  # noqa: E402
     build_work_services,
     default_worker_id,
@@ -42,7 +43,7 @@ class BuildWorkServicesTest(unittest.TestCase):
             repository = Path(tmp)
             services = build_work_services(
                 repository, worker_id="worker-1", kinds=("generate",))
-            drain_file = repository / ".local/_nogit/worker/drain"
+            drain_file = data_dir(repository) / "worker/drain"
 
             self.assertFalse(services.draining())
             drain_file.parent.mkdir(parents=True, exist_ok=True)

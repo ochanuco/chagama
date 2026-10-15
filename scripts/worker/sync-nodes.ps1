@@ -1,14 +1,15 @@
-# Bring ComfyUI's custom_nodes/ to the commits pinned in manifests/worker-nodes.toml.
-#   sync-nodes.ps1 -Checkout <dir> -ComfyRoot <dir>
-# Prints "changed: True" on its last line when any node was cloned or moved.
+# Bring ComfyUI's custom_nodes/ to the commits pinned in a worker-nodes manifest.
+#   sync-nodes.ps1 -Manifest <file> -ComfyRoot <ComfyUI dir> -Python <python.exe> [-FetchOnly]
+# -FetchOnly only fetches the pinned commits into nodes already cloned, with no
+# clone, no checkout and no pip.
 param(
-    [Parameter(Mandatory = $true)][string]$Checkout,
-    [Parameter(Mandatory = $true)][string]$ComfyRoot
+    [Parameter(Mandatory = $true)][string]$Manifest,
+    [Parameter(Mandatory = $true)][string]$ComfyRoot,
+    [Parameter(Mandatory = $true)][string]$Python,
+    [switch]$FetchOnly
 )
-$ErrorActionPreference = "Stop"
-$manifest = Join-Path $Checkout "manifests\worker-nodes.toml"
-$python = Join-Path (Split-Path $ComfyRoot -Parent) "python_embeded\python.exe"
-if (-not (Test-Path $python)) { throw "not found: $python" }
+$ErrorActionPreference = "Continue"
+if (-not (Test-Path $Python)) { throw "not found: $Python" }
 $nodesDir = Join-Path $ComfyRoot "custom_nodes"
 if (-not (Test-Path $nodesDir)) { throw "not found: $nodesDir" }
 
@@ -21,7 +22,7 @@ for node in tomllib.loads(open(sys.argv[1], encoding="utf-8").read()).get("node"
 '@
 $readerPath = Join-Path $env:TEMP "worker-nodes-reader.py"
 Set-Content -Path $readerPath -Value $reader -Encoding ASCII
-$entries = & (Join-Path $Checkout ".venv\Scripts\python.exe") $readerPath $manifest
+$entries = & $Python $readerPath $Manifest
 if ($LASTEXITCODE) { exit $LASTEXITCODE }
 
 $changed = $false
@@ -29,28 +30,39 @@ foreach ($line in $entries) {
     $name, $repo, $commit, $requirements, $pip = $line -split "`t"
     $dir = Join-Path $nodesDir $name
     $moved = $false
-    if (-not (Test-Path (Join-Path $dir ".git"))) {
-        git clone --quiet $repo $dir
+    $present = Test-Path (Join-Path $dir ".git")
+    if ($FetchOnly) {
+        if (-not $present) { "{0} missing, cloned at start" -f $name; continue }
+        git -C $dir cat-file -e "$commit^{commit}" 2>&1 | Out-Null
+        if ($LASTEXITCODE) {
+            git -C $dir fetch --quiet origin 2>&1 | Out-Host
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+        }
+        "{0} {1} fetched" -f $name, $commit.Substring(0, 7)
+        continue
+    }
+    if (-not $present) {
+        git clone --quiet $repo $dir 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
         $moved = $true
     }
     $head = git -C $dir rev-parse HEAD
     if ($head -ne $commit) {
-        git -C $dir fetch --quiet origin
+        git -C $dir fetch --quiet origin 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
-        git -C $dir checkout --quiet --detach $commit
+        git -C $dir checkout --quiet --detach $commit 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
         $moved = $true
     }
     if ($moved -and $requirements -eq "True" -and (Test-Path (Join-Path $dir "requirements.txt"))) {
-        & $python -m pip install --quiet -r (Join-Path $dir "requirements.txt")
+        & $Python -m pip install --quiet -r (Join-Path $dir "requirements.txt") 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
     }
     if ($moved -and $pip) {
-        & $python -m pip install --quiet ($pip -split " ")
+        & $Python -m pip install --quiet ($pip -split " ") 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
     }
     "{0} {1} {2}" -f $name, $commit.Substring(0, 7), $(if ($moved) { "updated" } else { "ok" })
     $changed = $changed -or $moved
 }
-"changed: $changed"
+if (-not $FetchOnly) { "changed: $changed" }

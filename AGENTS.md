@@ -261,7 +261,7 @@ cutting again.
 
 Discord notification is the worker's job — every ingest and every delivery
 posts to the webhook. There is no separate watcher daemon. The webhook is a
-credential and lives in `.local/discord-webhook` on the box; never put it in a
+credential and lives in `C:\ProgramData\chagama\discord-webhook` on the box; never put it in a
 tracked file.
 
 ## chimera 連携の不変条件
