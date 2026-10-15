@@ -1,8 +1,9 @@
 # Release path
 
 `main` is where PRs land, and a merge is a release: the push to `main`
-deploys that commit to the GPU worker. There is no release branch. A deploy
-stops for approval only when its plan finds a reason to (below).
+builds that commit into a GitHub Release and the GPU box runs it. There is no
+release branch and no git checkout on the box. A deploy stops for approval
+only when its plan finds a reason to (below).
 
 ## Branches and rulesets
 
@@ -28,93 +29,113 @@ stops for approval only when its plan finds a reason to (below).
   - `approve` runs only when `plan` asked, in the Environment
     `production-approval`, whose required reviewer approves after reading
     that summary. The Environment holds no secrets.
-  - `wake` asks the Wake-on-LAN service to wake the box
-    (`.github/deploy/wake.sh`). It runs in the Environment `production`,
-    which has no reviewers and holds the 1Password service account token
-    `OP_SA_DEPLOY`; the service's address and Cloudflare Access token come
-    from 1Password through `.github/deploy/wake.env.op`. It does not wait for
-    the box to come up: the next job stays queued until the box's runner
-    connects.
-  - `deploy` runs on the self-hosted runner labelled `gpu-box`, in the same
-    Environment. It deploys the SHA `plan` pinned, and shares its
-    concurrency group with `restart worker comfyui`.
+  - `build` zips `src`, `comfy_nodes`, `manifests`, `assets`, `scripts`,
+    `deploy`, `ops` and `pyproject.toml` at the SHA, plus a `release.json`
+    (`scripts/release/build.sh`). The version is `r<run number>-<sha7>`;
+    `release.json` holds `version`, `commit` and `ref: "production"`.
+  - `deploy` runs in the Environment `production`, which has no reviewers
+    and holds the 1Password service account token `OP_SA_DEPLOY`. It publishes
+    the zip as the GitHub Release `<version>` with the asset `chagama.zip`
+    (`scripts/release/publish.sh`: draft, then publish; releases are
+    immutable), or reuses a published release of the same commit. Then
+    `.github/actions/gpu-box-app` dispatches `gpu-box-app.yml` in
+    ochanuco/chabatake (`app=chagama`, `action=deploy`, the version) with a
+    GitHub App token read from 1Password, and waits for it. Only a
+    conclusion of `success` passes. Last, `scripts/release/prune.sh 3`
+    deletes every release but the 3 newest, tags included.
   The repository is public. Both Environments accept only `main`, and the
-  main-only ref check (in `plan` and `scripts/worker/resolve-ref.ps1`)
-  refuses any other commit; together they keep other code off the box.
-  The `deploy` job calls `scripts/worker/deploy.ps1` in the standing checkout named by
-  the repository variable `WORKER_CHECKOUT` with the resolved SHA. That
-  moves the checkout to that commit on the local branch `production` -- the
-  worker serves only requests whose `recipe_ref` equals the branch it is on,
-  so the name stays -- and refreshes the venv. `deploy.ps1` also re-junctions our node packs
-  into the ComfyUI install named by the repository variable `COMFYUI_ROOT`,
-  moves that install to the ComfyUI tag pinned in
-  `manifests/worker-nodes.toml` (`scripts/worker/sync-comfyui.ps1`: fetch,
-  detached forced checkout, its `requirements.txt` into the portable Python
-  when the tag moved -- so a ComfyUI upgrade is a PR that bumps the tag),
-  brings the third-party node packs under its `custom_nodes/` to the commits
-  pinned in the same file (`scripts/worker/sync-nodes.ps1`:
-  clone, detached checkout, `requirements.txt` into the portable Python when
-  an entry moved, then that entry's `pip` list -- packages a node needs
-  that its own `requirements.txt` cannot supply, whether because
-  `install_requirements` is off or because the list omits one), and
-  restarts ComfyUI
-  (`scripts/worker/restart-comfyui.ps1`) every time. That restart is not an
-  optimisation to skip: the drain below ends the claim loop, and the loop is
-  a thread in that process, so nothing else brings the worker back. A deploy
-  that skipped it would leave the box with no worker at all.
-- `fetch worker models` is a manual `workflow_dispatch` with the same `ref`
-  input, in the Environment `production`. Run it after a deploy that
-  changes `manifests/worker-models.toml`; it does not wake the box, so run
-  it while the box is still up from that deploy. It downloads
-  the listed Hugging Face models into the box's ComfyUI `models/`
-  (`scripts/worker_models.py`) and does not restart anything.
-- `pixal3d` is a manual `workflow_dispatch` (any ref) that runs
-  `scripts/pixal3d_run.py` on the box: it splits a chimera turnaround sheet
-  into its figures, sends four of them through the core Pixal3D multi-view
-  graph on the local ComfyUI, and keeps the GLB, the views and the base-color
-  texture as the run's artifact. It queues behind the worker's renders in the
-  same ComfyUI.
-- `restart worker comfyui` is a manual `workflow_dispatch` that runs the same
-  restart on the box, for changes made outside a deploy.
+  main-only ref check in `plan` refuses any other commit; together they keep
+  other code off the box. All box workflows share the concurrency group
+  `gpu-box-chagama`.
+- `fetch worker models` is a manual `workflow_dispatch` with the input
+  `dry_run`, in the Environment `production`. Run it after a deploy that
+  changes `manifests/worker-models.toml`. It runs the `fetch-models` op of
+  `gpu-box-app` (`ops/fetch-models.ps1` of the running release;
+  `fetch-models-dry-run` with `-DryRun`), which downloads the listed Hugging
+  Face models into the box's ComfyUI `models/` (`scripts/worker_models.py`)
+  with `HF_TOKEN` read from `C:\ProgramData\chagama\hf-token`. It restarts
+  nothing.
+- `restart worker comfyui` is a manual `workflow_dispatch` that runs the
+  `restart` action of `gpu-box-app`: the running release's `stop.ps1`, the
+  `comfyui` task, then its `check.ps1`.
+
+## What the box does
+
+`gpu-box-app` belongs to chabatake. For a deploy it wakes the box, checks that
+the release is published and that the asset's sha256 equals the API digest,
+and extracts it to `C:\apps\chagama\releases\<version>\`. Then:
+
+1. `deploy\prepare.ps1` of the new release runs while ComfyUI keeps serving:
+   it fetches the pinned ComfyUI tag and node commits (no checkout) and
+   prefetches the wd-tagger and matting models.
+2. `deploy\stop.ps1` of the running release drains the worker, stops the
+   `comfyui` task and kills leftovers.
+3. The junction `C:\apps\chagama\current` flips to the new release and the
+   `comfyui` task starts.
+4. `deploy\check.ps1` of the new release waits up to 9 minutes for
+   `http://127.0.0.1:8188/system_stats` to answer 200 and for
+   `data\worker\status.json` to report the release's version with a live pid.
+
+The box keeps the 3 newest releases. The hooks receive `APP_ROOT`,
+`APP_DATA`, `APP_CONFIG`, `APP_ACTION`, `APP_FROM_*` and `APP_TO_*`.
+
+### A failed check
+
+When `check.ps1` fails, the deployer stops the new release, flips `current`
+back, starts the `comfyui` task and runs the previous release's `check.ps1`.
+The dispatched run still ends as a failure, so the `deploy` job fails.
+
+### Rollback
+
+Run `deploy` by `workflow_dispatch` with `ref` set to an older commit on main.
+Any commit on main works: a release that was pruned is built again. A
+rollback always asks for approval.
 
 ## Draining before a deploy
 
-`deploy.ps1` asks the worker to stop before it moves the checkout: it writes
-`.local/_nogit/worker/drain` in the checkout and waits. The worker stops
-claiming, finishes the request it is running, and deletes the file on its way
-out, so the wait ends on the worker's own word rather than on a clock. Only
-then does the checkout move; the `taskkill` that follows is for a worker
-already gone or wedged. A drain that times out deletes the file itself -- one
-left behind would drain the next worker the moment it started.
+`stop.ps1` asks the worker to stop before it stops the task: it writes
+`C:\apps\chagama\data\worker\drain` and waits up to 300 seconds. The worker
+stops claiming, finishes the request it is running, and deletes the file on
+its way out, so the wait ends on the worker's own word rather than on a
+clock. It skips the drain when ComfyUI is not running. Whatever is left after
+the wait is killed. A drain that times out deletes the file itself -- one left
+behind would drain the next worker the moment it started.
 
-The bound is `-DrainSeconds`, 300 by default. What it has to cover is one
-request, not the queue: the worker claims nothing new once the file appears.
-A sketch seed takes about 45 seconds, a redraw about 90, a four-seed request a
-few minutes. The ceiling above it is the deploy job's own `timeout-minutes:
-15`, which also has to hold `git fetch` and the `uv pip install`.
+What the bound has to cover is one request, not the queue: the worker claims
+nothing new once the file appears. A sketch seed takes about 45 seconds, a
+redraw about 90, a four-seed request a few minutes.
 
-The drain is what keeps the render in flight. The worker runs inside
-ComfyUI, and `deploy.ps1` restarts ComfyUI on every deploy, so a render still
-going when the restart comes dies with the process and its request has to be
-claimed and drawn again. A drain that times out leaves that request `running`
-until it is handed back to the queue.
+The drain is what keeps the render in flight. The worker runs inside ComfyUI,
+so a render still going when the task stops dies with the process and its
+request has to be claimed and drawn again. A drain that times out leaves that
+request `running` until it is handed back to the queue.
 
 ## Where the worker runs
 
-The claim loop runs in ComfyUI's embedded Python, not the checkout's
-`.venv`, so what it imports has to be installed there. The deploy adds only
-the gap -- `websockets` -- because numpy, Pillow, OpenCV and SciPy already
-come with the box and reinstalling them into a working ComfyUI is how it
-stops working.
+The claim loop runs in ComfyUI's embedded Python, so what it imports has to be
+installed there. `run-comfyui.ps1` adds only the gap -- `websockets`, and
+`onnxruntime` and `pymatting` when missing -- because numpy, Pillow, OpenCV and
+SciPy already come with the box and reinstalling them into a working ComfyUI
+is how it stops working.
+
+`scripts/worker/run-comfyui.ps1` is the action of the `comfyui` scheduled
+task. On every start it:
+
+- junctions each `comfy_nodes\<pack>` into ComfyUI's `custom_nodes` through
+  `C:\apps\chagama\current\comfy_nodes\<pack>`;
+- brings ComfyUI core and the third-party node packs to the pins in the
+  release's `manifests/worker-nodes.toml` (`sync-comfyui.ps1`,
+  `sync-nodes.ps1`) when the stamp `data\worker\comfyui-applied.txt` differs
+  from them, so a ComfyUI upgrade is a PR that bumps the tag, and a rollback
+  of `current` brings core and nodes back to the previous pins (packages pip
+  added stay);
+- runs ComfyUI with `CHAGAMA_WORKER=1`, `CHAGAMA_DATA` and `CHAGAMA_CONFIG`.
 
 The claim loop is a thread inside ComfyUI's own process, started by
-`comfy_nodes/yukari_worker/` when `CHAGAMA_WORKER` is set. The
-variable is a user environment variable on the box, written by
-`register-comfyui.ps1`, because a scheduled task inherits the user
-environment and not a shell's. The thread waits for ComfyUI's own HTTP to
-answer before it claims anything -- custom nodes are imported while the
-server is still coming up, and a request claimed then would be submitted to
-a port with nothing behind it.
+`comfy_nodes/yukari_worker/` when `CHAGAMA_WORKER` is set. The thread waits
+for ComfyUI's own HTTP to answer before it claims anything -- custom nodes are
+imported while the server is still coming up, and a request claimed then
+would be submitted to a port with nothing behind it.
 
 The worker inside ComfyUI is `<host>:comfyui` unless `CHAGAMA_WORKER_ID`
 says otherwise, so the same ID comes back after a restart. On startup it
@@ -122,22 +143,20 @@ hands back to the queue whatever is still `running` under its ID -- a request
 a killed ComfyUI was drawing -- instead of leaving it until chimera finds the
 heartbeat stale.
 
-`register-watch.ps1` and `watch.ps1` still register the standalone worker as
-its own logon task. The deploy does not call them, and running both at once
-means two workers claiming under one explicitly configured `worker_id`; the
-standalone worker's default ID includes the process ID. They are there for
-running the loop by hand, the way `register-comfyui.ps1` and
-`register-runner.ps1` are.
+## Where things live on the box
 
-## The box
+| What | Where |
+| --- | --- |
+| Releases, and `current` pointing at the running one | `C:\apps\chagama\releases\<version>\`, `C:\apps\chagama\current` |
+| Data: render outputs, `models/wd-tagger`, worker logs, `drain`, `status.json` | `C:\apps\chagama\data` (`CHAGAMA_DATA`) |
+| Config and secrets: `chimera-token`, `discord-webhook`, `hf-token`, `worker.json` (`comfyui_portable_root`) | `C:\ProgramData\chagama` (`CHAGAMA_CONFIG`) |
 
-`scripts/worker/register-runner.ps1 -Token <registration token> -Version <x.y.z>`
-downloads the runner, registers it against this repository with the label
-`gpu-box`, and installs `run.cmd` as the per-user logon task `actions-runner`
-next to `comfyui` and `chagama-watch`. The registration token comes
-from `gh api -X POST repos/ochanuco/chagama/actions/runners/registration-token`
-and is valid for an hour.
+Outside the box the defaults are `<repo>/.local/_nogit` for data and
+`<repo>/.local` for config (`src/chagama/infrastructure/locations.py`).
 
-Rows in chimera's requests queue default to `recipe_ref = production`; the
-worker serves only the branch it is checked out on, so the box stays on its
-local branch `production` between deploys.
+## Which rows the worker serves
+
+Rows in chimera's requests queue default to `recipe_ref = production`. The
+worker serves only rows whose `recipe_ref` equals its ref: the `ref` in
+`release.json`, which is `production` for every release, or the git branch
+when it runs from a checkout.

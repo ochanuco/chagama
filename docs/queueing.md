@@ -50,7 +50,7 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
 
 ### Worker
 
-- A row's `recipe_ref` must equal the worker's git branch, or the row fails.
+- A row's `recipe_ref` must equal the worker's ref (release.json, else git branch), or the row fails.
 - Idempotency keys come from the request id (`request:{id}`,
   `…:job:{i}`, `…:gen:{j}`, `…:asset:{role}`), so a re-claimed row resumes
   its own records. A ComfyUI prompt id the server forgot is resubmitted.
