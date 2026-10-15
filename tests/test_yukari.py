@@ -328,24 +328,28 @@ REDRAW_STAND_NEGATIVE = (
 )
 
 
+def _outing_for(pose):
+    return {"costume": "outing"} if pose in ("coffee", "step", "amae", "stand") else {}
+
+
 class PromptTest(unittest.TestCase):
     def test_coffee_positive_matches_the_confirmed_render(self):
-        self.assertEqual(positive("coffee", legwear="sheer-gloss"), COFFEE_POSITIVE)
+        self.assertEqual(positive("coffee", costume="outing", legwear="sheer-gloss"), COFFEE_POSITIVE)
 
     def test_coffee_negative_matches_the_confirmed_render(self):
-        self.assertEqual(negative("coffee", legwear="sheer-gloss"), COFFEE_NEGATIVE)
+        self.assertEqual(negative("coffee", costume="outing", legwear="sheer-gloss"), COFFEE_NEGATIVE)
 
     def test_amae_positive_matches_the_confirmed_render(self):
-        self.assertEqual(positive("amae", legwear="sheer-gloss"), AMAE_POSITIVE)
+        self.assertEqual(positive("amae", costume="outing", legwear="sheer-gloss"), AMAE_POSITIVE)
 
     def test_amae_negative_drops_the_coffee_vessel_ban(self):
-        self.assertEqual(negative("amae", legwear="sheer-gloss"), AMAE_NEGATIVE)
+        self.assertEqual(negative("amae", costume="outing", legwear="sheer-gloss"), AMAE_NEGATIVE)
 
     def test_stand_positive_matches_the_confirmed_render(self):
-        self.assertEqual(positive("stand", legwear="sheer-gloss"), STAND_POSITIVE)
+        self.assertEqual(positive("stand", costume="outing", legwear="sheer-gloss"), STAND_POSITIVE)
 
     def test_stand_negative_matches_the_confirmed_render(self):
-        self.assertEqual(negative("stand", legwear="sheer-gloss"), STAND_NEGATIVE)
+        self.assertEqual(negative("stand", costume="outing", legwear="sheer-gloss"), STAND_NEGATIVE)
 
     def test_bust_positive_matches_the_confirmed_render(self):
         self.assertEqual(positive("bust", legwear="sheer-gloss"), BUST_POSITIVE)
@@ -451,7 +455,7 @@ class PromptTest(unittest.TestCase):
         self.assertEqual(spec.prompts.negative, negative("amae", legwear="sheer"))
 
     def test_standard_costume_negative_drops_the_hood_ban(self):
-        self.assertIn("(hood:1.3), (cardigan:1.3), ", negative("stand"))
+        self.assertIn("(hood:1.3), (cardigan:1.3), ", negative("stand", costume="outing"))
         self.assertNotIn("(hood:1.3), (cardigan:1.3), ",
                          negative("stand", costume="standard"))
 
@@ -484,9 +488,9 @@ class PromptTest(unittest.TestCase):
     def test_default_prompts_match_the_sheer_gloss_final_look(self):
         for pose, fixture in LEGWEAR_SHEER_GLOSS_FINAL.items():
             with self.subTest(pose=pose):
-                self.assertEqual(positive(pose, legwear="sheer-gloss"),
+                self.assertEqual(positive(pose, **_outing_for(pose), legwear="sheer-gloss"),
                                  fixture["positive"])
-                self.assertEqual(negative(pose, legwear="sheer-gloss"),
+                self.assertEqual(negative(pose, **_outing_for(pose), legwear="sheer-gloss"),
                                  fixture["negative"])
 
     def test_eye_shape_leads_the_eyes_part_for_every_expression(self):
@@ -547,7 +551,7 @@ class PartsTest(unittest.TestCase):
                               (GAO_POSITIVE, "gao")):
             with self.subTest(pose=pose):
                 joined = "".join(text for _, text in positive_parts(
-                    pose, legwear="sheer-gloss"))
+                    pose, **_outing_for(pose), legwear="sheer-gloss"))
                 self.assertEqual(joined, fixture)
 
     def test_every_pose_wears_light_purple_nails_right_after_gesture(self):
@@ -582,11 +586,11 @@ class IdentityTagsTest(unittest.TestCase):
     def test_identity_tags_are_pose_and_costume_independent(self):
         # `tareme` and `jitome` ride in EYE_SHAPE, ahead of every
         # expression's own `e.eyes` -- present for every pose regardless of
-        # expression. No anima costume carries a cardigan/hood, so those two
+        # expression. `outing` carries no cardigan/hood, so those two
         # names never enter the set.
         for pose in ("coffee", "step", "amae", "stand"):
             with self.subTest(pose=pose):
-                self.assertEqual(identity_tags(pose), self.EXPECTED)
+                self.assertEqual(identity_tags(pose, "outing"), self.EXPECTED)
 
     def test_costume_override_does_not_change_the_identity_set(self):
         self.assertEqual(identity_tags("coffee", "roomwear"), self.EXPECTED)
@@ -603,12 +607,12 @@ class PoseTableTest(unittest.TestCase):
     def test_step_pose_defaults(self):
         self.assertIn("step", POSES)
         self.assertEqual(POSES["step"].expression, "resting")
-        self.assertEqual(POSES["step"].costume, "outing")
+        self.assertEqual(POSES["step"].costume, "standard")
 
     def test_stand_pose_defaults(self):
         self.assertIn("stand", POSES)
         self.assertEqual(POSES["stand"].expression, "doya")
-        self.assertEqual(POSES["stand"].costume, "outing")
+        self.assertEqual(POSES["stand"].costume, "standard")
 
     def test_dance_pose_defaults(self):
         self.assertIn("dance", POSES)
@@ -756,8 +760,11 @@ class PlainRenderLegwearDefaultTest(unittest.TestCase):
     sets, so a bare `parameters: {"pose": ...}` must resolve legwear from
     the pose, not from a recipe-wide default."""
 
-    def _plain_positive(self, pose: str, legwear: str | None = None) -> str:
+    def _plain_positive(self, pose: str, legwear: str | None = None,
+                        costume: str | None = None) -> str:
         parameters = {"pose": pose}
+        if costume is not None:
+            parameters["costume"] = costume
         if legwear is not None:
             parameters["legwear"] = legwear
         generation = {"recipe": "yukari", "parameters": parameters}
@@ -775,7 +782,7 @@ class PlainRenderLegwearDefaultTest(unittest.TestCase):
                 self.assertIn(SHEER_LEGWEAR, self._plain_positive(pose))
 
     def test_plain_stand_render_with_explicit_opaque_legwear_yields_the_opaque_block(self):
-        text = self._plain_positive("stand", legwear="opaque")
+        text = self._plain_positive("stand", legwear="opaque", costume="outing")
         self.assertNotIn(SHEER_GLOSS_LEGWEAR, text)
         self.assertIn("(black pantyhose:1.5), (opaque pantyhose:1.4), ", text)
 

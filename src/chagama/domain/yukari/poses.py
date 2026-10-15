@@ -42,7 +42,7 @@ POSES = {
                  "(white sneakers:1.2), "),
         framing=Framing.COWBOY,
         leg_display="(thighs:1.15), ",
-        expression="doya", costume="outing",
+        expression="doya", costume="standard",
         negative=("(sitting:1.3), (eating:1.3), (theater seat:1.1), "
                   "(mug:1.2), (glass:1.2), (bottle:1.2), (bag:1.1), "
                   "(multiple girls:1.3), "),
@@ -55,7 +55,7 @@ POSES = {
         gesture="(looking at viewer:1.1), ",
         framing=Framing.COWBOY,
         leg_display="(thighs:1.2), ",
-        expression="resting", costume="outing",
+        expression="resting", costume="standard",
         negative="(mug:1.3), (paper cup:1.2), (hot coffee:1.2), (steam:1.3), "),
     "amae": Pose(
         action="(standing:1.2), ",
@@ -65,7 +65,7 @@ POSES = {
                  "(hands up:1.1), "),
         framing=Framing.COWBOY,
         leg_display="(thighs:1.2), ",
-        expression="doya", costume="outing"),
+        expression="doya", costume="standard"),
     "step": Pose(
         action=("(walking:1.3), (stepping:1.3), (big step:1.35), "
                 "(wide stride:1.3), (one leg forward:1.3), "
@@ -76,7 +76,7 @@ POSES = {
         framing=Framing.FULL,
         angle="(from side:1.1), ",
         leg_display="(thighs:1.1), ",
-        expression="resting", costume="outing",
+        expression="resting", costume="standard",
         negative="(running:1.3), (jumping:1.25), (sitting:1.2), "),
     "stand": Pose(
         action=("(standing:1.5), (own hands together:1.3), (hands up:1.2), "
@@ -87,7 +87,7 @@ POSES = {
         framing=Framing.FULL,
         angle="(from front:1.3), ",
         leg_display="(thighs:1.1), ",
-        expression="doya", costume="outing",
+        expression="doya", costume="standard",
         negative="(sitting:1.3), (cowboy shot:1.2), (upper body:1.2), "),
     "dance": Pose(
         action=("(standing:1.4), (dancing:1.4), (knock-kneed:1.3), "

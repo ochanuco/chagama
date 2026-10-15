@@ -510,7 +510,8 @@ class PartTargetPatchTest(unittest.TestCase):
             dict(result.positive_parts)["action"].startswith("(sipping:1.3), "))
 
     def test_legacy_costume_replace_of_a_legwear_tag_hits_legwear(self):
-        opaque_spec = anima_render_spec("coffee", 7, "prefix", legwear="opaque")
+        opaque_spec = anima_render_spec("coffee", 7, "prefix", costume="outing",
+                                         legwear="opaque")
         patches = parse_patches([_patch(
             target="prompt.positive.costume", op="replace",
             old="(black pantyhose:1.5), ", value="(navy pantyhose:1.5), ",
