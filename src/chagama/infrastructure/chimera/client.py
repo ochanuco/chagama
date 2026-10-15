@@ -12,6 +12,8 @@ import urllib.request
 import uuid
 from pathlib import Path
 
+from ..locations import config_dir
+
 USER_AGENT = "chagama-generate/1.0 (+local)"
 OP_ITEM = "yml6r5qgx3zt57pryokgi3xdqy"
 
@@ -21,7 +23,7 @@ class ChimeraClient:
         self.repository = repository
         self.base_url = (base_url or os.environ.get(
             "CHIMERA_BASE_URL", "https://chimera.chanu.co")).rstrip("/")
-        self.token_cache = repository / ".local/chimera-token"
+        self.token_cache = config_dir(repository) / "chimera-token"
         self._credentials: dict[str, str] | None = None
         self._preset_cache: dict[tuple[str, str, str, int], dict] = {}
 

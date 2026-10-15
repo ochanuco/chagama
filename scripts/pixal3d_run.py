@@ -203,7 +203,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--views", default=DEFAULT_VIEWS)
     parser.add_argument("--fov", type=float, default=20.0)
     parser.add_argument("--repository", type=Path, default=Path.cwd(),
-                        help="checkout whose .local/chimera-token is used")
+                        help="checkout whose chimera-token is used")
     parser.add_argument("--no-submit", action="store_true",
                         help="split and write the graph, do not run ComfyUI")
     args = parser.parse_args(argv)

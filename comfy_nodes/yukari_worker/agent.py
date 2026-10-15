@@ -17,6 +17,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from chagama.envcompat import getenv
+from chagama.infrastructure.locations import data_dir
 
 _STARTUP_TIMEOUT = 600.0
 
@@ -75,7 +76,7 @@ def _log(repository: Path) -> Callable[[str], None]:
     Standing inside ComfyUI, the loop has no console of its own to be read
     later; the standalone worker had watch.log and this replaces it.
     """
-    path = repository / ".local/_nogit/worker/comfy-worker.log"
+    path = data_dir(repository) / "worker/comfy-worker.log"
 
     def emit(message: str) -> None:
         print(f"[yukari_worker] {message}")

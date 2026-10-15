@@ -973,6 +973,30 @@ class PublishCatalogAtStartupTest(unittest.TestCase):
             self.assertEqual(calls, [])
 
 
+class StatusHeartbeatTest(unittest.TestCase):
+    def test_status_is_written_on_every_loop_iteration(self):
+        with tempfile.TemporaryDirectory() as directory:
+            management = ManagementFake()
+            calls = []
+            services = dataclasses.replace(
+                make_services(Path(directory), management),
+                status=lambda: calls.append(1))
+            work(services, once=True)
+            self.assertEqual(len(calls), 1)
+
+    def test_unwritable_status_does_not_stop_the_loop(self):
+        def broken():
+            raise OSError("disk full")
+
+        with tempfile.TemporaryDirectory() as directory:
+            emitted = []
+            services = dataclasses.replace(
+                make_services(Path(directory), ManagementFake(), emit=emitted.append),
+                status=broken)
+            work(services, once=True)
+            self.assertTrue(any("status write failed" in line for line in emitted))
+
+
 class ReleaseClaimsTest(unittest.TestCase):
     def _services(self, management, emit=None):
         with tempfile.TemporaryDirectory() as directory:

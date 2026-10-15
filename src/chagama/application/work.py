@@ -91,6 +91,7 @@ class WorkServices:
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
+    status: Callable[[], None] | None = None
     draining: Callable[[], bool] | None = None
     drained: Callable[[], None] | None = None
     progress_feed: Callable[[], Connection] | None = None
@@ -449,6 +450,16 @@ def _draining(services: WorkServices) -> bool:
         return False
 
 
+def _report_status(services: WorkServices) -> None:
+    """Write the status file; report a failure instead of raising it."""
+    if services.status is None:
+        return
+    try:
+        services.status()
+    except (SystemExit, Exception) as error:
+        services.emit(f"! status write failed: {error}")
+
+
 def _idle(services: WorkServices, wake: threading.Event | None,
           interval: float) -> None:
     """Sleep out the idle interval, cut short once a drain is asked for.
@@ -494,6 +505,7 @@ def work(services: WorkServices, *, interval: float = 30, once: bool = False,
         if services.progress_feed is not None:
             relay = ProgressRelay(services, listener).start()
         while True:
+            _report_status(services)
             if _draining(services):
                 services.emit("draining: no new work claimed")
                 break
