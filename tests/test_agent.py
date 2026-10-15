@@ -120,6 +120,11 @@ class WorkerAgentStartTest(unittest.TestCase):
 
         self.assertEqual(len(calls), 1)
 
+    @patch("comfy_nodes.yukari_worker.agent.socket.gethostname",
+           return_value="gpu-box")
+    def test_worker_id_defaults_to_one_per_host(self, _hostname):
+        self.assertEqual(worker_agent._worker_id(), "gpu-box:comfyui")
+
     def test_worker_id_env_var_is_threaded_through(self):
         os.environ["CHAGAMA_WORKER"] = "yes"
         os.environ["CHAGAMA_WORKER_ID"] = "box-7"

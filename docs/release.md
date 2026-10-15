@@ -116,12 +116,18 @@ answer before it claims anything -- custom nodes are imported while the
 server is still coming up, and a request claimed then would be submitted to
 a port with nothing behind it.
 
+The worker inside ComfyUI is `<host>:comfyui` unless `CHAGAMA_WORKER_ID`
+says otherwise, so the same ID comes back after a restart. On startup it
+hands back to the queue whatever is still `running` under its ID -- a request
+a killed ComfyUI was drawing -- instead of leaving it until chimera finds the
+heartbeat stale.
+
 `register-watch.ps1` and `watch.ps1` still register the standalone worker as
 its own logon task. The deploy does not call them, and running both at once
 means two workers claiming under one explicitly configured `worker_id`; the
-default ID includes the process ID. They are there for running
-the loop by hand, the way `register-comfyui.ps1` and `register-runner.ps1`
-are.
+standalone worker's default ID includes the process ID. They are there for
+running the loop by hand, the way `register-comfyui.ps1` and
+`register-runner.ps1` are.
 
 ## The box
 
