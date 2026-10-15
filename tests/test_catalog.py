@@ -24,8 +24,10 @@ from chagama.application.request_options import (
     repair_arguments,
 )
 from chagama.domain.generation.patches import (
+    LORAS_TARGETS,
     NUMBER_TARGETS,
     STRING_TARGETS,
+    TARGET_KINDS,
     TEXT_TARGETS,
     parse_patches,
 )
@@ -140,6 +142,42 @@ class BuildCatalogTest(unittest.TestCase):
         for target in STRING_TARGETS:
             self.assertEqual(patches["string"][target]["op"], "set")
             self.assertIsNone(patches["string"][target]["values"])
+
+    def test_patches_block_lists_exactly_the_targets_parse_patches_accepts(self):
+        patches = build_catalog(GIT)["patches"]
+        published = {
+            **dict.fromkeys(patches["text"]["targets"], "text"),
+            **{target: kind for kind in ("number", "string", "loras")
+               for target in patches[kind]},
+        }
+        self.assertEqual(published, TARGET_KINDS)
+        self.assertEqual(patches["loras"],
+                         {target: {"op": "set"} for target in LORAS_TARGETS})
+        part_target = patches["text"]["part_target"].replace("<part>", "costume")
+        for target in [*published, part_target]:
+            with self.subTest(target=target):
+                with self.assertRaises(ValueError) as caught:
+                    parse_patches([{"target": target, "op": "no-such-op",
+                                    "reason": "r"}])
+                self.assertNotIn("unknown target", str(caught.exception))
+
+    def test_patches_block_text_ops_are_the_keys_each_op_requires(self):
+        ops = build_catalog(GIT)["patches"]["text"]["ops"]
+        for op, keys in ops.items():
+            complete = {"target": "prompt.positive", "op": op, "reason": "r",
+                        **{key: "x" for key in keys}}
+            with self.subTest(op=op):
+                parse_patches([complete])  # must not raise
+            for key in [*keys, "reason"]:
+                for broken in ({k: v for k, v in complete.items() if k != key},
+                               {**complete, key: ""}):
+                    with self.subTest(op=op, key=key, patch=broken):
+                        with self.assertRaises(ValueError):
+                            parse_patches([broken])
+            for key in {"value", "old"} - set(keys):
+                with self.subTest(op=op, extra=key):
+                    with self.assertRaises(ValueError):
+                        parse_patches([{**complete, key: "x"}])
 
     def test_patches_block_carries_the_part_target_and_identity_override(self):
         catalog = build_catalog(GIT)

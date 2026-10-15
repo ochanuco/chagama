@@ -21,7 +21,7 @@ Options, defaults and ranges live here:
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
 | Every option of a kind, its default and range | `uv run chagama <generate\|work\|redraw\|deliver\|stage\|lighting\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
 | Poses, costumes, parts, patch targets, dials, redraw, deliver, stage, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run chagama catalog` |
-| Patch targets and their ops | `domain/generation/patches.py` |
+| Patch targets, their ops and the catalog `patches` grammar chimera validates | `domain/generation/patches.py`, `docs/architecture.md` |
 | What a request would render, without rendering | `uv run chagama generate --request r.json --dry-run` |
 
 ## Kinds
