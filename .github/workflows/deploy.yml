@@ -1,4 +1,5 @@
 name: deploy
+run-name: deploy chagama @ ${{ inputs.ref }}
 
 # 本番（GPU 機）へのデプロイはこの手動実行だけ。Environment production の承認を通ってから
 # self-hosted runner に乗る。DB を持たないので migration は無い。
