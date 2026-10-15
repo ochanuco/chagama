@@ -17,6 +17,12 @@ reaches the box.
   handed to the self-hosted runner labelled `gpu-box`. The repository is
   public; the approval and the main-only ref check
   (`scripts/worker/resolve-ref.ps1`) are what keep other code off the box.
+  A `plan` job (`deploy-plan.yml` in ochanuco/.github) runs before the
+  approval: it pins the ref to a SHA (`main` to the commit the run started
+  on), and writes to the Job Summary the PRs since the last deploy, what a
+  rollback drops, the changed files, and a notice for a change that needs a
+  step by hand (the `notices` list in `deploy.yml`). The deploy job deploys
+  that SHA.
   The job calls `scripts/worker/deploy.ps1` in the standing checkout named by
   the repository variable `WORKER_CHECKOUT` with the resolved SHA. That
   moves the checkout to that commit on the local branch `production` -- the
