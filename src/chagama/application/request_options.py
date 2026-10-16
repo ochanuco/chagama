@@ -15,6 +15,18 @@ from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
     DOF_VIEWFINDER,
+    FRAME_COORD_RANGE,
+    FRAME_LINE,
+    FRAME_PAPER,
+    FRAME_POINTS_MAX,
+    FRAME_RIM,
+    FRAME_SIDE_CHOICES,
+    FRAME_SIDE_DEFAULTS,
+    FRAME_SIDES,
+    FRAME_STROKE_MODES,
+    FRAME_STROKE_POINTS_MAX,
+    FRAME_STROKE_WIDTH_MAX_PCT,
+    FRAME_STROKES_MAX,
     LENS_CENTER_DEFAULT,
     LENS_RADIUS,
     LENS_SHAPE,
@@ -60,9 +72,10 @@ _KNOWN_PHOTO_OPTIONS = frozenset({
     "focal_length"})
 
 _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from",
-                                  "light"})
+                                  "light", "frame"})
 _STAGE_PHOTO_OPTIONS = frozenset({"photo", "place", "height"})
-_STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light"})
+_STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light", "frame"})
+_KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas", "strokes"})
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
 
@@ -167,17 +180,117 @@ def _outlines_argument(value: object, *, key: str = "outlines") -> list[dict]:
         where = f"{key}[{index}]"
         if not isinstance(outline, Mapping) or set(outline) != {"color", "width"}:
             raise ValueError(f"{where} must be {{\"color\", \"width\"}}, got {outline!r}")
-        color, width = outline["color"], outline["width"]
-        if (not isinstance(color, str) or len(color) != 7 or color[0] != "#"
-                or any(c not in "0123456789abcdefABCDEF" for c in color[1:])):
-            raise ValueError(f"{where}.color must be #rrggbb, got {color!r}")
-        if not isinstance(width, (int, float)) or isinstance(width, bool):
-            raise ValueError(f"{where}.width must be a number, got {width!r}")
+        width = _number(outline["width"], key=f"{where}.width")
         if not (0 < width <= OUTLINE_WIDTH_MAX_PCT):
             raise ValueError(
                 f"{where}.width must be > 0 and <= {OUTLINE_WIDTH_MAX_PCT:g}, got {width!r}")
-        parsed.append({"color": color.lower(), "width": float(width)})
+        parsed.append({"color": _hex_colour(outline["color"], key=f"{where}.color"),
+                       "width": width})
     return parsed
+
+
+def _hex_colour(value: object, *, key: str) -> str:
+    if (not isinstance(value, str) or len(value) != 7 or value[0] != "#"
+            or any(c not in "0123456789abcdefABCDEF" for c in value[1:])):
+        raise ValueError(f"{key} must be #rrggbb, got {value!r}")
+    return value.lower()
+
+
+def _number(value: object, *, key: str) -> float:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise ValueError(f"{key} must be a number, got {value!r}")
+    return float(value)
+
+
+def _frame_share(value: object, *, key: str) -> float:
+    share = _number(value, key=key)
+    low, high = FRAME_COORD_RANGE
+    if not (low <= share <= high):
+        raise ValueError(f"{key} must be within {low:g}..{high:g}, got {value!r}")
+    return share
+
+
+def _frame_rect(value: object, *, key: str) -> list[float]:
+    if not isinstance(value, list) or len(value) != 4:
+        raise ValueError(f"{key} must be [x0, y0, x1, y1], got {value!r}")
+    x0, y0, x1, y1 = (_frame_share(v, key=f"{key}[{i}]") for i, v in enumerate(value))
+    if not (x0 < x1 and y0 < y1):
+        raise ValueError(f"{key} must have x0 < x1 and y0 < y1, got {value!r}")
+    return [x0, y0, x1, y1]
+
+
+def _frame_strokes(value: object, *, key: str) -> list[dict]:
+    if not isinstance(value, list):
+        raise ValueError(f"{key} must be an array, got {type(value).__name__}")
+    if len(value) > FRAME_STROKES_MAX:
+        raise ValueError(f"{key} must have at most {FRAME_STROKES_MAX} strokes, got {len(value)}")
+    parsed, total = [], 0
+    for index, stroke in enumerate(value):
+        where = f"{key}[{index}]"
+        if not isinstance(stroke, Mapping) or set(stroke) != {"mode", "width", "points"}:
+            raise ValueError(f"{where} must be {{\"mode\", \"width\", \"points\"}}, got {stroke!r}")
+        if stroke["mode"] not in FRAME_STROKE_MODES:
+            raise ValueError(
+                f"{where}.mode must be one of {list(FRAME_STROKE_MODES)}, got {stroke['mode']!r}")
+        width = _number(stroke["width"], key=f"{where}.width")
+        if not (0 < width <= FRAME_STROKE_WIDTH_MAX_PCT):
+            raise ValueError(f"{where}.width must be > 0 and <= "
+                             f"{FRAME_STROKE_WIDTH_MAX_PCT:g}, got {width!r}")
+        points = stroke["points"]
+        if not isinstance(points, list) or not 1 <= len(points) <= FRAME_STROKE_POINTS_MAX:
+            raise ValueError(
+                f"{where}.points must be 1..{FRAME_STROKE_POINTS_MAX} [x, y] points")
+        total += len(points)
+        if total > FRAME_POINTS_MAX:
+            raise ValueError(f"{key} must have at most {FRAME_POINTS_MAX} points in all")
+        xy = []
+        for number, point in enumerate(points):
+            if not isinstance(point, list) or len(point) != 2:
+                raise ValueError(f"{where}.points[{number}] must be [x, y], got {point!r}")
+            xy.append([_frame_share(v, key=f"{where}.points[{number}]") for v in point])
+        parsed.append({"mode": stroke["mode"], "width": width, "points": xy})
+    return parsed
+
+
+def _frame_band(value: object, default: Mapping, *, key: str) -> dict | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping) or not set(value) <= {"color", "width"}:
+        raise ValueError(f"{key} must be null or {{\"color\", \"width\"}}, got {value!r}")
+    value = {**default, **value}
+    width = _number(value["width"], key=f"{key}.width")
+    if not (0 <= width <= OUTLINE_WIDTH_MAX_PCT):
+        raise ValueError(f"{key}.width must be within 0..{OUTLINE_WIDTH_MAX_PCT:g}, got {width!r}")
+    if width == 0:
+        return None
+    return {"color": _hex_colour(value["color"], key=f"{key}.color"), "width": width}
+
+
+def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{key} must be null or an object, got {type(value).__name__}")
+    unknown = sorted(set(value) - _KNOWN_FRAME_KEYS)
+    if unknown:
+        raise ValueError(f"{key} has unknown keys: {unknown}")
+    if "box" not in value:
+        raise ValueError(f"{key}.box is required")
+    sides = value.get("sides", {})
+    if not isinstance(sides, Mapping) or not set(sides) <= set(FRAME_SIDES):
+        raise ValueError(f"{key}.sides must be an object of {list(FRAME_SIDES)}, got {sides!r}")
+    for side, choice in sides.items():
+        if choice not in FRAME_SIDE_CHOICES:
+            raise ValueError(f"{key}.sides.{side} must be one of "
+                             f"{list(FRAME_SIDE_CHOICES)}, got {choice!r}")
+    canvas = value.get("canvas")
+    return {"box": _frame_rect(value["box"], key=f"{key}.box"),
+            "sides": {side: sides.get(side, FRAME_SIDE_DEFAULTS[side]) for side in FRAME_SIDES},
+            "line": _frame_band(value.get("line", FRAME_LINE), FRAME_LINE, key=f"{key}.line"),
+            "rim": _frame_band(value.get("rim", FRAME_RIM), FRAME_RIM, key=f"{key}.rim"),
+            "paper": _hex_colour(value.get("paper", FRAME_PAPER), key=f"{key}.paper"),
+            "canvas": None if canvas is None else _frame_rect(canvas, key=f"{key}.canvas"),
+            "strokes": _frame_strokes(value.get("strokes", []), key=f"{key}.strokes")}
 
 
 def _light_argument(value: object, *, key: str = "light") -> Light | None:
@@ -641,8 +754,9 @@ def stage_arguments(options: Mapping) -> dict:
     shadow thrown away from `shadow_from` (a direction, null for none,
     absent to take the delivery's own light) and `light` ({scene, from}
     tinting the backdrop as a delivery in that scene; null for none; absent
-    for the nearest light redraw in the picture's lineage). The two sets of
-    keys do not mix.
+    for the nearest light redraw in the picture's lineage) and `frame` (the
+    backdrop fills its box; see `_frame_argument`, null or absent for none).
+    The two sets of keys do not mix.
     """
     if not isinstance(options, Mapping):
         raise ValueError(
@@ -677,7 +791,8 @@ def stage_arguments(options: Mapping) -> dict:
             "shadow_from": None if shadow_from is _SHADOW_INHERITED else shadow_from,
             "inherit_shadow": shadow_from is _SHADOW_INHERITED,
             "light": _light_argument(options.get("light")),
-            "inherit_light": "light" not in options}
+            "inherit_light": "light" not in options,
+            "frame": _frame_argument(options.get("frame"))}
 
 
 def lighting_arguments(options: Mapping) -> dict:

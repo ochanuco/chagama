@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from ...domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH, PHOTO_FOCAL_LENGTHS
 from .deliver_graph import depth_nodes
 
@@ -13,12 +15,13 @@ VIEWFINDER_SUFFIX = "-viewfinder"
 def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
               prefix: str, *, depth_image: str | None, source_image: str | None,
               focus: tuple[float, float], f_number: float, scope: dict,
-              viewfinder: str) -> dict:
+              viewfinder: str, depth_place: list[float] | None = None) -> dict:
     """The dof graph over the uploaded layer images of a delivery.
 
     The depth is the uploaded `depth_image` of the delivery's source, or is
     built from the uploaded `source_image` and saved under `prefix` +
-    DEPTH_SUFFIX. `viewfinder` 'on' draws the viewfinder over the saved
+    DEPTH_SUFFIX; `depth_place` is where the delivery's canvas lies in the
+    layers' (shares of it) when a frame moved it. `viewfinder` 'on' draws the viewfinder over the saved
     picture; 'both' also saves the plain one under `prefix` + DOF_SUFFIX and
     the overlaid one under `prefix` + VIEWFINDER_SUFFIX.
     """
@@ -52,7 +55,8 @@ def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
         "depth": depth_ref, "focus_x": focus[0], "focus_y": focus[1],
         "f_number": f_number, "blur_figure": scope["figure"],
         "blur_outline": scope["outline"], "blur_backdrop": scope["backdrop"],
-        **({"backdrop": [backdrop_id, 0]} if backdrop_id is not None else {})}}
+        **({"backdrop": [backdrop_id, 0]} if backdrop_id is not None else {}),
+        **({"depth_place": json.dumps(depth_place)} if depth_place is not None else {})}}
     picture_ref = [blur_id, 0]
     saved_ref = picture_ref
     if viewfinder != "off":

@@ -4,12 +4,16 @@ SaveImage prefixes of the graph it was handed."""
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
+
 from chagama.application.dof import DofServices, dof
 from chagama.application.stage import StageServices, lighting, stage
+from chagama.infrastructure.imaging.stage import _png
 
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
           "layer-backdrop": b"backdrop-png"}
@@ -137,6 +141,36 @@ class StageTest(unittest.TestCase):
                   key_prefix="no-scene")
             self.assertNotIn("light_scene", node(services, "YukariStage")["inputs"])
 
+    def test_a_frame_resolves_its_canvas_from_the_layers_and_records_it(self):
+        figure = np.zeros((80, 60, 4), np.float32)
+        figure[10:70, 15:45] = (200, 60, 120, 255)
+        layers = {"layer-figure": _png(figure, "RGBA"),
+                  "layer-outline": _png(np.zeros_like(figure), "RGBA")}
+        frame = {"box": [0.25, 0.25, 1.0, 1.0],
+                 "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"},
+                 "line": {"color": "#885b80", "width": 5.0}, "paper": "#ffffff",
+                 "canvas": None, "strokes": []}
+        management = ManagementFake({"dlv": (DELIVERY, layers)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            result = stage("dlv", services, backdrop="stripes", frame=frame)
+        resolved = {**frame, "canvas": [9 / 60, 6 / 80, 66 / 60, 86 / 80]}
+        self.assertEqual(json.loads(node(services, "YukariStage")["inputs"]["frame"]),
+                         resolved)
+        self.assertEqual(result["frame"], resolved)
+        resolution = management.resolution()
+        self.assertEqual(resolution["parameters"]["frame"], resolved)
+        self.assertIn("枠", resolution["raw_instruction"])
+
+    def test_a_frame_with_its_own_canvas_is_sent_as_given(self):
+        frame = {"box": [0, 0, 1, 1], "sides": {}, "line": None, "paper": "#ffffff",
+                 "canvas": [0, 0, 1, 1], "strokes": []}
+        management = ManagementFake({"dlv": (DELIVERY, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            stage("dlv", services, backdrop="dots", frame=frame)
+        self.assertEqual(json.loads(node(services, "YukariStage")["inputs"]["frame"]), frame)
+
     def test_a_photo_places_the_layers_and_references_the_photo(self):
         management = ManagementFake({"dlv": (DELIVERY, LAYERS)})
         with tempfile.TemporaryDirectory() as directory:
@@ -234,6 +268,21 @@ class StagedDofTest(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "写真に置いた絵"):
                 dof("stg", services, focus=(0.5, 0.5), f_number=2.8, scope={},
                     photo_blur={"stand_at": None, "nearer": 0, "tilt": 0, "bokeh": 0})
+            self.assertNotIn("depth_place", node(services, "YukariDepthOfField")["inputs"])
+
+    def test_a_framed_picture_lays_the_depth_where_the_delivery_stands(self):
+        frame = {"box": [0, 0, 1, 1], "canvas": [-0.25, 0.0, 1.25, 2.0]}
+        management = ManagementFake({
+            "lit": ({"kind": "lighting", "base_generation": "stg"}, LAYERS),
+            "stg": ({"kind": "stage", "base_generation": "dlv", "backdrop": "dots",
+                     "frame": frame}, LAYERS),
+            "dlv": (DELIVERY, LAYERS), "src": ({"kind": "generate"}, {})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(DofServices, management, directory)
+            dof("lit", services, focus=(0.5, 0.5), f_number=2.8,
+                scope={"figure": True, "outline": True, "backdrop": True})
+        place = json.loads(node(services, "YukariDepthOfField")["inputs"]["depth_place"])
+        self.assertEqual(place, [0.25 / 1.5, 0.0, 1.25 / 1.5, 0.5])
 
 
 if __name__ == "__main__":

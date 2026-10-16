@@ -336,14 +336,58 @@ class StageArgumentsTest(unittest.TestCase):
     def test_a_pattern_takes_backdrop_and_shadow(self):
         self.assertEqual(stage_arguments({}), {
             "backdrop": "dots", "shadow_from": None, "inherit_shadow": True,
-            "light": None, "inherit_light": True})
+            "light": None, "inherit_light": True, "frame": None})
         self.assertEqual(stage_arguments({"backdrop": "#102030", "shadow_from": None,
                                           "light": None}), {
             "backdrop": "#102030", "shadow_from": None, "inherit_shadow": False,
-            "light": None, "inherit_light": False})
+            "light": None, "inherit_light": False, "frame": None})
         self.assertEqual(stage_arguments({"light": {"scene": "moon"}})["light"],
                          Light("moon", "nw"))
         self.assertEqual(stage_arguments({"shadow_from": "nw"})["shadow_from"], "nw")
+
+    def test_a_frame_takes_its_box_and_fills_the_catalog_defaults(self):
+        frame = stage_arguments({"frame": {"box": [0.1, 0.25, 1, 1],
+                                           "sides": {"left": "out"}}})["frame"]
+        self.assertEqual(frame, {
+            "box": [0.1, 0.25, 1.0, 1.0],
+            "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "out"},
+            "line": {"color": "#885b80", "width": 0.6},
+            "rim": {"color": "#2e2236", "width": 0.25}, "paper": "#ffffff",
+            "canvas": None, "strokes": []})
+        frame = stage_arguments({"frame": {
+            "box": [0, 0, 1, 1], "line": {"color": "#AABBCC", "width": 0}, "rim": None,
+            "canvas": [-0.1, -0.1, 1.1, 1.1],
+            "strokes": [{"mode": "restore", "width": 3, "points": [[0.5, 1.2]]}]}})["frame"]
+        self.assertIsNone(frame["line"])
+        self.assertIsNone(frame["rim"])
+        self.assertEqual(frame["canvas"], [-0.1, -0.1, 1.1, 1.1])
+        self.assertEqual(frame["strokes"],
+                         [{"mode": "restore", "width": 3.0, "points": [[0.5, 1.2]]}])
+        frame = stage_arguments({"frame": {"box": [0, 0, 1, 1], "line": {"width": 1},
+                                           "rim": {"color": "#000000"}}})["frame"]
+        self.assertEqual(frame["line"], {"color": "#885b80", "width": 1.0})
+        self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
+
+    def test_bad_frames_fail(self):
+        box = [0, 0, 1, 1]
+        for bad in ({}, {"box": [0, 0, 1]}, {"box": [0.5, 0, 0.4, 1]},
+                    {"box": [-1.5, 0, 1, 1]}, {"box": box, "sides": {"middle": "cut"}},
+                    {"box": box, "sides": {"top": "in"}}, {"box": box, "line": {"color": "red", "width": 1}},
+                    {"box": box, "line": {"color": "#000000", "width": 6}},
+                    {"box": box, "rim": {"color": "#000000", "alpha": 1}},
+                    {"box": box, "paper": "white"}, {"box": box, "zoom": 1},
+                    {"box": box, "strokes": [{"mode": "smudge", "width": 1, "points": [[0, 0]]}]},
+                    {"box": box, "strokes": [{"mode": "erase", "width": 0, "points": [[0, 0]]}]},
+                    {"box": box, "strokes": [{"mode": "erase", "width": 1, "points": []}]},
+                    {"box": box, "strokes": [{"mode": "erase", "width": 1, "points": [[0, 3]]}]},
+                    {"box": box, "strokes": [{"mode": "erase", "width": 1,
+                                              "points": [[0, 0]] * 2001}]},
+                    {"box": box, "strokes": [{"mode": "erase", "width": 1,
+                                              "points": [[0, 0]] * 2000}] * 11}):
+            with self.subTest(bad=str(bad)[:80]), self.assertRaises(ValueError):
+                stage_arguments({"frame": bad})
+        with self.assertRaises(ValueError):
+            stage_arguments({"photo": "p", "frame": {"box": box}})
 
     def test_the_two_sets_do_not_mix_and_bad_values_fail(self):
         for bad in ({"photo": "p", "backdrop": "dots"}, {"place": [0.5, 0.5]},

@@ -22,6 +22,7 @@ in [`findings/delivery.md`](../findings/delivery.md).
 | `DOF_*` | the `dof` request's options and the catalog's top-level `dof` section |
 | `PHOTO_*` | the `photo` request's placement and depth options and the catalog's top-level `photo` section |
 | `LENS_*` | the `lens` request's options (strength, centre, shape, sphere radius) and the catalog's top-level `lens` section |
+| `FRAME_*` | the `stage` request's `frame` option and the catalog's `stage.frame` block |
 
 ## Contracts
 
@@ -63,3 +64,27 @@ in [`findings/delivery.md`](../findings/delivery.md).
   so the white band continues it. It applies only when it covers
   `DRAWN_OUTLINE_MIN_EDGE` of the figure's edge; otherwise the delivery is
   unchanged. Its tag ends in `-outline`.
+
+## Stage frame
+
+A `stage` request's `frame` sets the delivery in a square panel:
+
+- `box` and `canvas` are `[x0, y0, x1, y1]` shares of the delivery's canvas
+  (x of its width, y of its height, each within `FRAME_COORD_RANGE`);
+  widths are percent of its longest side.
+- The canvas is painted `paper`, the box filled with the request's
+  `backdrop` rendered at the box's size, and the `line` straddles the box's
+  sides with the `rim` along both its edges (either null or width 0 for
+  none, an omitted color or width the default); together they are the
+  border.
+- A `cut` side ends the figure and outline at the border's inner edge, the
+  half-plane running past the box; an `out` side leaves them over it.
+- `strokes` are round pens applied in order: an `erase` multiplies what is
+  kept by one minus its anti-aliased coverage, a `restore` adds its
+  coverage back, never past the figure's own alpha.
+- Pixels count by their centres, so cuts, line and box are hard-edged.
+- Without `canvas` it is the box out to the border's outer edge with the
+  visible figure and outline, `FRAME_MARGIN_PCT` around, rounded outward.
+  The worker records the frame with that canvas and reports it in
+  `resolved_options`.
+- `dof` lays the source depth where the frame put the delivery's canvas.

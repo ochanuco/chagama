@@ -584,6 +584,26 @@ PHOTO_SUBJECT_MM = 1500.0
 # A lighting request then lights the figure and outline by that backdrop.
 LIGHTING_STRENGTH = {"min": 0.0, "max": 1.0, "default": 0.7}
 
+# A framed stage sets the delivery in a square panel: the backdrop
+# fills the panel, the paper colour the canvas around it, and each side of the
+# panel either cuts the figure at the inner edge of its border (the line and
+# the rim along both its edges) or lets it out over it. Boxes are shares of
+# the delivery's canvas (x of its width, y of its height), widths percent of
+# its longest side.
+FRAME_SIDES = ("top", "right", "bottom", "left")
+FRAME_SIDE_CHOICES = ("cut", "out")
+FRAME_SIDE_DEFAULTS = {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"}
+FRAME_LINE = {"color": "#885b80", "width": 0.6}
+FRAME_RIM = {"color": "#2e2236", "width": 0.25}
+FRAME_PAPER = "#ffffff"
+FRAME_COORD_RANGE = (-1.0, 2.0)
+FRAME_MARGIN_PCT = 4.0
+FRAME_STROKE_MODES = ("erase", "restore")
+FRAME_STROKE_WIDTH_MAX_PCT = 20.0
+FRAME_STROKES_MAX = 200
+FRAME_STROKE_POINTS_MAX = 2000
+FRAME_POINTS_MAX = 20000
+
 
 class Light(NamedTuple):
     scene: str

@@ -166,18 +166,35 @@ def _decode(data: bytes, mode: str) -> np.ndarray:
     return np.array(Image.open(io.BytesIO(data)).convert(mode), dtype=np.float32)
 
 
+def placed_depth(depth: np.ndarray, width: int, height: int,
+                 place: tuple[float, float, float, float] | None = None) -> np.ndarray:
+    """`depth` resized to the layers' canvas, or into the `place` rectangle
+    (shares of that canvas) with 0 around it."""
+    if place is None:
+        return cv2.resize(depth, (width, height), interpolation=cv2.INTER_LINEAR)
+    x0, x1 = round(place[0] * width), round(place[2] * width)
+    y0, y1 = round(place[1] * height), round(place[3] * height)
+    region = cv2.resize(depth, (max(x1 - x0, 1), max(y1 - y0, 1)),
+                        interpolation=cv2.INTER_LINEAR)
+    placed = np.zeros((height, width), np.float32)
+    left, top = max(x0, 0), max(y0, 0)
+    right, bottom = min(x0 + region.shape[1], width), min(y0 + region.shape[0], height)
+    if right > left and bottom > top:
+        placed[top:bottom, left:right] = region[top - y0:bottom - y0, left - x0:right - x0]
+    return placed
+
+
 def blur_layers_png(figure_png: bytes, outline_png: bytes,
                     backdrop_png: bytes | None, depth_png: bytes,
                     focus_x: float, focus_y: float, f_number: float,
-                    scope: dict) -> bytes:
-    """`blur_layers` over a delivery's layer PNGs; RGB over a backdrop, RGBA
-    without one."""
+                    scope: dict, depth_place=None) -> bytes:
+    """`blur_layers` over a delivery's layer PNGs, the depth laid by
+    `placed_depth`; RGB over a backdrop, RGBA without one."""
     figure = _decode(figure_png, "RGBA")
     outline = _decode(outline_png, "RGBA")
     height, width = figure.shape[:2]
     backdrop = _decode(backdrop_png, "RGB") if backdrop_png is not None else None
-    depth = cv2.resize(_decode(depth_png, "L"), (width, height),
-                       interpolation=cv2.INTER_LINEAR)
+    depth = placed_depth(_decode(depth_png, "L"), width, height, depth_place)
     colour, alpha = blur_layers(
         figure[..., :3], figure[..., 3] / 255.0, outline[..., :3],
         outline[..., 3] / 255.0, backdrop, depth, focus_x, focus_y, f_number,

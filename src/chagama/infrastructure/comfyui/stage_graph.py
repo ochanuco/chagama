@@ -42,10 +42,10 @@ def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
                 photo_image: str | None = None, backdrop: str | None = None,
                 shadow_from: str | None = None, outlines: list | None = None,
                 place: tuple[float, float] = (0.5, 1.0), height: float = 1.0,
-                light: tuple[str, str] | None = None) -> dict:
+                light: tuple[str, str] | None = None, frame: dict | None = None) -> dict:
     """Set the uploaded layer images on the uploaded `photo_image`, or on
-    the `backdrop` pattern when there is none, tinted to the `light`
-    (scene, from) when one is given. The picture is saved under
+    the `backdrop` pattern when there is none (in the `frame` when one is
+    given), tinted to the `light` (scene, from) when one is given. The picture is saved under
     `prefix` + STAGE_SUFFIX and its three layers beside it."""
     graph, allocate, load = _builder()
     figure_id, outline_id = load(figure_image), load(outline_image)
@@ -58,7 +58,8 @@ def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
         inputs.update({"mode": "pattern", "backdrop": backdrop or "",
                        "shadow_from": shadow_from or "",
                        "outlines": json.dumps(outlines) if outlines is not None else "",
-                       **({"light_scene": light[0], "light_from": light[1]} if light else {})})
+                       **({"light_scene": light[0], "light_from": light[1]} if light else {}),
+                       **({"frame": json.dumps(frame)} if frame is not None else {})})
     stage_id = allocate()
     graph[stage_id] = {"class_type": "YukariStage", "inputs": inputs}
     _save(graph, allocate, [stage_id, 0], prefix + STAGE_SUFFIX)

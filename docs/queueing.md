@@ -33,7 +33,7 @@ Options, defaults and ranges live here:
 | `repair` | `{generation_id, options}` | DWPose-masked crop-and-stitch reroll of hands/feet; uploads one picture per seed |
 | `masked_redraw` | `{generation_id, options}` | the same reroll on caller rectangles with a free-text prompt patch |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: repin, backdrop, outline bands; never redraws |
-| `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern or in a photo, unblurred |
+| `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern, in a frame or in a photo, unblurred |
 | `lighting` | `{generation_id, options}` | light a staged picture's figure and outline by its backdrop: exposure, colour cast, optional side shading |
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
@@ -153,10 +153,10 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
   scene's), merged into the outline layer. `light` (`{scene, from}`; absent:
   the nearest light redraw in the lineage; null: none) tints the backdrop
   and casts the shadow in the scene's colour, as deliver does. The two sets
-  of keys do not mix.
-- The output (`-set`) is a delivered picture with canvas-sized
-  `layer-figure`, `layer-outline` and `layer-backdrop`, recording
-  `kind: "stage"` and its options.
+  of keys do not mix. `frame` sets the pattern in a square panel instead
+  ([yukari/delivery_style.md](yukari/delivery_style.md#stage-frame)).
+- The output (`-set`) is a delivered picture with canvas-sized layers
+  (figure, outline, backdrop), recording `kind: "stage"` and its options.
 
 ### Lighting options
 

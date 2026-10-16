@@ -247,6 +247,8 @@ def _execute_stage(services: WorkServices, row: Mapping) -> dict:
             light = arguments["light"]
             result["resolved_options"]["light"] = (
                 {"scene": light.scene, "from": light.direction} if light else None)
+        if arguments["frame"] is not None:
+            result["resolved_options"]["frame"] = result.pop("frame", arguments["frame"])
     return result
 
 

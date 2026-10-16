@@ -11,6 +11,7 @@ from pathlib import Path
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
 from ..infrastructure.comfyui.stage_graph import lighting_graph, stage_graph
 from ..infrastructure.comfyui.timings import note_ingested
+from ..infrastructure.imaging.stage import frame_canvas_share
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .deliver import inherited_light
 from .ingest import (
@@ -152,11 +153,14 @@ def stage(generation_id: str, services: StageServices, *,
           height: float = 0.7, backdrop: str | None = None,
           shadow_from: str | None = None, inherit_shadow: bool = False,
           light: Light | None = None, inherit_light: bool = False,
+          frame: dict | None = None,
           key_prefix: str | None = None, request_id: str | None = None,
           context: dict | None = None) -> dict:
     """Set the delivery `generation_id` in the photo `photo_id`, or on the
-    `backdrop` pattern when there is none, in the `light` scene (inherited
-    from the lineage's light redraw when `inherit_light`)."""
+    `backdrop` pattern when there is none (filling the `frame`'s box when
+    one is given, its canvas resolved from the layers when it names none),
+    in the `light` scene (inherited from the lineage's light redraw when
+    `inherit_light`). The result carries the frame as resolved."""
     state_path, state = _load_state(services, "stage", key_prefix)
     if state.get("status") == "completed" and state.get("result"):
         return state["result"]
@@ -177,9 +181,12 @@ def stage(generation_id: str, services: StageServices, *,
 
     prefix = f"set-{generation_id}"
     token = uuid.uuid4().hex[:8]
-    uploaded = {role: services.comfyui.upload_image(
-        f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
-        for role in FIGURE_ROLES}
+    layer_bytes = {role: management.fetch_asset(generation_id, role) for role in FIGURE_ROLES}
+    if frame is not None and frame.get("canvas") is None:
+        frame = {**frame, "canvas": frame_canvas_share(
+            layer_bytes["layer-figure"], layer_bytes["layer-outline"], frame)}
+    uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
+                for role, data in layer_bytes.items()}
     if photo_id is not None:
         photo_image = services.comfyui.upload_image(
             f"{prefix}-photo-{token}.png", management.fetch_generation_image(photo_id))
@@ -194,10 +201,13 @@ def stage(generation_id: str, services: StageServices, *,
         graph = services.stage_graph(uploaded["layer-figure"], uploaded["layer-outline"],
                                      prefix, backdrop=backdrop, shadow_from=shadow_from,
                                      outlines=parameters.get("outlines"),
-                                     light=(light.scene, light.direction) if light else None)
+                                     light=(light.scene, light.direction) if light else None,
+                                     frame=frame)
         recorded = {"backdrop": backdrop, "shadow_from": shadow_from,
-                    "light": {"scene": light.scene, "from": light.direction} if light else None}
-        raw = f"{generation_id} に背景 {backdrop}"
+                    "light": {"scene": light.scene, "from": light.direction} if light else None,
+                    **({"frame": frame} if frame is not None else {})}
+        raw = (f"{generation_id} を枠に入れる（枠の中は {backdrop}）" if frame is not None
+               else f"{generation_id} に背景 {backdrop}")
         references = []
 
     prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
@@ -214,6 +224,8 @@ def stage(generation_id: str, services: StageServices, *,
                      "aspect": "composition", "instruction": "この納品の絵に背景を付ける"},
                     *references],
         title="stage")
+    if frame is not None:
+        result["frame"] = frame
     return _finish(services, state_path, state, result)
 
 
