@@ -337,6 +337,10 @@ def parser() -> argparse.ArgumentParser:
              f"({', '.join(sorted(LIGHT_SCENES))}) and the direction "
              f"({', '.join(sorted(STROKE_LIGHTS))}; default "
              f"{LIGHT_FROM_DEFAULT}) it is lit from")
+    redraw_parser.add_argument(
+        "--cut", action="store_true",
+        help="also cut the result as a deliver would and attach the cut and an "
+             "RGBA cutout to it")
 
     deliver_parser = commands.add_parser(
         "deliver", help="cut and decorate one picture generation")
@@ -730,6 +734,7 @@ def main(argv: list[str] | None = None) -> None:
             **({"hires": args.hires} if args.hires is not None else {}),
             **({"scene": light.scene, "from": light.direction}
                if light is not None else {}),
+            **({"cut": True} if args.cut else {}),
         }
         try:
             arguments = redraw_arguments(options)

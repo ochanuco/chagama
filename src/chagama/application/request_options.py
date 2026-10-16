@@ -430,8 +430,9 @@ def redraw_arguments(options: Mapping,
                      dials: Mapping[str, Mapping[str, float]] | None = None) -> dict:
     """Validate a redraw request's `options` and map it to redraw() kwargs.
 
-    `method` selects which options are accepted; unknown keys or a wrong
-    type raise ValueError naming the offending key.
+    `method` selects which options are accepted, and every method takes
+    `cut` (false when absent); unknown keys or a wrong type raise ValueError
+    naming the offending key.
     """
     if not isinstance(options, Mapping):
         raise ValueError(
@@ -440,10 +441,13 @@ def redraw_arguments(options: Mapping,
     if method not in _KNOWN_REDRAW_OPTIONS:
         raise ValueError(
             f"method must be one of {sorted(_KNOWN_REDRAW_OPTIONS)}, got {method!r}")
-    unknown = sorted(set(options) - _KNOWN_REDRAW_OPTIONS[method] - {"method"})
+    unknown = sorted(set(options) - _KNOWN_REDRAW_OPTIONS[method] - {"method", "cut"})
     if unknown:
         raise ValueError(
             f"redraw {method} が受け付けない option です: {', '.join(unknown)}")
+    cut = options.get("cut", False)
+    if not isinstance(cut, bool):
+        raise ValueError(f"cut must be true or false, got {cut!r}")
     dials = dials or {}
 
     if method == "light":
@@ -451,7 +455,7 @@ def redraw_arguments(options: Mapping,
             {"scene": options.get("scene"),
              **({"from": options["from"]} if "from" in options else {})},
             key="light")
-        return {"method": method, "light": light}
+        return {"method": method, "light": light, "cut": cut}
 
     if method == "hires":
         hires = options.get("hires")
@@ -461,7 +465,7 @@ def redraw_arguments(options: Mapping,
             raise ValueError(f"hires must be at least 1, got {hires!r}")
         denoise = (_denoise_argument(options["denoise"]) if "denoise" in options
                    else HIRES_DENOISE)
-        return {"method": method, "hires": hires, "denoise": denoise}
+        return {"method": method, "hires": hires, "denoise": denoise, "cut": cut}
 
     denoise = resolve_dial("denoise", options.get("denoise"), dials)
     if denoise is not None:
@@ -502,6 +506,7 @@ def redraw_arguments(options: Mapping,
         "keep_regions": _regions_argument(
             options.get("keep_regions", []), key="keep_regions"),
         "keep_strength": _keep_strength_argument(options.get("keep_strength", 0.25)),
+        "cut": cut,
     }
 
 

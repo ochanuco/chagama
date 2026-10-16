@@ -19,11 +19,13 @@ from ..infrastructure.comfyui.base_graph import (
     hires_graph,
     sampler_settings,
 )
+from ..infrastructure.comfyui.deliver_graph import cut_graph
 from ..infrastructure.comfyui.light_graph import light_graph
 from ..infrastructure.comfyui.refinement_graph import redraw_graph, sizes
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.delivery import image_size
 from ..infrastructure.imaging.masks import render_soft_mask_png
+from ..infrastructure.imaging.matting import cutout_png
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import (
     ALPHA_ROLE,
@@ -34,6 +36,9 @@ from .cut_assets import (
     stored_cut,
 )
 from .ingest import (
+    asset_key,
+    attach_asset,
+    classify_cut_outputs,
     classify_redraw_outputs,
     generation_key,
     open_request,
@@ -49,6 +54,7 @@ KEEP_FEATHER_FRACTION = 0.03
 HIRES_DENOISE = 0.45
 
 LINEAGE_HOPS = 10
+CUTOUT_ROLE = "cutout"
 DELIVERED_SOURCE = ("納品済みの絵は redraw できません。"
                     "描き直しの元になる絵を指定してください")
 
@@ -72,6 +78,7 @@ class RedrawServices:
     redraw_graph: Callable[..., dict] = redraw_graph
     hires_graph: Callable[..., dict] = hires_graph
     light_graph: Callable[..., dict] = light_graph
+    cut_graph: Callable[..., dict] = cut_graph
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
@@ -241,14 +248,51 @@ def _prepare_light(generation_id: str, services: RedrawServices,
         cut_roles=cut_roles, stored=stored, asset_roles=frozenset(assets))
 
 
+def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, bytes], *,
+                prefix: str, key_prefix: str | None, state: dict, state_path) -> None:
+    """Cut the redrawn `picture` as a deliver of it would and attach the
+    alpha, depth and their `cut` description to `rendered_id`, so a deliver
+    of it reuses them, with an RGBA `cutout` to show it by."""
+    prompt_id = state.get("cut_prompt_id")
+    knows = getattr(services.comfyui, "knows", None)
+    if prompt_id and (knows is None or knows(prompt_id)):
+        services.emit(f"{prefix} resume {prompt_id}")
+    else:
+        image = services.comfyui.upload_image(
+            f"{prefix}-in-{uuid.uuid4().hex[:8]}.png", picture[1])
+        prompt_id = services.comfyui.submit(
+            services.cut_graph(image, delivery_style.MATTE_MODEL, prefix))
+        if state_path:
+            state["cut_prompt_id"] = prompt_id
+            services.state.save(state_path, state)
+    services.emit(f"{prefix} {prompt_id}")
+    outputs = classify_cut_outputs(services.comfyui.wait_for(prompt_id))
+    missing = [role for role, found in outputs.items() if not found]
+    if missing:
+        raise SystemExit(f"{prefix} is missing its {', '.join(missing)} output(s)")
+    fetched = {role: (found[-1]["filename"], services.comfyui.fetch(found[-1]))
+               for role, found in outputs.items()}
+    output_key = None if key_prefix is None else f"{key_prefix}:output"
+    attach_cut(services.management, services.emit, rendered_id, key_prefix=output_key,
+               fetched=fetched, stored={}, roles=set(), current=current_cut(),
+               cut_roles=[ALPHA_ROLE, DEPTH_ROLE])
+    name = f"{prefix}-cutout.png"
+    attach_asset(services.management, rendered_id, role=CUTOUT_ROLE, name=name,
+                 data=cutout_png(fetched["foreground"][1], fetched["alpha"][1]),
+                 idempotency_key=asset_key(output_key, 0, CUTOUT_ROLE))
+    services.emit(f"{name} -> {CUTOUT_ROLE} on {rendered_id}")
+
+
 def redraw(generation_id: str, services: RedrawServices, *, method: str,
            denoise: float | None = None, size: int | None = None,
            latent_route: bool | None = None, finalizer: str | None = None,
            upscale: str | None = None,
            keep_regions: Sequence[Sequence[float]] = (),
            keep_strength: float = 0.25, hires: int | None = None,
-           light: Light | None = None, key_prefix: str | None = None,
+           light: Light | None = None, cut: bool = False, key_prefix: str | None = None,
            request_id: str | None = None, context: dict | None = None) -> dict:
+    """Redraw `generation_id` by `method` and record the result; with `cut`,
+    also cut the result as a deliver would (see `_cut_output`)."""
     state_path = operation_state_path(services.output_root, "redraw", key_prefix)
     if state_path:
         state_path.parent.mkdir(parents=True, exist_ok=True)
@@ -306,7 +350,7 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
             "recipe": source.context["request"].get("recipe") or "yukari",
             "parameters": {"kind": "redraw", "method": method,
                            "base_generation": generation_id,
-                           **prepared.parameters},
+                           **prepared.parameters, **({"cut": True} if cut else {})},
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",
@@ -325,6 +369,9 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
                    current=current_cut(), cut_roles=list(prepared.cut_roles))
     management.request("PATCH", f"/api/v1/jobs/{job['id']}", {"status": "ingested"})
     note_ingested(services.comfyui, prompt_id)
+    if cut:
+        _cut_output(services, rendered["id"], fetched["picture"], prefix=f"{prefix}-out",
+                    key_prefix=key_prefix, state=state, state_path=state_path)
     services.notifier.send(
         f"**redraw {method}** `{generation_id}`\n"
         f"**file** `{name}`\n"

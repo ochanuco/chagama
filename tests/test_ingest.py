@@ -8,6 +8,7 @@ from pathlib import Path
 
 from chagama.application.ingest import (
     attach_asset,
+    classify_cut_outputs,
     classify_deliver_outputs,
     classify_dof_outputs,
     classify_redraw_outputs,
@@ -68,6 +69,13 @@ class ClassifyOutputsTests(unittest.TestCase):
         self.assertEqual(found["picture"], [outputs[0]])
         self.assertEqual(found["alpha"], [outputs[1]])
         self.assertEqual(found["depth"], [outputs[2]])
+
+    def test_a_cut_is_its_alpha_depth_and_foreground(self):
+        outputs = [{"filename": "a-out-alpha_00001_.png"}, {"filename": "a-out-depth_00001_.png"},
+                   {"filename": "a-out-foreground_00001_.png"}]
+        found = classify_cut_outputs(outputs)
+        self.assertEqual([found[role] for role in ("alpha", "depth", "foreground")],
+                         [[outputs[0]], [outputs[1]], [outputs[2]]])
 
 
 class IngestSeedRenderTests(unittest.TestCase):
