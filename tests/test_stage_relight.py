@@ -76,6 +76,19 @@ class FrameTest(unittest.TestCase):
         np.testing.assert_allclose(staged.picture[20, 30], (200, 60, 120))
         np.testing.assert_allclose(staged.backdrop[20, 30], (16, 32, 48))
 
+    def test_the_rim_edges_both_sides_of_the_line_and_moves_the_cut_inward(self):
+        # The line 4 px wide on the box's left edge at x 15, a 2 px rim either side.
+        staged = stage.in_frame(
+            self.figure, self.outline,
+            framed(rim={"color": "#405060", "width": 2.5}, canvas=[0.0, 0.0, 1.0, 1.0]),
+            "#ffffff")
+        np.testing.assert_allclose(staged.backdrop[40, 12], (64, 80, 96))
+        np.testing.assert_allclose(staged.backdrop[40, 14], (16, 32, 48))
+        np.testing.assert_allclose(staged.backdrop[40, 18], (64, 80, 96))
+        np.testing.assert_allclose(staged.backdrop[40, 10], (255, 255, 255))
+        self.assertEqual(staged.figure_alpha[40, 18], 0.0)
+        self.assertEqual(staged.figure_alpha[40, 19], 1.0)
+
     def test_the_backdrop_fills_the_box_and_paper_the_rest(self):
         staged = stage.in_frame(self.figure, self.outline,
                                 framed(line=None, canvas=[0.0, 0.0, 1.0, 1.0]), "#405060")

@@ -19,6 +19,7 @@ from ..domain.yukari.delivery_style import (
     FRAME_LINE,
     FRAME_PAPER,
     FRAME_POINTS_MAX,
+    FRAME_RIM,
     FRAME_SIDE_CHOICES,
     FRAME_SIDE_DEFAULTS,
     FRAME_SIDES,
@@ -74,7 +75,7 @@ _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shado
                                   "light", "frame"})
 _STAGE_PHOTO_OPTIONS = frozenset({"photo", "place", "height"})
 _STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light", "frame"})
-_KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "paper", "canvas", "strokes"})
+_KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas", "strokes"})
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
 
@@ -251,6 +252,19 @@ def _frame_strokes(value: object, *, key: str) -> list[dict]:
     return parsed
 
 
+def _frame_band(value: object, *, key: str) -> dict | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping) or set(value) != {"color", "width"}:
+        raise ValueError(f"{key} must be null or {{\"color\", \"width\"}}, got {value!r}")
+    width = _number(value["width"], key=f"{key}.width")
+    if not (0 <= width <= OUTLINE_WIDTH_MAX_PCT):
+        raise ValueError(f"{key}.width must be within 0..{OUTLINE_WIDTH_MAX_PCT:g}, got {width!r}")
+    if width == 0:
+        return None
+    return {"color": _hex_colour(value["color"], key=f"{key}.color"), "width": width}
+
+
 def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
     if value is None:
         return None
@@ -268,20 +282,11 @@ def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
         if choice not in FRAME_SIDE_CHOICES:
             raise ValueError(f"{key}.sides.{side} must be one of "
                              f"{list(FRAME_SIDE_CHOICES)}, got {choice!r}")
-    line = value.get("line", FRAME_LINE)
-    if line is not None:
-        if not isinstance(line, Mapping) or set(line) != {"color", "width"}:
-            raise ValueError(f"{key}.line must be null or {{\"color\", \"width\"}}, got {line!r}")
-        width = _number(line["width"], key=f"{key}.line.width")
-        if not (0 <= width <= OUTLINE_WIDTH_MAX_PCT):
-            raise ValueError(f"{key}.line.width must be within 0..{OUTLINE_WIDTH_MAX_PCT:g}, "
-                             f"got {width!r}")
-        line = ({"color": _hex_colour(line["color"], key=f"{key}.line.color"), "width": width}
-                if width > 0 else None)
     canvas = value.get("canvas")
     return {"box": _frame_rect(value["box"], key=f"{key}.box"),
             "sides": {side: sides.get(side, FRAME_SIDE_DEFAULTS[side]) for side in FRAME_SIDES},
-            "line": line,
+            "line": _frame_band(value.get("line", FRAME_LINE), key=f"{key}.line"),
+            "rim": _frame_band(value.get("rim", FRAME_RIM), key=f"{key}.rim"),
             "paper": _hex_colour(value.get("paper", FRAME_PAPER), key=f"{key}.paper"),
             "canvas": None if canvas is None else _frame_rect(canvas, key=f"{key}.canvas"),
             "strokes": _frame_strokes(value.get("strokes", []), key=f"{key}.strokes")}

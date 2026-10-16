@@ -73,15 +73,16 @@ A `stage` request's `frame` sets the delivery in a square panel:
   (x of its width, y of its height, each within `FRAME_COORD_RANGE`);
   widths are percent of its longest side.
 - The canvas is painted `paper`, the box filled with the request's
-  `backdrop` rendered at the box's size, and the `line` (null or width 0
-  for none) straddles the box's sides.
-- A `cut` side ends the figure and outline at the line's inner edge, the
-  half-plane running past the box; an `out` side leaves them over the line.
+  `backdrop` rendered at the box's size, and the `line` straddles the box's
+  sides with the `rim` along both its edges (either null or width 0 for
+  none); together they are the border.
+- A `cut` side ends the figure and outline at the border's inner edge, the
+  half-plane running past the box; an `out` side leaves them over it.
 - `strokes` are round pens applied in order: an `erase` multiplies what is
   kept by one minus its anti-aliased coverage, a `restore` adds its
   coverage back, never past the figure's own alpha.
 - Pixels count by their centres, so cuts, line and box are hard-edged.
-- Without `canvas` it is the box out to the line's outer edge with the
+- Without `canvas` it is the box out to the border's outer edge with the
   visible figure and outline, `FRAME_MARGIN_PCT` around, rounded outward.
   The worker records the frame with that canvas and reports it in
   `resolved_options`.

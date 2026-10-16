@@ -166,9 +166,13 @@ def _share_px(rect, width: int, height: int) -> tuple[float, float, float, float
     return x0 * width, y0 * height, x1 * width, y1 * height
 
 
-def _line_px(frame: Mapping, longest: int) -> float:
-    line = frame.get("line")
-    return longest * line["width"] / 100 if line else 0.0
+def _width_px(band: Mapping | None, longest: int) -> float:
+    return longest * band["width"] / 100 if band else 0.0
+
+
+def _border_half(frame: Mapping, longest: int) -> float:
+    """Half the frame's border: its line and the rim edging both sides of it."""
+    return _width_px(frame.get("line"), longest) / 2 + _width_px(frame.get("rim"), longest)
 
 
 def _stroke_cover(shape: tuple[int, int], points: np.ndarray, diameter: float) -> np.ndarray:
@@ -199,13 +203,13 @@ def _stroke_cover(shape: tuple[int, int], points: np.ndarray, diameter: float) -
 
 def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
     """The 0..1 share of each pixel of a delivery canvas `shape` that the
-    `frame` keeps: nothing past a cut side's line inner edge, then each
+    `frame` keeps: nothing past a cut side's border inner edge, then each
     stroke in order, an erase taking its coverage away and a restore
     giving it back."""
     height, width = shape
     longest = max(height, width)
     x0, y0, x1, y1 = _share_px(frame["box"], width, height)
-    half = _line_px(frame, longest) / 2
+    half = _border_half(frame, longest)
     sides = frame["sides"]
     keep = _rect(shape,
                  x0 + half if sides["left"] == "cut" else None,
@@ -225,14 +229,14 @@ def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
 def frame_canvas(frame: Mapping, figure_alpha: np.ndarray,
                  outline_alpha: np.ndarray) -> tuple[int, int, int, int]:
     """The framed canvas as (left, top, right, bottom) px of the delivery
-    canvas: the frame's own `canvas`, else the box out to its line's outer
+    canvas: the frame's own `canvas`, else the box out to its border's outer
     edge together with the visible figure and outline, `FRAME_MARGIN_PCT`
     around, rounded outward and kept within `FRAME_COORD_RANGE`."""
     height, width = figure_alpha.shape
     if frame.get("canvas") is not None:
         return tuple(int(round(v)) for v in _share_px(frame["canvas"], width, height))
     longest = max(height, width)
-    half = _line_px(frame, longest) / 2
+    half = _border_half(frame, longest)
     x0, y0, x1, y1 = _share_px(frame["box"], width, height)
     x0, y0, x1, y1 = x0 - half, y0 - half, x1 + half, y1 + half
     rows, cols = np.nonzero((figure_alpha > VISIBLE_ALPHA) | (outline_alpha > VISIBLE_ALPHA))
@@ -264,8 +268,9 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
     """`figure` and `outline` (straight HxWx4 0..255) in the `frame`: on
     the framed canvas painted `paper`, the box filled with the `backdrop`
     pattern rendered at the box's size, its line straddling the box's sides
-    and the figure and outline kept by `frame_keep` over all of it; the
-    light `scene` and drop shadow as `on_pattern` sets them."""
+    with the rim along both its edges, and the figure and outline kept by
+    `frame_keep` over all of it; the light `scene` and drop shadow as
+    `on_pattern` sets them."""
     height, width = figure.shape[:2]
     keep = frame_keep((height, width), frame)
     figure_alpha = figure[..., 3] / 255.0 * keep
@@ -287,11 +292,13 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
     if panel_x1 > panel_x0 and panel_y1 > panel_y0:
         _paste(backdrop_rgb, backdrops.render(backdrop, panel_y1 - panel_y0,
                                               panel_x1 - panel_x0), panel_x0, panel_y0)
-    half = _line_px(frame, max(height, width)) / 2
-    if half > 0:
-        ring = (_rect(size, x0 - half, y0 - half, x1 + half, y1 + half)
-                & ~_rect(size, x0 + half, y0 + half, x1 - half, y1 - half))
-        backdrop_rgb[ring] = parse_color(frame["line"]["color"])
+    longest = max(height, width)
+    for band, half in ((frame.get("rim"), _border_half(frame, longest)),
+                       (frame.get("line"), _width_px(frame.get("line"), longest) / 2)):
+        if band and half > 0:
+            ring = (_rect(size, x0 - half, y0 - half, x1 + half, y1 + half)
+                    & ~_rect(size, x0 + half, y0 + half, x1 - half, y1 - half))
+            backdrop_rgb[ring] = parse_color(band["color"])
     (figure_colour, figure_alpha), (outline_colour, outline_alpha) = layers
     return _on_backdrop(figure_colour, figure_alpha, outline_colour, outline_alpha,
                         backdrop_rgb, shadow_from, outlines, scene, light_from)

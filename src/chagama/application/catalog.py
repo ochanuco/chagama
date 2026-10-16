@@ -31,6 +31,7 @@ from ..domain.yukari.delivery_style import (
     FRAME_MARGIN_PCT,
     FRAME_PAPER,
     FRAME_POINTS_MAX,
+    FRAME_RIM,
     FRAME_SIDE_CHOICES,
     FRAME_SIDE_DEFAULTS,
     FRAME_STROKE_MODES,
@@ -256,6 +257,7 @@ def _stage_block() -> dict:
             "sides": dict(FRAME_SIDE_DEFAULTS),
             "side_values": list(FRAME_SIDE_CHOICES),
             "line": dict(FRAME_LINE),
+            "rim": dict(FRAME_RIM),
             "line_width_max": OUTLINE_WIDTH_MAX_PCT,
             "paper": FRAME_PAPER,
             "margin": FRAME_MARGIN_PCT,
@@ -267,8 +269,9 @@ def _stage_block() -> dict:
                        "points": FRAME_POINTS_MAX},
             "help": "without a photo: set the delivery in a square panel the backdrop "
                     "fills. box and canvas are [x0, y0, x1, y1] shares of the "
-                    "delivery's canvas; a cut side clips the figure at its line's "
-                    "inner edge, an out side lets it over the line; strokes erase or "
+                    "delivery's canvas; the rim edges both sides of the line; a cut "
+                    "side clips the figure at the border's inner edge, an out side "
+                    "lets it over the border; strokes erase or "
                     "restore the figure in order. Widths are percent of the "
                     "delivery's longest side",
         },
