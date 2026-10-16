@@ -42,7 +42,7 @@ class RedrawArgumentsTest(unittest.TestCase):
         self.assertEqual(redraw_arguments({"method": "canvas"}), {
             "method": "canvas", "denoise": None, "size": None,
             "latent_route": None, "finalizer": None, "upscale": None,
-            "keep_regions": [], "keep_strength": 0.25})
+            "keep_regions": [], "keep_strength": 0.25, "cut": False})
 
     def test_canvas_options_parse(self):
         arguments = redraw_arguments({
@@ -52,7 +52,7 @@ class RedrawArgumentsTest(unittest.TestCase):
         self.assertEqual(arguments, {
             "method": "canvas", "denoise": 0.5, "size": 2048,
             "latent_route": True, "finalizer": "model", "upscale": "lanczos",
-            "keep_regions": [[0.0, 0.0, 0.5, 0.5]], "keep_strength": 0.3})
+            "keep_regions": [[0.0, 0.0, 0.5, 0.5]], "keep_strength": 0.3, "cut": False})
         self.assertIs(redraw_arguments(
             {"method": "canvas", "route": "pixel"})["latent_route"], False)
 
@@ -74,7 +74,7 @@ class RedrawArgumentsTest(unittest.TestCase):
 
     def test_hires_takes_its_pixels_and_defaults_the_denoise(self):
         self.assertEqual(redraw_arguments({"method": "hires", "hires": 2048}), {
-            "method": "hires", "hires": 2048, "denoise": 0.45})
+            "method": "hires", "hires": 2048, "denoise": 0.45, "cut": False})
         self.assertEqual(
             redraw_arguments({"method": "hires", "hires": 2048,
                               "denoise": 0.3})["denoise"], 0.3)
@@ -90,13 +90,22 @@ class RedrawArgumentsTest(unittest.TestCase):
 
     def test_light_takes_a_scene_and_a_direction(self):
         self.assertEqual(redraw_arguments({"method": "light", "scene": "moon"}), {
-            "method": "light", "light": Light("moon", "nw")})
+            "method": "light", "light": Light("moon", "nw"), "cut": False})
         self.assertEqual(
             redraw_arguments({"method": "light", "scene": "moon",
                               "from": "se"})["light"], Light("moon", "se"))
         for options in ({}, {"scene": "noon"}, {"scene": "moon", "from": "up"}):
             with self.subTest(options=options), self.assertRaises(ValueError):
                 redraw_arguments({"method": "light", **options})
+
+    def test_every_method_takes_cut(self):
+        for options in ({"method": "canvas"}, {"method": "hires", "hires": 2048},
+                        {"method": "light", "scene": "moon"}):
+            with self.subTest(method=options["method"]):
+                self.assertIs(redraw_arguments(options)["cut"], False)
+                self.assertIs(redraw_arguments({**options, "cut": True})["cut"], True)
+                with self.assertRaises(ValueError):
+                    redraw_arguments({**options, "cut": "yes"})
 
     def test_unknown_keys_are_rejected_per_method(self):
         cases = {

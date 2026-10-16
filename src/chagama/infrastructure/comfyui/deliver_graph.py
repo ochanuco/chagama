@@ -18,6 +18,7 @@ from .refinement_graph import (
 
 ALPHA_SUFFIX = "-alpha"
 DEPTH_SUFFIX = "-depth"
+FOREGROUND_SUFFIX = "-foreground"
 
 
 def alpha_nodes(graph: dict, allocate: Callable[[], str], source_ref: list,
@@ -54,6 +55,30 @@ def depth_nodes(graph: dict, allocate: Callable[[], str], source_ref: list,
     graph[save_depth] = {"class_type": "SaveImage", "inputs": {
         "images": depth_ref, "filename_prefix": prefix + DEPTH_SUFFIX}}
     return depth_ref
+
+
+def cut_graph(source_image: str, matte_model: str, prefix: str) -> dict:
+    """The cut of the uploaded `source_image` as a deliver makes it: the
+    alpha and depth saved under `prefix` + ALPHA_SUFFIX / DEPTH_SUFFIX, and
+    the figure's colour under that alpha under `prefix` + FOREGROUND_SUFFIX."""
+    graph: dict = {}
+    cursor = 1
+
+    def allocate() -> str:
+        nonlocal cursor
+        node_id = str(cursor)
+        cursor += 1
+        return node_id
+
+    load = allocate()
+    graph[load] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
+    source_ref = [load, 0]
+    alpha_ref = alpha_nodes(graph, allocate, source_ref, matte_model, prefix, None)
+    depth_nodes(graph, allocate, source_ref, prefix, None)
+    graph[allocate()] = {"class_type": "SaveImage", "inputs": {
+        "images": foreground_node(graph, allocate, source_ref, alpha_ref),
+        "filename_prefix": prefix + FOREGROUND_SUFFIX}}
+    return graph
 
 
 def deliver_graph(source_image: str, matte_model: str, prefix: str, *,

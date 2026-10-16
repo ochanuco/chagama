@@ -63,15 +63,13 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
 
 - `options` is required and names a `method`; any key the method does not
   take is an error. One request changes the picture once and uploads one
-  picture Generation (green background, no delivery, no `mask` asset) that
-  refines the source, saved under `rdw-<generation id>`. The request's
-  `parameters` are `kind: "redraw"`, `method`, `base_generation` and the
-  resolved options; `seed` is the sampler seed that ran.
-- `canvas` takes `denoise`, `size`, `route`, `finalizer`, `upscale`,
-  `keep_regions` and `keep_strength`, with the defaults the catalog publishes
-  as `redraw.defaults.canvas`.
-  `denoise` accepts the `redraw` dial words. It re-samples the source on a
-  bigger canvas and only redraws an Anima source.
+  picture Generation (green background, no delivery) that refines the source,
+  saved under `rdw-<generation id>`. Its `parameters` are `kind: "redraw"`,
+  `method`, `base_generation` and the resolved options; `seed` is the sampler seed.
+- `canvas` takes `denoise` (also the `redraw` dial words), `size`, `route`,
+  `finalizer`, `upscale`, `keep_regions` and `keep_strength`, defaults as
+  `redraw.defaults.canvas`. It re-samples the source on a bigger canvas and
+  only redraws an Anima source.
 - `hires` takes `hires` (the long side in px of the area a 1024x1640 canvas
   has) and `denoise` (0 < d <= 1, default 0.45). It re-samples the stored
   graph of the Anima generate output, so a `repair`, `masked_redraw` or
@@ -89,8 +87,10 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
   `redraw` output is redrawn from its own pixels, with prompts and seed read
   from the original generate graph by following `base_generation`
   (at most 10 hops).
-- Dial words are accepted for the `canvas` `denoise`. The row's result
-  carries `resolved_options` with what actually ran.
+- Every method takes `cut` (default false): the result is also cut as deliver
+  cuts it, its `alpha`, `depth` and `cut` assets attached to it for deliver
+  to reuse, with an RGBA `cutout` (figure colour under the alpha, no repin).
+- The row's result carries `resolved_options` with what actually ran.
 
 ### Deliver options
 

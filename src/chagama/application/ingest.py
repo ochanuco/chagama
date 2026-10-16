@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Sequence
 from pathlib import Path
 
-from ..infrastructure.comfyui.deliver_graph import ALPHA_SUFFIX, DEPTH_SUFFIX
+from ..infrastructure.comfyui.deliver_graph import ALPHA_SUFFIX, DEPTH_SUFFIX, FOREGROUND_SUFFIX
 from ..infrastructure.comfyui.dof_graph import DOF_SUFFIX, VIEWFINDER_SUFFIX
 from ..infrastructure.comfyui.lens_graph import LENS_SUFFIX
 from ..infrastructure.comfyui.photo_graph import STAGED_SUFFIX
@@ -91,6 +91,12 @@ def classify_redraw_outputs(outputs: list) -> dict[str, list]:
                         if not any(suffix in out["filename"]
                                    for suffix in cuts.values())]
     return found
+
+
+def classify_cut_outputs(outputs: list) -> dict[str, list]:
+    """A cut submission's outputs by role: `alpha`, `depth` and `foreground`."""
+    return _by_suffix(outputs, {"alpha": ALPHA_SUFFIX, "depth": DEPTH_SUFFIX,
+                                "foreground": FOREGROUND_SUFFIX})
 
 
 def open_request(management, *, request_id: str | None,

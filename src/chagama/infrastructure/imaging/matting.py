@@ -202,6 +202,16 @@ def clearer_png(data: bytes, alpha: bytes, gain: float) -> bytes:
     return _png(clearer(px, solved, gain) * 255, "L")
 
 
+def cutout_png(foreground: bytes, alpha: bytes) -> bytes:
+    """The figure's colour (RGB PNG) with the alpha (L PNG) as a straight
+    RGBA PNG."""
+    rgba = Image.open(io.BytesIO(foreground)).convert("RGB")
+    rgba.putalpha(Image.open(io.BytesIO(alpha)).convert("L"))
+    output = io.BytesIO()
+    rgba.save(output, "PNG")
+    return output.getvalue()
+
+
 def foreground_png(data: bytes, alpha: bytes, foreground: Foreground) -> bytes:
     """The figure's colour (RGB PNG) in `data` under the alpha (L PNG)."""
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)

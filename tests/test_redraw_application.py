@@ -8,6 +8,7 @@ it was handed, so what the use case uploads follows what the graph saves.
 from __future__ import annotations
 
 import copy
+import io
 import json
 import tempfile
 import unittest
@@ -20,6 +21,7 @@ from chagama.application.redraw import RedrawServices, redraw
 from chagama.domain.yukari import delivery_style
 from chagama.domain.yukari.delivery_style import Light
 from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from PIL import Image
 
 ANIMA_GRAPH = {
     "1": {"class_type": "UNETLoader", "inputs": {}},
@@ -409,6 +411,87 @@ class LightTest(RedrawCase):
                    if call[0] == "POST" and call[1].endswith("/jobs"))
         self.assertEqual(job[2]["seed"], 5)
         self.assertEqual(job[2]["source_generation_id"], "src")
+
+
+def png(mode: str, colour) -> bytes:
+    output = io.BytesIO()
+    Image.new(mode, (4, 4), colour).save(output, "PNG")
+    return output.getvalue()
+
+
+class CutComfyFake(ComfyFake):
+    """Answers the cut's alpha and figure colour with real PNGs."""
+
+    def fetch(self, image):
+        if image["filename"].startswith("rdw-src-out-alpha"):
+            return png("L", 200)
+        if image["filename"].startswith("rdw-src-out-foreground"):
+            return png("RGB", (10, 20, 30))
+        return super().fetch(image)
+
+
+class CutTest(unittest.TestCase):
+    def run_cut(self, **kwargs):
+        records = {"src": record(graph=ANIMA_GRAPH)}
+        management = ManagementFake(records)
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management, comfyui=CutComfyFake())
+            result = redraw("src", svc, context=records["src"], cut=True,
+                            key_prefix="request:r1", **kwargs)
+        return svc, management, result
+
+    def test_the_redrawn_picture_is_cut_and_its_cut_attached_to_it(self):
+        svc, management, result = self.run_cut(method="canvas")
+        self.assertEqual(len(svc.comfyui.submitted), 2)
+        cut = svc.comfyui.submitted[1]
+        self.assertTrue({"BiRefNetRMBG", "YukariMatting", DEPTH_NODE,
+                         "YukariForeground"} <= set(classes(cut)))
+        self.assertEqual(sorted(saved_prefixes(cut)), [
+            "rdw-src-out-alpha", "rdw-src-out-depth", "rdw-src-out-foreground"])
+        [(_, load)] = nodes_of(cut, "LoadImage")
+        self.assertEqual(svc.comfyui.uploaded[-1][1], b"bytes:rdw-src_00001_.png")
+        self.assertTrue(load["inputs"]["image"].startswith("uploaded-rdw-src-out-in-"))
+        uploads = management.asset_uploads()
+        self.assertEqual([call[3][0]["role"] for call in uploads],
+                         ["alpha", "depth", "cut", "cutout"])
+        self.assertEqual({call[1] for call in uploads},
+                         {"/api/v1/generations/redrawn/assets"})
+        self.assertEqual(json.loads(uploads[2][3][3]), current_cut())
+        self.assertEqual(uploads[0][3][0]["idempotency_key"],
+                         "request:r1:output:job:0:asset:alpha")
+        cutout = Image.open(io.BytesIO(uploads[3][3][3]))
+        self.assertEqual(cutout.mode, "RGBA")
+        self.assertEqual(cutout.getpixel((1, 1)), (10, 20, 30, 200))
+        resolution = next(call[2] for call in management.calls
+                          if call[1] == "/api/v1/requests")
+        self.assertTrue(resolution["parameters"]["cut"])
+        self.assertEqual(result["generation_ids"], ["redrawn"])
+
+    def test_a_light_redraw_cuts_its_source_and_its_result_apart(self):
+        _, management, _ = self.run_cut(method="light", light=Light("moon", "se"))
+        targets = [(call[1], call[3][0]["role"]) for call in management.asset_uploads()]
+        self.assertEqual(targets, [
+            ("/api/v1/generations/src/assets", "alpha"),
+            ("/api/v1/generations/src/assets", "depth"),
+            ("/api/v1/generations/src/assets", "cut"),
+            ("/api/v1/generations/redrawn/assets", "alpha"),
+            ("/api/v1/generations/redrawn/assets", "depth"),
+            ("/api/v1/generations/redrawn/assets", "cut"),
+            ("/api/v1/generations/redrawn/assets", "cutout")])
+        keys = [call[3][0]["idempotency_key"] for call in management.asset_uploads()]
+        self.assertEqual(len(set(keys)), len(keys))
+
+    def test_without_cut_nothing_is_cut(self):
+        records = {"src": record(graph=ANIMA_GRAPH)}
+        management = ManagementFake(records)
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management)
+            redraw("src", svc, context=records["src"], method="canvas")
+        self.assertEqual(len(svc.comfyui.submitted), 1)
+        self.assertEqual(management.asset_uploads(), [])
+        resolution = next(call[2] for call in management.calls
+                          if call[1] == "/api/v1/requests")
+        self.assertNotIn("cut", resolution["parameters"])
 
 
 class OutputsTest(unittest.TestCase):
