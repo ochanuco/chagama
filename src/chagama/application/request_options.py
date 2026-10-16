@@ -16,6 +16,7 @@ from ..domain.yukari.delivery_style import (
     DOF_SCOPE,
     DOF_VIEWFINDER,
     FRAME_COORD_RANGE,
+    FRAME_EXPAND,
     FRAME_LINE,
     FRAME_PAPER,
     FRAME_POINTS_MAX,
@@ -75,7 +76,8 @@ _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shado
                                   "light", "frame"})
 _STAGE_PHOTO_OPTIONS = frozenset({"photo", "place", "height"})
 _STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light", "frame"})
-_KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas", "strokes"})
+_KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas", "expand",
+                               "strokes"})
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
 
@@ -284,12 +286,16 @@ def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
             raise ValueError(f"{key}.sides.{side} must be one of "
                              f"{list(FRAME_SIDE_CHOICES)}, got {choice!r}")
     canvas = value.get("canvas")
+    expand = value.get("expand", FRAME_EXPAND)
+    if not isinstance(expand, bool):
+        raise ValueError(f"{key}.expand must be true or false, got {expand!r}")
     return {"box": _frame_rect(value["box"], key=f"{key}.box"),
             "sides": {side: sides.get(side, FRAME_SIDE_DEFAULTS[side]) for side in FRAME_SIDES},
             "line": _frame_band(value.get("line", FRAME_LINE), FRAME_LINE, key=f"{key}.line"),
             "rim": _frame_band(value.get("rim", FRAME_RIM), FRAME_RIM, key=f"{key}.rim"),
             "paper": _hex_colour(value.get("paper", FRAME_PAPER), key=f"{key}.paper"),
             "canvas": None if canvas is None else _frame_rect(canvas, key=f"{key}.canvas"),
+            "expand": expand,
             "strokes": _frame_strokes(value.get("strokes", []), key=f"{key}.strokes")}
 
 

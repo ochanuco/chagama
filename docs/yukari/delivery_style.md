@@ -87,7 +87,8 @@ A `stage` request's `frame` sets the delivery in a square panel:
   coverage back, never past the figure's own alpha.
 - Pixels count by their centres, so cuts, line and box are hard-edged.
 - Without `canvas` it is the box out to the border's outer edge with the
-  visible figure and outline, `FRAME_MARGIN_PCT` around, rounded outward.
+  visible figure and outline, `FRAME_MARGIN_PCT` around, rounded outward,
+  and kept within the delivery's canvas when `expand` is false.
   The worker records the frame with that canvas and reports it in
   `resolved_options`.
 - `dof` lays the source depth where the frame put the delivery's canvas.

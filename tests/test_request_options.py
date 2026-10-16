@@ -355,7 +355,7 @@ class StageArgumentsTest(unittest.TestCase):
             "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "out"},
             "line": {"color": "#885b80", "width": 0.6},
             "rim": {"color": "#2e2236", "width": 0.25}, "paper": "#ffffff",
-            "canvas": None, "strokes": []})
+            "canvas": None, "expand": True, "strokes": []})
         frame = stage_arguments({"frame": {
             "box": [0, 0, 1, 1], "line": {"color": "#AABBCC", "width": 0}, "rim": None,
             "canvas": [-0.1, -0.1, 1.1, 1.1],
@@ -379,6 +379,7 @@ class StageArgumentsTest(unittest.TestCase):
                     {"box": box, "line": {"color": "#000000", "width": 6}},
                     {"box": box, "rim": {"color": "#000000", "alpha": 1}},
                     {"box": box, "paper": "white"}, {"box": box, "zoom": 1},
+                    {"box": box, "expand": "no"},
                     {"box": box, "strokes": [{"mode": "smudge", "width": 1, "points": [[0, 0]]}]},
                     {"box": box, "strokes": [{"mode": "erase", "width": 0, "points": [[0, 0]]}]},
                     {"box": box, "strokes": [{"mode": "erase", "width": 1, "points": []}]},
