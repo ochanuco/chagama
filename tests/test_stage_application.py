@@ -4,13 +4,16 @@ SaveImage prefixes of the graph it was handed."""
 
 from __future__ import annotations
 
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
 import numpy as np
+from PIL import Image
 
+from chagama.application.cut_assets import current_cut
 from chagama.application.dof import DofServices, dof
 from chagama.application.stage import StageServices, lighting, saturation, stage
 from chagama.infrastructure.imaging.stage import _png
@@ -247,7 +250,7 @@ class LightingTest(unittest.TestCase):
             services = services_for(StageServices, management, directory)
             with self.assertRaisesRegex(SystemExit, "もう光"):
                 lighting("lit", services, direction=None, strength=0.5)
-            with self.assertRaisesRegex(SystemExit, "stage"):
+            with self.assertRaisesRegex(SystemExit, "どちらかを指定"):
                 lighting("dlv", services, direction=None, strength=0.5)
 
 
@@ -329,7 +332,7 @@ class SaturatedSourceTest(unittest.TestCase):
             lighting("sat-opaque", services, direction=None, strength=0.5)
             self.assertIn("YukariRelight",
                           [n["class_type"] for n in services.comfyui.submitted[-1].values()])
-            with self.assertRaisesRegex(SystemExit, "stage"):
+            with self.assertRaisesRegex(SystemExit, "どちらかを指定"):
                 lighting("sat-clear", services, direction=None, strength=0.5)
 
     def test_dof_passes_through_the_saturation_to_the_delivery(self):
@@ -403,6 +406,179 @@ class StagedDofTest(unittest.TestCase):
                 scope={"figure": True, "outline": True, "backdrop": True})
         place = json.loads(node(services, "YukariDepthOfField")["inputs"]["depth_place"])
         self.assertEqual(place, [0.25 / 1.5, 0.0, 1.25 / 1.5, 0.5])
+
+
+def png_bytes(size=(40, 30), colour=(10, 20, 30, 255)):
+    output = io.BytesIO()
+    Image.new("RGBA", size, colour).save(output, "PNG")
+    return output.getvalue()
+
+
+CUTOUT = png_bytes()
+CUT_REDRAW = {"kind": "redraw", "method": "canvas", "base_generation": "src", "cut": True}
+CUT_ASSETS = {"cutout": CUTOUT, "alpha": b"alpha-png", "depth": b"depth-png",
+              "cut": json.dumps(current_cut()).encode()}
+UNCUT_REDRAW = {"kind": "redraw", "method": "canvas", "base_generation": "src"}
+
+
+def uploaded_data(services):
+    return [data for _, data in services.comfyui.uploaded]
+
+
+class CutRedrawSourceTest(unittest.TestCase):
+    def records(self):
+        return ManagementFake({
+            "cr": (CUT_REDRAW, CUT_ASSETS), "plain": (UNCUT_REDRAW, {"depth": b"d"}),
+            "nocut": (CUT_REDRAW, {"alpha": b"a"}), "src": ({"kind": "generate"}, {})})
+
+    def test_a_cut_redraw_is_a_transparent_delivery_with_no_outlines(self):
+        management = self.records()
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            saturation("cr", services, strength=0.5)
+        figure, outline = uploaded_data(services)
+        self.assertEqual(figure, CUTOUT)
+        blank = Image.open(io.BytesIO(outline))
+        self.assertEqual(blank.size, (40, 30))
+        self.assertEqual(blank.getextrema()[3], (0, 0))
+        self.assertNotIn("backdrop", node(services, "YukariSaturation")["inputs"])
+        self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
+        self.assertEqual(management.resolution()["parameters"], {
+            "kind": "saturation", "base_generation": "cr", "strength": 0.5})
+
+    def test_a_redraw_that_was_not_cut_is_refused(self):
+        management = self.records()
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
+                saturation("plain", services, strength=0.5)
+            with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
+                stage("plain", services, backdrop="dots")
+            with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
+                lighting("plain", services, direction="nw", strength=0.5)
+            with self.assertRaisesRegex(SystemExit, "層が無い"):
+                stage("nocut", services, backdrop="dots")
+        self.assertEqual(services.comfyui.submitted, [])
+
+    def test_a_pattern_throws_no_shadow_unless_asked_to(self):
+        management = self.records()
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            stage("cr", services, backdrop="dots", inherit_shadow=True)
+            inputs = node(services, "YukariStage")["inputs"]
+            self.assertEqual((inputs["shadow_from"], inputs["outlines"]), ("", "[]"))
+            self.assertEqual(management.resolution()["parameters"]["shadow_from"], None)
+            stage("cr", services, backdrop="dots", shadow_from="nw", key_prefix="shadowed")
+            self.assertEqual(node(services, "YukariStage")["inputs"]["shadow_from"], "nw")
+
+    def test_a_frame_and_a_photo_take_a_cut_redraw(self):
+        management = self.records()
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            stage("cr", services, backdrop="dots", frame={
+                "box": [0, 0, 1, 1], "canvas": [0.0, 0.0, 1.0, 1.0]}, key_prefix="framed")
+            self.assertEqual(node(services, "YukariStage")["inputs"]["mode"], "pattern")
+            stage("cr", services, photo_id="pic", key_prefix="photoed")
+            self.assertEqual(node(services, "YukariStage")["inputs"]["mode"], "photo")
+
+    def test_a_saturation_of_a_cut_redraw_stages_with_no_outlines(self):
+        management = ManagementFake({
+            "sat": ({"kind": "saturation", "base_generation": "cr", "strength": 1.0}, LAYERS),
+            "cr": (CUT_REDRAW, CUT_ASSETS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            stage("sat", services, backdrop="dots", inherit_shadow=True)
+        inputs = node(services, "YukariStage")["inputs"]
+        self.assertEqual((inputs["shadow_from"], inputs["outlines"]), ("", "[]"))
+
+
+class TransparentLightingTest(unittest.TestCase):
+    def test_a_transparent_delivery_is_lit_by_direction_without_a_backdrop(self):
+        management = ManagementFake({"dlv": (DELIVERY, {
+            "layer-figure": b"figure-png", "layer-outline": b"outline-png"})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            lighting("dlv", services, direction="ne", strength=0.5)
+        inputs = node(services, "YukariRelight")["inputs"]
+        self.assertNotIn("backdrop", inputs)
+        self.assertEqual((inputs["direction"], inputs["strength"]), ("ne", 0.5))
+        self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
+        self.assertEqual(management.resolution()["parameters"], {
+            "kind": "lighting", "base_generation": "dlv", "direction": "ne",
+            "strength": 0.5, "scene": None})
+        saved = [n["inputs"]["filename_prefix"] for n in
+                 services.comfyui.submitted[0].values() if n["class_type"] == "SaveImage"]
+        self.assertEqual(sorted(saved), ["light-dlv-layer-figure", "light-dlv-layer-outline",
+                                         "light-dlv-lit"])
+
+    def test_a_scene_alone_lights_a_cut_redraw(self):
+        management = ManagementFake({"cr": (CUT_REDRAW, CUT_ASSETS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            lighting("cr", services, direction=None, strength=0.5, scene="moon")
+        self.assertNotIn("backdrop", node(services, "YukariRelight")["inputs"])
+        self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
+
+    def test_nothing_to_shade_with_is_refused(self):
+        management = ManagementFake({"cr": (CUT_REDRAW, CUT_ASSETS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            with self.assertRaisesRegex(SystemExit, "direction か scene"):
+                lighting("cr", services, direction=None, strength=0.5)
+        self.assertEqual(services.comfyui.submitted, [])
+
+
+class CutRedrawDofTest(unittest.TestCase):
+    def blur(self, generation_id, management):
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(DofServices, management, directory)
+            dof(generation_id, services, focus=(0.5, 0.5), f_number=2.8,
+                scope={"figure": True, "outline": True, "backdrop": False})
+        return services
+
+    def test_a_cut_redraw_blurs_by_its_own_stored_depth(self):
+        management = ManagementFake({"cr": (CUT_REDRAW, CUT_ASSETS)})
+        services = self.blur("cr", management)
+        self.assertIn(b"depth-png", uploaded_data(services))
+        self.assertEqual(management.asset_roles("cr"), [])
+        self.assertNotIn("backdrop", node(services, "YukariDepthOfField")["inputs"])
+
+    def test_a_stale_depth_is_recomputed_from_the_redraw_and_attached_to_it(self):
+        stale = {**current_cut(), "depth": {"ckpt": "old"}}
+        management = ManagementFake({"cr": (CUT_REDRAW, {
+            **CUT_ASSETS, "cut": json.dumps(stale).encode()})})
+        services = self.blur("cr", management)
+        self.assertNotIn(b"depth-png", uploaded_data(services))
+        self.assertIn(b"image:cr", uploaded_data(services))
+        self.assertEqual(management.asset_roles("cr"), ["depth", "cut"])
+
+    def test_pictures_built_on_a_cut_redraw_take_the_redraws_depth(self):
+        management = ManagementFake({
+            "cr": (CUT_REDRAW, CUT_ASSETS),
+            "sat": ({"kind": "saturation", "base_generation": "cr", "strength": 1.0},
+                    {"layer-figure": b"f", "layer-outline": b"o"}),
+            "stg": ({"kind": "stage", "base_generation": "sat", "backdrop": "dots"}, LAYERS),
+            "lit": ({"kind": "lighting", "base_generation": "sat"},
+                    {"layer-figure": b"f", "layer-outline": b"o"})})
+        for source, backdrop in (("sat", False), ("stg", True), ("lit", False)):
+            with self.subTest(source=source):
+                services = self.blur(source, management)
+                self.assertIn(b"depth-png", uploaded_data(services))
+                self.assertEqual("backdrop" in node(services, "YukariDepthOfField")["inputs"],
+                                 backdrop)
+
+    def test_a_redraw_that_was_not_cut_is_refused(self):
+        management = ManagementFake({"plain": (UNCUT_REDRAW, {})})
+        with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
+            self.blur("plain", management)
+
+    def test_a_lit_transparent_delivery_needs_no_backdrop_layer(self):
+        management = ManagementFake({
+            "lit": ({"kind": "lighting", "base_generation": "dlv"},
+                    {"layer-figure": b"f", "layer-outline": b"o"}),
+            "dlv": (DELIVERY, {}), "src": ({"kind": "generate"}, {})})
+        services = self.blur("lit", management)
+        self.assertNotIn("backdrop", node(services, "YukariDepthOfField")["inputs"])
 
 
 if __name__ == "__main__":

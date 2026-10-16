@@ -20,9 +20,10 @@ from .ingest import (
     record_job,
     upload_generation,
 )
-from .picture_source import is_delivered
+from .picture_source import is_cut_redraw, is_delivered, layer_bytes, layer_roles_present
 
-NOT_DELIVERED = "写真に立てられるのは納品の絵だけです。先に deliver してください"
+NOT_DELIVERED = ("写真に立てられるのは納品の絵か切り抜いた描き直し（redraw の cut）だけです。"
+                 "先に deliver してください")
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
 LAYER_ROLES = ("layer-figure", "layer-outline")
 
@@ -41,14 +42,16 @@ class PhotoServices:
 
 
 def _check_source(services: PhotoServices, generation_id: str, context: dict) -> None:
-    """A deliver output that carries its figure and outline layers."""
+    """A deliver output, or a cut redraw, that carries its figure and
+    outline layers."""
     request = context["request"]
     parameters = request.get("parameters") or {}
-    if not is_delivered(request):
+    cut = is_cut_redraw(parameters)
+    if not is_delivered(request) and not cut:
         raise SystemExit(NOT_DELIVERED)
-    if parameters.get("kind") not in ("deliver", "saturation"):
+    if parameters.get("kind") not in ("deliver", "saturation") and not cut:
         raise SystemExit(NO_LAYERS)
-    present = {asset["role"] for asset in services.management.list_assets(generation_id)}
+    present = layer_roles_present(services.management, generation_id, context)
     if not set(LAYER_ROLES) <= present:
         raise SystemExit(NO_LAYERS)
 
@@ -98,9 +101,9 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
     photo_bytes = management.fetch_generation_image(photo_id)
     photo_image = services.comfyui.upload_image(
         f"{prefix}-photo-{token}.png", photo_bytes)
-    layers = {role: services.comfyui.upload_image(
-        f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
-        for role in LAYER_ROLES}
+    layers = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
+              for role, data in layer_bytes(management, generation_id, context,
+                                            LAYER_ROLES).items()}
     graph = services.photo_graph(
         photo_image, layers["layer-figure"], layers["layer-outline"], prefix,
         depth_image=depth_image, photo_size=services.image_size(photo_bytes),

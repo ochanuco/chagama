@@ -25,12 +25,19 @@ from .ingest import (
     record_job,
     upload_generation,
 )
-from .picture_source import delivery_parameters, is_delivered
+from .picture_source import (
+    has_backdrop_layer,
+    is_cut_redraw,
+    is_delivered,
+    layer_bytes,
+    layer_roles_present,
+)
 
 DOF_OUTPUT = "dof の出力に dof はかけられません。納品の絵を指定してください"
 LENS_OUTPUT = ("lens の出力に dof はかけられません。dof を先にかけて、"
                "その絵に lens をかけてください")
-NOT_DELIVERED = "dof をかけられるのは納品の絵だけです。先に deliver してください"
+NOT_DELIVERED = ("dof をかけられるのは納品の絵か切り抜いた描き直し（redraw の cut）だけです。"
+                 "先に deliver してください")
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
 PHOTO_ONLY = ("stand_at / nearer / tilt / bokeh / focal_length は"
               "写真に置いた絵（stage の photo）の dof だけで使えます")
@@ -55,21 +62,22 @@ class DofServices:
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
-def _layer_roles(parameters: dict) -> list[str]:
-    """`parameters` are the request's own, or for a saturation its deliver's."""
+def _layer_roles(management, context: dict) -> list[str]:
     roles = ["layer-figure", "layer-outline"]
-    if parameters.get("kind") != "deliver" or not parameters.get("transparent"):
+    if has_backdrop_layer(management, context):
         roles.append("layer-backdrop")
     return roles
 
 
-def _setting(management, context: dict
+def _setting(management, generation_id: str, context: dict
              ) -> tuple[str | None, dict | None, list[float] | None]:
     """Where the picture's layers stand: ("photo", the stage parameters,
     None) when a stage in its lineage set them in a photo, else (the
-    delivery's own source, None, the framed stage's canvas when a frame
-    moved the delivery's canvas)."""
+    delivery's own source, or the cut redraw that is itself the source,
+    None, the framed stage's canvas when a frame moved the delivery's
+    canvas)."""
     record = context
+    record_id = generation_id
     canvas = None
     for _ in range(SETTING_HOPS):
         parameters = record["request"].get("parameters") or {}
@@ -78,14 +86,16 @@ def _setting(management, context: dict
             return "photo", parameters, None
         if kind == "stage" and parameters.get("frame"):
             canvas = parameters["frame"].get("canvas")
+        if is_cut_redraw(parameters):
+            return record_id, None, canvas
         if kind == "deliver":
             return (parameters.get("base_generation")
                     or (record.get("refines_generation") or {}).get("id")), None, canvas
         if (kind not in ("saturation", "stage", "lighting")
                 or not parameters.get("base_generation")):
             break
-        record = management.request(
-            "GET", f"/api/v1/generations/{parameters['base_generation']}/context")
+        record_id = parameters["base_generation"]
+        record = management.request("GET", f"/api/v1/generations/{record_id}/context")
     return None, None, None
 
 
@@ -109,16 +119,16 @@ def _check_source(services: DofServices, generation_id: str,
         raise SystemExit(DOF_OUTPUT)
     if request.get("kind") == "lens" or parameters.get("kind") == "lens":
         raise SystemExit(LENS_OUTPUT)
-    if not is_delivered(request):
+    cut = is_cut_redraw(parameters)
+    if not is_delivered(request) and not cut:
         raise SystemExit(NOT_DELIVERED)
-    if parameters.get("kind") not in LAYERED_KINDS:
+    if parameters.get("kind") not in LAYERED_KINDS and not cut:
         raise SystemExit(NO_LAYERS)
-    roles = _layer_roles(delivery_parameters(services.management, context))
-    present = {asset["role"] for asset in
-               services.management.list_assets(generation_id)}
+    roles = _layer_roles(services.management, context)
+    present = layer_roles_present(services.management, generation_id, context)
     if not set(roles) <= present:
         raise SystemExit(NO_LAYERS)
-    source, staged, canvas = _setting(services.management, context)
+    source, staged, canvas = _setting(services.management, generation_id, context)
     if not source:
         raise SystemExit(NO_LAYERS)
     return source, staged, canvas, roles
@@ -176,9 +186,9 @@ def dof(generation_id: str, services: DofServices, *,
         source_size = services.image_size(source_bytes)
         source_image = services.comfyui.upload_image(
             f"{prefix}-source-{token}.png", source_bytes)
-    uploaded = {role: services.comfyui.upload_image(
-        f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
-        for role in roles}
+    uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
+                for role, data in layer_bytes(management, generation_id, context,
+                                              roles).items()}
     if staged is not None:
         graph = services.photo_dof_graph(
             uploaded["layer-figure"], uploaded["layer-outline"],

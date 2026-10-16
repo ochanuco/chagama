@@ -12,6 +12,7 @@ from .ingest import asset_key, attach_asset
 CUT_ROLE = "cut"
 ALPHA_ROLE = "alpha"
 DEPTH_ROLE = "depth"
+CUTOUT_ROLE = "cutout"
 
 
 def current_cut() -> dict:

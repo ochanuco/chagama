@@ -29,6 +29,7 @@ from ..infrastructure.imaging.matting import cutout_png
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import (
     ALPHA_ROLE,
+    CUTOUT_ROLE,
     DEPTH_ROLE,
     attach_cut,
     current_cut,
@@ -54,7 +55,6 @@ KEEP_FEATHER_FRACTION = 0.03
 HIRES_DENOISE = 0.45
 
 LINEAGE_HOPS = 10
-CUTOUT_ROLE = "cutout"
 DELIVERED_SOURCE = ("納品済みの絵は redraw できません。"
                     "描き直しの元になる絵を指定してください")
 

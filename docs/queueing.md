@@ -43,8 +43,9 @@ picture on the green key; `deliver` makes the delivered picture, and
 `saturation`, `dof` and `lens` make another delivered picture from it. They
 stack as separate requests in one order: `deliver` (transparent, for the
 workbench), `saturation`, `stage`, `lighting`, `dof`, then `lens` (as often as
-wanted); all but `deliver` may be skipped. `photo` is the older one-step
-stage-and-blur.
+wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
+`cutout` and `alpha`) stands in for a transparent delivery with no outlines
+(figure `cutout`, no backdrop). `photo` is the older one-step stage-and-blur.
 
 ## Rules the code spreads across files
 
@@ -141,7 +142,8 @@ stage-and-blur.
 ### Stage options
 
 - The source must be a deliver or saturation output with `layer-figure` and
-  `layer-outline` (usually transparent); anything else is refused.
+  `layer-outline`, or a cut redraw (no inherited shadow; an explicit
+  `shadow_from` is drawn); anything else is refused.
 - With `photo`, the card is placed at `place` / `height` exactly as the
   photo kind places it, at the photo's canvas, unblurred. Without it, the
   layers stay at their canvas on `backdrop` (pattern or `#RRGGBB`, default
@@ -157,9 +159,9 @@ stage-and-blur.
 
 ### Saturation options
 
-- The source must be a deliver output with its layers; a saturation output
-  is refused. `strength` 0..1 (default 1) blends the `REPIN_*` compression
-  in; 0 leaves the layers as they are.
+- The source must be a deliver output with its layers, or a cut redraw.
+  `strength` 0..1 (default 1) blends the `REPIN_*` compression in; 0 leaves
+  the layers as they are.
 - Each layer is compressed through its own alpha (every pixel above 0), the
   outline colour included; `layer-backdrop` passes through. The picture is
   backdrop, outline, figure composited as stage does (RGBA without a
@@ -168,8 +170,9 @@ stage-and-blur.
 
 ### Lighting options
 
-- The source must be a stage output or a delivery (or its saturation) with
-  its backdrop; a lighting output and a transparent delivery are refused.
+- The source must be a stage output, a delivery or its saturation, or a cut
+  redraw; a lighting output is refused. With no backdrop layer there is no
+  ambient: only `direction` / `scene` shade (one required), staying transparent.
 - The ambient is the backdrop in a ring around the card (6% of the longest
   side). Figure and outline take `(ambient luminance / 0.35) ** (0.4 ×
   strength)` (within 0.35..1.15, linear) and half its colour cast at
@@ -177,14 +180,14 @@ stage-and-blur.
   underpaint does, its lit side tinted by the backdrop's brightest light.
   `strength` 0..1 (default 0.7). A `scene` (sunset / moon) shades and tints
   the figure as that light redraw does (`direction` default nw) and tints a
-  pattern backdrop to the scene; a photo backdrop is never changed.
-- The output (`-lit`) carries the relit layers and the backdrop layer and
-  records `kind: "lighting"`, `direction` and `strength`.
+  pattern backdrop; a photo backdrop is never changed.
+- The output (`-lit`) carries the relit layers (and backdrop) and records
+  `kind: "lighting"`, `direction` and `strength`.
 
 ### Dof options
 
 - The source must be a delivered picture carrying its layer assets: a
-  delivery, a saturation, stage or lighting output. A dof output, a picture
+  delivery, a saturation, stage or lighting output, or a cut redraw. A dof output, a picture
   that was not delivered and a delivery without layers (delivered before
   layers existed: deliver it again) are refused.
 - `focus` (`[x, y]`, fractions of the picture) is required. `f_number`
@@ -192,7 +195,8 @@ stage-and-blur.
   (absent keys on; all off is an error) and `viewfinder` `off | on | both`
   follow the catalog's top-level `dof` section.
 - Depth is the `depth` asset of the delivery's source (`base_generation`),
-  reused under the `cut` rule, or built in the graph and attached to it.
+  reused under the `cut` rule, or built in the graph and attached to it. For a
+  cut redraw, or a picture built on one, it is the cut redraw's own `depth`.
   The figure takes its own depth, the outline the nearest figure depth, the
   backdrop the far plane; only the layers in `scope` are blurred, the rest
   are composited sharp. A transparent delivery stays transparent.
@@ -233,9 +237,9 @@ stage-and-blur.
 
 ### Photo options
 
-- The source must be a deliver or saturation output carrying its `layer-figure` and
-  `layer-outline` assets (its backdrop is replaced by the photo); a picture that was
-  not delivered, a dof or lens output and a delivery without layers are refused.
+- The source must be a deliver or saturation output, or a cut redraw, carrying
+  `layer-figure` and `layer-outline` (its backdrop is replaced by the photo);
+  anything else, a dof or lens output and a delivery without layers are refused.
   `photo` names the Generation whose image is the scene: any Generation, usually a
   photo uploaded on chimera's GUI (an `import` whose `parameters.kind` is `photo`).
 - The figure over its outline bands is one flat card, like an acrylic stand.
