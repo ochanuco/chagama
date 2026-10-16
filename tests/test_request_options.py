@@ -360,13 +360,13 @@ class StageArgumentsTest(unittest.TestCase):
             "strokes": [{"mode": "restore", "width": 3, "points": [[0.5, 1.2]]}]}})["frame"]
         self.assertIsNone(frame["line"])
         self.assertIsNone(frame["rim"])
+        self.assertEqual(frame["canvas"], [-0.1, -0.1, 1.1, 1.1])
+        self.assertEqual(frame["strokes"],
+                         [{"mode": "restore", "width": 3.0, "points": [[0.5, 1.2]]}])
         frame = stage_arguments({"frame": {"box": [0, 0, 1, 1], "line": {"width": 1},
                                            "rim": {"color": "#000000"}}})["frame"]
         self.assertEqual(frame["line"], {"color": "#885b80", "width": 1.0})
         self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
-        self.assertEqual(frame["canvas"], [-0.1, -0.1, 1.1, 1.1])
-        self.assertEqual(frame["strokes"],
-                         [{"mode": "restore", "width": 3.0, "points": [[0.5, 1.2]]}])
 
     def test_bad_frames_fail(self):
         box = [0, 0, 1, 1]
