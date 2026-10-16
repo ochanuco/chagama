@@ -21,8 +21,6 @@ from ..application.photo import PhotoServices
 from ..application.stage import StageServices
 from ..application.redraw import RedrawServices
 from ..application.generate import GenerateServices, request_graph
-from ..application.masked_redraw import MaskedRedrawServices
-from ..application.repair import RepairServices
 from ..application.work import WorkServices, work
 from ..domain.generation.fingerprint import prompt_fingerprint
 from ..domain.generation.prompt_lint import conflicts
@@ -32,7 +30,7 @@ from ..infrastructure.comfyui.anima_graph import build_graph as anima_build_grap
 from ..infrastructure.comfyui.client import ComfyUIClient
 from ..infrastructure.comfyui.progress import ProgressFeed
 from ..infrastructure.comfyui.timings import AttemptTimings, EnvCollector
-from ..infrastructure.imaging.delivery import graph_from_png, graph_from_png_or_none, image_size
+from ..infrastructure.imaging.delivery import graph_from_png_or_none, image_size
 from ..infrastructure.imaging.palette import summarize
 from ..infrastructure.notifications.discord import DiscordNotifier
 from ..infrastructure.persistence.run_state import JsonRunState
@@ -46,8 +44,8 @@ DRAIN_FILE = "worker/drain"
 
 # Must track the `work` subparser's own defaults in interfaces/cli.py by
 # hand -- no single source both can read.
-DEFAULT_KINDS = ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-                 "lens", "photo", "stage", "lighting", "saturation")
+DEFAULT_KINDS = ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
+                 "lighting", "saturation")
 
 
 def default_worker_id() -> str:
@@ -126,7 +124,6 @@ def build_deliver_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notif
         management=chimera,
         comfyui=comfyui,
         graph_from_png=graph_from_png_or_none,
-        image_size=image_size,
         git_metadata=repository_metadata,
         notifier=notifier,
         output_root=data_dir(repository) / "deliver",
@@ -178,32 +175,6 @@ def build_stage_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifie
     )
 
 
-def build_repair_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier: object,
-                     repository: Path, repository_metadata) -> RepairServices:
-    return RepairServices(
-        management=chimera,
-        comfyui=comfyui,
-        graph_from_png=graph_from_png,
-        image_size=image_size,
-        git_metadata=repository_metadata,
-        notifier=notifier,
-        output_root=data_dir(repository) / "repair",
-    )
-
-
-def build_masked_redraw_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier: object,
-                            repository: Path, repository_metadata) -> MaskedRedrawServices:
-    return MaskedRedrawServices(
-        management=chimera,
-        comfyui=comfyui,
-        graph_from_png=graph_from_png,
-        image_size=image_size,
-        git_metadata=repository_metadata,
-        notifier=notifier,
-        output_root=data_dir(repository) / "masked-redraw",
-    )
-
-
 def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier: object,
                         repository: Path, repository_metadata, *, worker_id: str,
                         kinds: tuple[str, ...], hub: bool = True,
@@ -239,10 +210,6 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
         redraw_services=build_redraw_services(
             chimera, comfyui, notifier, repository, repository_metadata),
         deliver_services=build_deliver_services(
-            chimera, comfyui, notifier, repository, repository_metadata),
-        repair_services=build_repair_services(
-            chimera, comfyui, notifier, repository, repository_metadata),
-        masked_redraw_services=build_masked_redraw_services(
             chimera, comfyui, notifier, repository, repository_metadata),
         dof_services=build_dof_services(
             chimera, comfyui, notifier, repository, repository_metadata),

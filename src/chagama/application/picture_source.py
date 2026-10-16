@@ -6,6 +6,8 @@ from __future__ import annotations
 # deliver existed; their rows are still read.
 DELIVERED_KINDS = ("deliver", "saturation", "dof", "lens", "photo", "stage", "lighting",
                    "hires-chain")
+# "repair" and "masked_redraw" are no longer created; their stored outputs are
+# still valid sources.
 DERIVED_KINDS = ("repair", "masked_redraw", "redraw")
 
 

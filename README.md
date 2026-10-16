@@ -58,7 +58,7 @@ model these recipes were tuned against.
 ## Recording runs in chimera
 
 A round is queued on [chimera](https://chimera.chanu.co) — through its MCP
-tools (`derive_request`, `redraw_generation`, `deliver_generation`, `repair_generation`) or
+tools (`derive_request`, `redraw_generation`, `deliver_generation`) or
 `POST /api/v1/requests` — and `chagama work` on the GPU box is the one
 command that executes it. Inside the worker, a `generate` row runs the same
 code as `chagama generate --request`: it validates the request, submits

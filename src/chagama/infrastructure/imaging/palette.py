@@ -23,8 +23,7 @@ from ...domain.yukari.delivery_style import (
     REPIN_DARK, REPIN_DARK_EXEMPT, REPIN_LIGHT, REPIN_MID, REPIN_SAT_ONLY_V_MAX,
     REPIN_SAT_ONLY_WINDOWS, REPIN_SKIN_CAP, REPIN_SKIN_CAP_V,
     REPIN_SKIN_WINDOW,
-    SAT_BAND, SKIN_PIN_BLEND, SKIN_PIN_MIN_AREA, SKIN_PIN_MIN_SHARE,
-    SKIN_SOURCE_S_MAX, SKIN_SOURCE_S_MIN, SKIN_SOURCE_V_MIN,
+    SAT_BAND, SKIN_PIN_MIN_AREA, SKIN_SOURCE_S_MIN, SKIN_SOURCE_V_MIN,
 )
 
 H_TARGET_BLEND = 0.7   # hue is eased toward the target, not snapped
@@ -53,27 +52,6 @@ def figure_mask(im: np.ndarray) -> np.ndarray:
     mask = background_mask(im.astype(int), 18)
     mask |= enclosed_mask(im.astype(int), mask, 4)
     return ~mask
-
-
-def legwear_mask(im: np.ndarray, col_cut: float) -> np.ndarray:
-    """The asserted-legwear region, to be kept verbatim through `repin`.
-
-    Geometry does the separating: the tights and the hair drift into the
-    same purple band, so colour alone cannot tell them apart. `col_cut` is
-    the column (as a width share) the legs stay left of -- a property of the
-    composition, chosen by the caller per picture.
-    """
-    hsv = np.array(Image.fromarray(im).convert("HSV")).astype(float)
-    fig = figure_mask(im)
-    columns = np.arange(fig.shape[1])[None, :]
-    legs = (fig & (columns < int(fig.shape[1] * col_cut))
-            & ((hsv[..., 2] < 110) | (hsv[..., 1] > 60)))
-    legs = ndimage.binary_closing(legs, iterations=3)
-    labels, count = ndimage.label(legs)
-    if count:
-        sizes = ndimage.sum(legs, labels, range(1, count + 1))
-        legs = labels == (1 + int(np.argmax(sizes)))
-    return ndimage.binary_dilation(legs, iterations=3)
 
 
 def repin(im: np.ndarray, protect: np.ndarray | None = None,
@@ -136,8 +114,7 @@ def repin(im: np.ndarray, protect: np.ndarray | None = None,
     for lo, hi in (palette_window(REPIN_SKIN_WINDOW)["hue"],
                    *REPIN_SAT_ONLY_WINDOWS):
         w_skin = np.maximum(w_skin, window_w(H, lo, hi))
-    w_skin = (w_skin * fig * (1 - keep)
-              * smoothstep((V - REPIN_SKIN_CAP_V) / 20.0))
+    w_skin = w_skin * fig * smoothstep((V - REPIN_SKIN_CAP_V) / 20.0)
     s_delta = s_delta + w_skin * np.minimum(compress(REPIN_SKIN_CAP) - S - s_delta, 0)
 
     new_S = S + s_delta + w_dark * (target_d - S)
@@ -174,53 +151,12 @@ def skin_mask(source: np.ndarray) -> np.ndarray:
     return np.isin(labels, 1 + np.nonzero(sizes >= SKIN_PIN_MIN_AREA)[0])
 
 
-def repin_skin_png(source: bytes, data: bytes) -> tuple[bytes, list[str]]:
-    """Pin the redraw's skin to the palette's skin window, where `source` has skin."""
-    src = np.array(Image.open(io.BytesIO(source)).convert("RGB"))
-    im = Image.open(io.BytesIO(data)).convert("RGB")
-    if src.shape[:2] != (im.size[1], im.size[0]):
-        src = np.array(Image.fromarray(src).resize(im.size, Image.BICUBIC))
-    mask = skin_mask(src)
-    if mask.mean() < SKIN_PIN_MIN_SHARE:
-        return data, [f"not pinned: the base drew skin over only "
-                      f"{mask.mean() * 100:.1f}% of the frame"]
-    src_hsv = np.array(Image.fromarray(src).convert("HSV")).astype(float)
-    field = smoothstep((SKIN_SOURCE_S_MAX - src_hsv[..., 1]) / 20.0)
-    window = palette_window(REPIN_SKIN_WINDOW)
-    alpha = (ndimage.gaussian_filter(mask.astype(float), 3) * field
-             * window_w(src_hsv[..., 0], *window["hue"])
-             * SKIN_PIN_BLEND)
-
-    hsv = np.array(im.convert("HSV")).astype(float)
-    wl, wm = band_w(hsv[..., 2])
-    target_s = wl * window["sat_light"] + wm * window["sat_mid"]
-    # Hue is circular: 191 down to 18 passes through green, the short way
-    # round does not.
-    turn = ((window["hue_target"] - hsv[..., 0] + 128.0) % 256.0) - 128.0
-    hsv[..., 0] = (hsv[..., 0] + alpha * turn) % 256.0
-    hsv[..., 1] += alpha * np.maximum(target_s - hsv[..., 1], 0)
-
-    output = io.BytesIO()
-    Image.fromarray(np.clip(hsv, 0, 255).astype(np.uint8),
-                    "HSV").convert("RGB").save(output, format="PNG")
-    return output.getvalue(), [
-        f"skin pinned to H{window['hue_target']:.0f} over "
-        f"{mask.mean() * 100:.1f}% of frame"]
-
-
-def repin_png(data: bytes,
-              keep_legwear: float | None = None) -> tuple[bytes, list[str]]:
+def repin_png(data: bytes) -> tuple[bytes, list[str]]:
     im = np.array(Image.open(io.BytesIO(data)).convert("RGB"))
-    protect = None
-    report_head = []
-    if keep_legwear is not None:
-        protect = legwear_mask(im, keep_legwear)
-        report_head = [f"legwear kept verbatim: {protect.mean() * 100:.1f}% "
-                       f"of frame (cut {keep_legwear})"]
-    rgb, report = repin(im, protect)
+    rgb, report = repin(im)
     output = io.BytesIO()
     Image.fromarray(rgb).save(output, format="PNG")
-    return output.getvalue(), report_head + report
+    return output.getvalue(), report
 
 
 def measure(data: bytes) -> dict:

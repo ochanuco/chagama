@@ -6,7 +6,7 @@
 Every render is a row on chimera's `requests` queue, posted through the MCP
 (`derive_request`, `redraw_generation`, `deliver_generation`,
 `dof_generation`, `lens_generation`, `photo_generation`, `stage_generation`,
-`lighting_generation`, `repair_generation`, `masked_redraw_generation`,
+`lighting_generation`,
 `create_request`) or `POST /api/v1/requests`.
 `chagama work` on the GPU box claims a row, runs it, and ingests the
 result back into chimera. Nothing else submits to ComfyUI.
@@ -19,7 +19,7 @@ Options, defaults and ranges live here:
 | Question | Source |
 |---|---|
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
-| Every option of a kind, its default and range | `uv run chagama <generate\|work\|redraw\|deliver\|saturation\|stage\|lighting\|dof\|lens\|photo\|repair\|masked_redraw> --help`, `application/request_options.py` |
+| Every option of a kind, its default and range | `uv run chagama <generate\|work\|redraw\|deliver\|saturation\|stage\|lighting\|dof\|lens\|photo> --help`, `application/request_options.py` |
 | Poses, costumes, parts, patch targets, dials, redraw, deliver, saturation, stage, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run chagama catalog` |
 | Patch targets, their ops and the catalog `patches` grammar chimera validates | `domain/generation/patches.py`, `docs/architecture.md` |
 | What a request would render, without rendering | `uv run chagama generate --request r.json --dry-run` |
@@ -30,8 +30,6 @@ Options, defaults and ranges live here:
 |---|---|---|
 | `generate` | a request.json body | render the recipe with its parameters and patches |
 | `redraw` | `{generation_id, options}` | one pixel-changing `method` (`canvas`, `hires` or `light`) on a picture Generation; uploads one green-background picture |
-| `repair` | `{generation_id, options}` | DWPose-masked crop-and-stitch reroll of hands/feet; uploads one picture per seed |
-| `masked_redraw` | `{generation_id, options}` | the same reroll on caller rectangles with a free-text prompt patch |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: backdrop, outline bands; never redraws |
 | `saturation` | `{generation_id, options}` | compress a delivery's figure and outline layers' saturation and recompose the picture |
 | `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern, in a frame or in a photo, unblurred |
@@ -40,7 +38,7 @@ Options, defaults and ranges live here:
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 | `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
 
-A `finalize` row is refused. `redraw`, `repair` and `masked_redraw` leave a
+A `finalize`, `repair` or `masked_redraw` row is refused. `redraw` leaves a
 picture on the green key; `deliver` makes the delivered picture, and
 `saturation`, `dof` and `lens` make another delivered picture from it. They
 stack as separate requests in one order: `deliver` (transparent, for the
@@ -96,9 +94,9 @@ stage-and-blur.
 
 - The source must be a picture: a delivered picture and a LayerDiffuse
   picture are refused. Any other recipe or model is delivered as drawn.
-- The options are `recolor`, `skin`, `keep_legwear`, `keep_scene`,
-  `transparent`, `backdrop`, `stroke_light`, `outlines`, `deliver_size` and
-  `light`; any other key is an error. An absent `stroke_light` or
+- The options are `keep_scene`, `transparent`, `backdrop`, `stroke_light`,
+  `outlines`, `light` and `see_through`; any other key is an error. An absent
+  `stroke_light` or
   `backdrop` takes the recipe's `deliver.defaults`, the same values the WebUI
   sends. `light` only shades the stroke and tints the backdrop; it does not
   redraw. An explicit `backdrop: null` without `transparent` delivers a
@@ -119,12 +117,12 @@ stage-and-blur.
   and `keep_scene` deliveries take the lit figure without the backdrop tint.
 - Dial words (`"keep"`, `"on"`, …) are accepted wherever a number is. The
   row's result carries `resolved_options` with what actually ran.
-- The cut is stored on the source Generation: `alpha` (ViTMatte alpha), `depth`
-  (built by `dof`) and a json `cut` asset recording the matte model, matting model
-  and revision, trimap and tile sizes, and the depth checkpoint and resolution. A
-  later deliver loads an asset when its `cut` entry equals the worker's current
-  values, and cuts again (and replaces the asset) when it differs or the asset is
-  missing. Both are cut from the source, so changing `recolor` reuses them; the
+- The cut is stored on the source Generation: `alpha` (ViTMatte alpha),
+  `depth` (built by `dof`) and a json `cut` asset recording
+  the matte model, matting model and revision, trimap and tile sizes, and
+  the depth checkpoint and resolution. A later deliver loads an asset when
+  its `cut` entry equals the worker's current values, and cuts again (and
+  replaces the asset) when it differs or the asset is missing. The
   foreground colour is estimated again each time.
 - The delivered Generation refines the source and carries its layers as
   PNG assets at the delivered size: `layer-figure` (RGBA, the
@@ -267,16 +265,12 @@ stage-and-blur.
   delivered picture (a lens may follow), and records `kind: "photo"`,
   `base_generation`, `photo` and the resolved options.
 
-### Repair and masked redraw
+### Stored repair and masked_redraw outputs
 
-- The source must be a picture: a delivered picture is refused. Each seed
-  uploads one picture Generation (plus a `repair-mask` asset); there is no
-  delivered output.
-- Redrawing or delivering a repair or masked_redraw output reads recipe,
-  prompts, seed and loaders from `parameters.base_generation`. The repaired
-  pixels are what gets redrawn.
-- The repair prompt drops face, hair and framing tags. Part LoRAs (`lora`)
-  are skipped on an Anima source.
+- No worker claims `repair` or `masked_redraw` any more. Generations they
+  made earlier stay valid sources for `redraw` and `deliver`.
+- Redrawing or delivering one reads recipe, prompts, seed and loaders from
+  `parameters.base_generation`. The repaired pixels are what gets redrawn.
 
 ### Generate requests
 

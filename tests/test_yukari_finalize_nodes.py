@@ -130,7 +130,7 @@ class BridgeTest(unittest.TestCase):
 class NodeMappingTest(unittest.TestCase):
     def test_node_class_mappings_cover_every_node(self):
         self.assertEqual(set(nodes.NODE_CLASS_MAPPINGS), {
-            "YukariRepinSkin", "YukariRepin", "YukariRecolor", "YukariMatting",
+            "YukariRepin", "YukariMatting",
             "YukariForeground", "YukariSeeThrough", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
             "YukariStage", "YukariRelight", "YukariSaturation", "YukariPhotoDepthOfField",
@@ -154,22 +154,8 @@ class NodeRunTest(unittest.TestCase):
         self._torch_patch.start()
         self.addCleanup(self._torch_patch.stop)
 
-    def test_repin_skin_wiring_returns_an_image_and_a_report_string(self):
-        node = nodes.YukariRepinSkin()
-        pixels = swatch()
-        image, report = node.run(image_tensor(pixels), image_tensor(pixels))
-        self.assertEqual(image.array.shape, (1, 64, 64, 3))
-        self.assertIsInstance(report, str)
-
     def test_repin_wiring_returns_an_image_and_a_report_string(self):
         node = nodes.YukariRepin()
-        image, report = node.run(
-            image_tensor(swatch()), keep_legwear=False, keep_legwear_cut=0.62)
-        self.assertEqual(image.array.shape, (1, 64, 64, 3))
-        self.assertIsInstance(report, str)
-
-    def test_recolor_wiring_returns_an_image_and_a_report_string(self):
-        node = nodes.YukariRecolor()
         image, report = node.run(image_tensor(swatch()))
         self.assertEqual(image.array.shape, (1, 64, 64, 3))
         self.assertIsInstance(report, str)

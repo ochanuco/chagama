@@ -17,7 +17,6 @@ from ..infrastructure.comfyui.refinement_graph import (
     LAYER_OUTLINE_SUFFIX,
 )
 from ..infrastructure.comfyui.stage_graph import LIT_SUFFIX, STAGE_SUFFIX
-from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.safety import rate_image
 
 
@@ -177,40 +176,6 @@ def attach_asset(management, generation_id: str, *, role: str, name: str,
         multipart=({"role": role,
                     "idempotency_key": idempotency_key or str(uuid.uuid4())},
                    "file", name, data, content_type))
-
-
-def ingest_seed_render(*, comfyui, management, output_root: Path, emit,
-                       request_id: str, key_prefix: str | None, index: int,
-                       seed: int, prompt_id: str, graph: dict, job_prefix: str,
-                       mask_png: bytes,
-                       source_generation_id: str | None = None) -> dict:
-    outputs = comfyui.wait_for(prompt_id)
-    if not outputs:
-        raise SystemExit(f"{job_prefix} produced no picture output")
-    picture_out = outputs[-1]
-    picture = comfyui.fetch(picture_out)
-    (output_root / picture_out["filename"]).write_bytes(picture)
-
-    job = record_job(management, request_id, key_prefix=key_prefix,
-                     index=index, seed=seed, prompt_id=prompt_id, graph=graph,
-                     source_generation_id=source_generation_id)
-
-    rendered = upload_generation(management, emit, job["id"], seed=seed,
-                                 name=picture_out["filename"], data=picture,
-                                 index=0,
-                                 idempotency_key=generation_key(
-                                     key_prefix, index, 0))
-    attach_asset(management, rendered["id"], role="repair-mask",
-                 name=f"{job_prefix}-mask.png", data=mask_png,
-                 idempotency_key=asset_key(key_prefix, index, "repair-mask"))
-
-    management.request(
-        "PATCH", f"/api/v1/jobs/{job['id']}", {"status": "ingested"})
-    note_ingested(comfyui, prompt_id)
-
-    return {"generation_ids": [rendered["id"]],
-            "generation_urls": [rendered["canonical_url"]],
-            "raw_filename": picture_out["filename"], "raw": picture}
 
 
 def import_images(management, emit, *, images: Sequence[Path],

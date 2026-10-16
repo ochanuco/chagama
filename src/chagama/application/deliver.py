@@ -43,7 +43,6 @@ class DeliverServices:
     management: object
     comfyui: object
     graph_from_png: Callable[[bytes], dict | None]
-    image_size: Callable[[bytes], tuple[int, int]]
     git_metadata: Callable[[], dict]
     notifier: object
     output_root: Path
@@ -91,22 +90,17 @@ def _check_source(generation_id: str, services: DeliverServices, context: dict,
         raise SystemExit("LayerDiffuse 由来の絵は deliver できません")
 
 
-def _request_parameters(generation_id: str, *, skin: bool,
-                        recolor: bool, keep_legwear: float | None,
+def _request_parameters(generation_id: str, *,
                         keep_scene: bool, transparent: bool,
                         backdrop: str | None, stroke_light: str | None,
-                        outlines: list[dict], deliver_size: int | None,
-                        light: Light | None, see_through: float = 1.0) -> dict:
+                        outlines: list[dict], light: Light | None,
+                        see_through: float = 1.0) -> dict:
     return {
         "kind": "deliver",
         "base_generation": generation_id,
-        "skin": skin,
-        **({"recolor": True} if recolor else {}),
-        **({"keep_legwear": keep_legwear} if keep_legwear is not None else {}),
         **({"keep_scene": True} if keep_scene else {}),
         **({"transparent": True} if transparent else {}),
         **({"backdrop": backdrop} if backdrop else {}),
-        **({"deliver_size": deliver_size} if deliver_size is not None else {}),
         **({"stroke_light": stroke_light} if stroke_light is not None else {}),
         "outlines": outlines,
         **({"light": {"scene": light.scene, "from": light.direction}}
@@ -116,14 +110,12 @@ def _request_parameters(generation_id: str, *, skin: bool,
 
 
 def deliver(generation_id: str, services: DeliverServices, *,
-            skin: bool = False, recolor: bool = False,
-            keep_legwear: float | None = None, keep_scene: bool = False,
+            keep_scene: bool = False,
             transparent: bool = False,
             backdrop: str | None = delivery_style.DELIVER_DEFAULTS["backdrop"],
             stroke_light: str | None | object = RECIPE_DEFAULT,
             outlines: list[dict] | None = None,
-            deliver_size: int | None = None, light: Light | None = None,
-            see_through: float = 1.0,
+            light: Light | None = None, see_through: float = 1.0,
             key_prefix: str | None = None, request_id: str | None = None,
             context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "deliver", key_prefix)
@@ -161,10 +153,9 @@ def deliver(generation_id: str, services: DeliverServices, *,
     graph = services.deliver_graph(
         source_image, delivery_style.MATTE_MODEL, prefix,
         alpha_image=alpha_image,
-        skin=skin, recolor=recolor, keep_scene=keep_scene,
+        keep_scene=keep_scene,
         transparent=transparent, backdrop=backdrop, stroke_light=stroke_light,
-        outlines=outlines, deliver_size=deliver_size,
-        canvas=services.image_size(picked),
+        outlines=outlines,
         light_scene=light.scene if light is not None else None,
         light_from=light.direction if light is not None else None,
         see_through=see_through)
@@ -212,12 +203,10 @@ def deliver(generation_id: str, services: DeliverServices, *,
             "raw_instruction": f"{generation_id} を納品",
             "recipe": context["request"].get("recipe") or "yukari",
             "parameters": _request_parameters(
-                generation_id, skin=skin,
-                recolor=recolor, keep_legwear=keep_legwear,
+                generation_id,
                 keep_scene=keep_scene, transparent=transparent,
                 backdrop=backdrop, stroke_light=stroke_light,
-                outlines=outlines, deliver_size=deliver_size, light=light,
-                see_through=see_through),
+                outlines=outlines, light=light, see_through=see_through),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",

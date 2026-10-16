@@ -102,10 +102,9 @@ class LightGraphTest(unittest.TestCase):
 class DeliverGraphTest(unittest.TestCase):
     def deliver(self, **kwargs) -> dict:
         graph = deliver_graph(
-            "src.png", "birefnet", "fin", skin=False,
-            recolor=False, keep_scene=False,
+            "src.png", "birefnet", "fin", keep_scene=False,
             transparent=False, backdrop=None, stroke_light=None,
-            outlines=[], deliver_size=None, canvas=(832, 1664),
+            outlines=[],
             **{"light_scene": None, "light_from": None, **kwargs})
         return find(graph, "YukariDeliver")[1]["inputs"]
 

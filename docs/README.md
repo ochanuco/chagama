@@ -10,7 +10,6 @@ tokens (`uv run scripts/atlas.py docs` prints the live numbers).
 | [findings/prompt.md](findings/prompt.md) | 1.6k | tag order and weight, negatives, seed and sampler |
 | [findings/face.md](findings/face.md) | 1k | ジト目, expressions, eye identity |
 | [findings/legwear-costume.md](findings/legwear-costume.md) | 1k | canonical legwear, gloss, garment colour and fit |
-| [findings/hands-feet-repair.md](findings/hands-feet-repair.md) | 1k | toes and fingers, `repair`, masked redraw |
 | [findings/composition.md](findings/composition.md) | 1.1k | canvas, framing, pose structure |
 | [findings/delivery.md](findings/delivery.md) | 1.7k | deliver, matte, stroke, backdrop, repin |
 | [findings/checkpoints.md](findings/checkpoints.md) | 1.3k | Anima vs IL, LoRA, ControlNet / region tools, checking a new stage-1 model |

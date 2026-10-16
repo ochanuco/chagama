@@ -83,10 +83,9 @@ def cut_graph(source_image: str, matte_model: str, prefix: str) -> dict:
 
 def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   alpha_image: str | None = None,
-                  skin: bool, recolor: bool, keep_scene: bool,
+                  keep_scene: bool,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
-                  deliver_size: int | None, canvas: tuple[int, int],
                   light_scene: str | None, light_from: str | None,
                   see_through: float = 1.0) -> dict:
     """The deliver graph over the uploaded `source_image`.
@@ -121,16 +120,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         graph, allocate, source_ref, matte_model, prefix, alpha_image)
 
     image_ref = source_ref
-    if skin:
-        repin_skin_id = allocate()
-        graph[repin_skin_id] = {"class_type": "YukariRepinSkin", "inputs": {
-            "image": image_ref, "source": source_ref}}
-        image_ref = [repin_skin_id, 0]
-    if recolor:
-        recolor_id = allocate()
-        graph[recolor_id] = {"class_type": "YukariRecolor", "inputs": {
-            "image": image_ref}}
-        image_ref = [recolor_id, 0]
     silhouette_ref = None
     if not keep_scene:
         image_ref = foreground_node(graph, allocate, image_ref, alpha_ref)
@@ -143,7 +132,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         graph, allocate, image_ref, alpha_ref, prefix,
         keep_scene=keep_scene, transparent=transparent, backdrop=backdrop,
         stroke_light=stroke_light, outlines=outlines,
-        deliver_size=deliver_size, canvas=canvas,
         light_scene=light_scene, light_from=light_from,
         silhouette_ref=silhouette_ref)
     return graph

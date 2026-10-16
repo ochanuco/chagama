@@ -16,15 +16,11 @@ from ..application.dof import dof
 from ..application.generate import generate
 from ..application.ingest import import_images
 from ..application.lens import lens
-from ..application.masked_redraw import masked_redraw
 from ..application.photo import photo
 from ..application.redraw import redraw
-from ..application.repair import repair
 from ..application.stage import lighting, saturation, stage
 from ..application.request_options import (
-    DELIVER_DIAL_KEYS,
     REDRAW_DIAL_KEYS,
-    REPAIR_DIAL_KEYS,
     deliver_arguments,
     dials_scope,
     dof_arguments,
@@ -38,9 +34,6 @@ from ..application.request_options import (
 )
 from ..application.watch import WatchServices, watch
 from ..application.work import fetch_source, work
-from ..domain.repair.controlnet import CONTROL_MODELS, DEFAULT_CONTROL_STRENGTH
-from ..domain.repair.loras import DEFAULT_PART_LORA_WEIGHT
-from ..domain.repair.models import MODELS
 from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
 from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
@@ -74,9 +67,7 @@ from .agent import (
     build_photo_services,
     build_stage_services,
     build_generate_services,
-    build_masked_redraw_services,
     build_redraw_services,
-    build_repair_services,
     default_worker_id,
     wire_work_services,
 )
@@ -285,8 +276,7 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
         "--kinds",
-        default="generate,redraw,repair,masked_redraw,deliver,dof,lens,photo,stage,"
-                "lighting,saturation",
+        default="generate,redraw,deliver,dof,lens,photo,stage,lighting,saturation",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",
@@ -350,15 +340,6 @@ def parser() -> argparse.ArgumentParser:
         "deliver", help="cut and decorate one picture generation")
     deliver_parser.add_argument("generation_id")
     deliver_parser.add_argument(
-        "--skin", action="store_true",
-        help="pin the skin back to the picture's own tones")
-    deliver_parser.add_argument("--recolor", action="store_true")
-    deliver_parser.add_argument(
-        "--keep-legwear", nargs="?", const=0.62, type=_number_or_word, default=None,
-        metavar="COL_CUT",
-        help="keep the asserted legwear verbatim through repin; the value is "
-             "the width share the legs stay left of (default 0.62)")
-    deliver_parser.add_argument(
         "--keep-scene", action="store_true",
         help="deliver the picture uncut, background and all")
     deliver_transparent = deliver_parser.add_mutually_exclusive_group()
@@ -383,9 +364,6 @@ def parser() -> argparse.ArgumentParser:
              "longest side; repeatable (default: the recipe's own bands)")
     deliver_outlines.add_argument(
         "--no-outlines", action="store_true", help="deliver without outlines")
-    deliver_parser.add_argument(
-        "--deliver-size", type=int, metavar="LONGEST",
-        help="downscale the delivered file to this longest side (lanczos)")
     deliver_parser.add_argument(
         "--light", metavar="SCENE[,FROM]",
         help="light the delivery as a scene "
@@ -540,71 +518,6 @@ def parser() -> argparse.ArgumentParser:
         help=f"{SATURATION_STRENGTH['min']}..{SATURATION_STRENGTH['max']} "
              f"(default {SATURATION_STRENGTH['default']})")
 
-    repair_parser = commands.add_parser(
-        "repair", help="masked local redraw of hands/feet on an existing generation")
-    repair_parser.add_argument("generation_id")
-    repair_parser.add_argument(
-        "--parts", default="hands,feet",
-        help="comma-separated: hands, feet (default: both)")
-    repair_parser.add_argument(
-        "--region", dest="regions", action="append", metavar="X0,Y0,X1,Y1",
-        help="fractional rectangle [0..1] added to the mask; repeatable")
-    repair_parser.add_argument("--denoise", type=_number_or_word, default=0.6)
-    repair_parser.add_argument(
-        "--seeds", default="1,2,3,4",
-        help="comma-separated seeds; one job per seed")
-    repair_parser.add_argument(
-        "--size", type=int, default=1024, metavar="LONGEST",
-        help="crop target's longest side")
-    repair_parser.add_argument(
-        "--pad", type=float, default=1.0,
-        help="multiplier on the auto region radius")
-    repair_parser.add_argument(
-        "--lora", type=_number_or_word, nargs="?", const=DEFAULT_PART_LORA_WEIGHT,
-        metavar="WEIGHT",
-        help="load each repaired part's own LoRA (Feet XL / Hands XL) inside "
-             "the crop, at this strength; off by default")
-    repair_parser.add_argument(
-        "--model", choices=sorted(MODELS),
-        help="sample the crop on this checkpoint instead of the source's own; "
-             "skips the part LoRA chain, which is Illustrious-only")
-    repair_parser.add_argument(
-        "--control", choices=sorted(CONTROL_MODELS), metavar="SIGNAL",
-        help="route the crop's conditioning through this ControlNet signal; "
-             "off by default")
-    repair_parser.add_argument(
-        "--control-strength", type=float, default=DEFAULT_CONTROL_STRENGTH,
-        metavar="STRENGTH",
-        help="the ControlNet's own strength, used only with --control")
-
-    masked_redraw_parser = commands.add_parser(
-        "masked_redraw", help="masked local redraw of a caller-given region")
-    masked_redraw_parser.add_argument("generation_id")
-    masked_redraw_parser.add_argument(
-        "--region", dest="regions", action="append", required=True,
-        metavar="X0,Y0,X1,Y1",
-        help="fractional rectangle [0..1] added to the mask; repeatable, at "
-             "least one required")
-    masked_redraw_parser.add_argument(
-        "--prompt-patch", required=True,
-        help="text appended to the source's own positive prompt after the "
-             "face/hair/framing drop")
-    # Server-side denoise resolves dial words via dials_scope(recipe,
-    # "repair"); this CLI flag stays numeric-only.
-    masked_redraw_parser.add_argument("--denoise", type=float, default=0.45)
-    masked_redraw_parser.add_argument(
-        "--mask-padding", type=int, default=0, metavar="PIXELS",
-        help="InpaintCropImproved mask_expand_pixels")
-    masked_redraw_parser.add_argument(
-        "--mask-feather", type=int, default=32, metavar="PIXELS",
-        help="InpaintCropImproved mask_blend_pixels")
-    masked_redraw_parser.add_argument(
-        "--size", type=int, default=1024, metavar="LONGEST",
-        help="crop target's longest side")
-    masked_redraw_parser.add_argument(
-        "--seeds", default="1,2,3,4",
-        help="comma-separated seeds; one job per seed")
-
     catalog_parser = commands.add_parser(
         "catalog", help="print the recipe catalog chimera composes requests from")
     catalog_parser.add_argument(
@@ -756,22 +669,13 @@ def main(argv: list[str] | None = None) -> None:
             chimera, comfyui, notifier, repository, repository_metadata)
         outlines = _outlines_from_args(args)
         light = _light_from_args(args)
-        context, dial_values = _resolve_word_args(
-            chimera, args.generation_id, "deliver",
-            {key: getattr(args, key) for key in DELIVER_DIAL_KEYS})
         options = {
-            **({"skin": True} if args.skin else {}),
-            **({"recolor": True} if args.recolor else {}),
-            **({"keep_legwear": dial_values["keep_legwear"]}
-               if dial_values["keep_legwear"] is not None else {}),
             **({"keep_scene": True} if args.keep_scene else {}),
             **({"transparent": args.transparent}
                if args.transparent is not None else {}),
             **({"backdrop": args.backdrop} if args.backdrop is not None else {}),
             **({"stroke_light": args.stroke_light}
                if args.stroke_light is not None else {}),
-            **({"deliver_size": args.deliver_size}
-               if args.deliver_size is not None else {}),
             **({"outlines": outlines} if outlines is not None else {}),
             **({"light": {"scene": light.scene, "from": light.direction}}
                if light is not None else {}),
@@ -780,7 +684,7 @@ def main(argv: list[str] | None = None) -> None:
             arguments = deliver_arguments(options)
         except ValueError as error:
             raise SystemExit(str(error)) from error
-        deliver(args.generation_id, services, context=context, **arguments)
+        deliver(args.generation_id, services, **arguments)
         return
     if args.command == "dof":
         services = build_dof_services(
@@ -846,33 +750,6 @@ def main(argv: list[str] | None = None) -> None:
         if args.publish:
             response = publish_catalog_document(chimera, git, catalog=document)
             print(json.dumps(response, indent=2, ensure_ascii=False))
-        return
-    if args.command == "repair":
-        services = build_repair_services(
-            chimera, comfyui, notifier, repository, repository_metadata)
-        parts = [part.strip() for part in args.parts.split(",") if part.strip()]
-        regions = [[float(value) for value in region.split(",")]
-                  for region in (args.regions or [])]
-        seeds = [int(seed.strip()) for seed in args.seeds.split(",") if seed.strip()]
-        context, dial_values = _resolve_word_args(
-            chimera, args.generation_id, "repair",
-            {key: getattr(args, key) for key in REPAIR_DIAL_KEYS})
-        repair(args.generation_id, services, parts=parts, regions=regions,
-              denoise=dial_values["denoise"], seeds=seeds, size=args.size,
-              pad=args.pad, lora=dial_values["lora"], model=args.model,
-              control=args.control, control_strength=args.control_strength,
-              context=context)
-        return
-    if args.command == "masked_redraw":
-        services = build_masked_redraw_services(
-            chimera, comfyui, notifier, repository, repository_metadata)
-        regions = [[float(value) for value in region.split(",")]
-                  for region in args.regions]
-        seeds = [int(seed.strip()) for seed in args.seeds.split(",") if seed.strip()]
-        masked_redraw(args.generation_id, services, regions=regions,
-                      prompt_patch=args.prompt_patch, denoise=args.denoise,
-                      mask_padding=args.mask_padding, mask_feather=args.mask_feather,
-                      size=args.size, seeds=seeds)
         return
 
     if args.command == "safety":

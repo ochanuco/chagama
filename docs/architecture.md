@@ -15,10 +15,10 @@ The maintained application layout is:
 ```text
 src/chagama/
 ├── interfaces/          # argparse and dependency wiring
-├── application/         # generate, redraw, repair, deliver and metadata workflows
+├── application/         # generate, redraw, deliver and metadata workflows
 ├── domain/
 │   ├── generation/      # shared values and prompt checks
-│   ├── repair/          # repair vocabulary: regions, prompt drops, models, LoRAs, ControlNet
+│   ├── regions.py       # caller-given redraw regions
 │   └── yukari/          # the recipe that draws (identity, costumes, poses, prompt edit
 │                        # order) and the delivery identity (backdrop, stroke, acceptance band)
 └── infrastructure/
@@ -53,7 +53,7 @@ decides prompts, sampling parameters, sizes and filenames; the ComfyUI adapter
 decides how those values are encoded as nodes and links.
 
 `yukari/` owns a `dials.py`: the named words (`{word: number}`) it
-publishes for its own redraw/deliver/repair/patch option values, referencing the
+publishes for its own redraw/deliver/patch option values, referencing the
 same constants the recipe itself uses rather than duplicating a number.
 `application/request_options.py`
 and `application/generate.py` resolve a request's word against the source
@@ -74,7 +74,7 @@ people).
 ## Application
 
 `src/chagama/application/` owns use cases: generate and record a request,
-redraw, repair or deliver a selected generation, and manage its metadata. It coordinates domain
+redraw or deliver a selected generation, and manage its metadata. It coordinates domain
 rules and concrete adapters without reimplementing either.
 
 ## Infrastructure
@@ -88,8 +88,8 @@ stay here.
 `src/chagama/interfaces/` owns the single public `chagama` CLI.
 Argument parsing stops at this boundary; commands call application use cases.
 
-The worker's composition root -- wiring the generate/redraw/deliver/repair/
-masked_redraw services, the hub and progress sockets and the drain sentinel
+The worker's composition root -- wiring the generate/redraw/deliver
+services, the hub and progress sockets and the drain sentinel
 into a `WorkServices` -- lives in `interfaces/agent.py`, not in the CLI
 itself. `comfy_nodes/yukari_worker/` calls the same `agent.run()` to host the
 identical claim loop as a thread inside ComfyUI's own process, so a restart

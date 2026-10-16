@@ -18,10 +18,8 @@ from chagama.application.generate import validate_request
 from chagama.application.request_options import (
     _KNOWN_DELIVER_OPTIONS,
     _KNOWN_REDRAW_OPTIONS,
-    _KNOWN_REPAIR_OPTIONS,
     deliver_arguments,
     redraw_arguments,
-    repair_arguments,
 )
 from chagama.domain.generation.patches import (
     LORAS_TARGETS,
@@ -40,9 +38,7 @@ _DIAL_WORD = re.compile(r"^[a-z][a-z0-9-]*$")
 
 # scope -> the real option/target keys a dial in that scope may name.
 _DIAL_SCOPE_KEYS = {
-    "deliver": _KNOWN_DELIVER_OPTIONS,
     "redraw": _KNOWN_REDRAW_OPTIONS["canvas"],
-    "repair": _KNOWN_REPAIR_OPTIONS,
     "patches": set(NUMBER_TARGETS),
 }
 
@@ -246,7 +242,7 @@ class DialsTest(unittest.TestCase):
         catalog = build_catalog(GIT)
         by_name = {recipe["name"]: recipe for recipe in catalog["recipes"]}
         self.assertEqual(set(by_name["yukari"]["dials"]),
-                         {"deliver", "redraw", "patches"})
+                         {"redraw", "patches"})
 
     def test_dial_keys_are_real_option_keys_of_their_scope(self):
         catalog = build_catalog(GIT)
@@ -276,13 +272,9 @@ class DialsTest(unittest.TestCase):
                     for word in words:
                         with self.subTest(
                                 recipe=recipe["name"], scope=scope, key=key, word=word):
-                            if scope == "deliver":
-                                deliver_arguments({key: word}, options)
-                            elif scope == "redraw":
+                            if scope == "redraw":
                                 redraw_arguments(
                                     {"method": "canvas", key: word}, options)
-                            elif scope == "repair":
-                                repair_arguments({"parts": ["hands"], key: word}, options)
                             else:
                                 parse_patches(
                                     [{"target": key, "op": "set", "value": word,

@@ -20,16 +20,11 @@ from .deliver import DeliverServices, deliver
 from .dof import DofServices, dof
 from .generate import GenerateServices, generate, request_file_path
 from .lens import LensServices, lens
-from .masked_redraw import MaskedRedrawServices, masked_redraw
 from .photo import PhotoServices, photo
 from .stage import StageServices, lighting, saturation, stage
 from .redraw import RedrawServices, redraw
-from .repair import RepairServices, repair
 from .request_options import (
-    DELIVER_DIAL_KEYS,
     REDRAW_DIAL_KEYS,
-    REPAIR_DIAL_KEYS,
-    _MASKED_REDRAW_DIAL_KEYS,
     _resolved_options,
     deliver_arguments,
     dials_scope,
@@ -37,11 +32,9 @@ from .request_options import (
     lens_arguments,
     lighting_arguments,
     saturation_arguments,
-    masked_redraw_arguments,
     photo_arguments,
     stage_arguments,
     redraw_arguments,
-    repair_arguments,
 )
 from .worker_channels import Connection, Heartbeat, HubListener, Management, ProgressRelay
 
@@ -65,8 +58,6 @@ class WorkServices:
     generate_services: GenerateServices
     deliver_services: DeliverServices
     redraw_services: RedrawServices
-    repair_services: RepairServices
-    masked_redraw_services: MaskedRedrawServices
     dof_services: DofServices
     lens_services: LensServices
     photo_services: PhotoServices
@@ -76,8 +67,6 @@ class WorkServices:
     generate: Callable[..., dict | None] = generate
     deliver: Callable[..., dict] = deliver
     redraw: Callable[..., dict] = redraw
-    repair: Callable[..., dict] = repair
-    masked_redraw: Callable[..., dict] = masked_redraw
     dof: Callable[..., dict] = dof
     lens: Callable[..., dict] = lens
     photo: Callable[..., dict] = photo
@@ -87,9 +76,8 @@ class WorkServices:
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
-    kinds: tuple[str, ...] = ("generate", "redraw", "repair", "masked_redraw",
-                              "deliver", "dof", "lens", "photo", "stage",
-                              "lighting", "saturation")
+    kinds: tuple[str, ...] = ("generate", "redraw", "deliver", "dof", "lens",
+                              "photo", "stage", "lighting", "saturation")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
@@ -145,20 +133,17 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
     generation_id = payload.get("generation_id")
     if not generation_id:
         raise SystemExit("deliver payload.generation_id is required")
-    context, recipe = fetch_source(services.management, generation_id)
-    dials = dials_scope(recipe, "deliver")
+    context, _ = fetch_source(services.management, generation_id)
     options = payload.get("options") or {}
     try:
-        arguments = deliver_arguments(options, dials)
+        arguments = deliver_arguments(options)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     result = services.deliver(generation_id, services.deliver_services,
                               key_prefix=f"request:{row['id']}",
                               request_id=row["id"], context=context,
                               **arguments)
-    result["resolved_options"] = {
-        **_resolved_options(options, arguments, DELIVER_DIAL_KEYS),
-        "outlines": arguments["outlines"]}
+    result["resolved_options"] = {**options, "outlines": arguments["outlines"]}
     return result
 
 
@@ -288,47 +273,6 @@ def _execute_saturation(services: WorkServices, row: Mapping) -> dict:
     return result
 
 
-def _execute_repair(services: WorkServices, row: Mapping) -> dict:
-    payload = row.get("payload") or {}
-    generation_id = payload.get("generation_id")
-    if not generation_id:
-        raise SystemExit("repair payload.generation_id is required")
-    context, recipe = fetch_source(services.management, generation_id)
-    dials = dials_scope(recipe, "repair")
-    options = payload.get("options") or {}
-    try:
-        arguments = repair_arguments(options, dials)
-    except ValueError as error:
-        raise SystemExit(str(error)) from error
-    result = services.repair(generation_id, services.repair_services,
-                             key_prefix=f"request:{row['id']}",
-                             request_id=row["id"], context=context,
-                             **arguments)
-    result["resolved_options"] = _resolved_options(options, arguments, REPAIR_DIAL_KEYS)
-    return result
-
-
-def _execute_masked_redraw(services: WorkServices, row: Mapping) -> dict:
-    payload = row.get("payload") or {}
-    generation_id = payload.get("generation_id")
-    if not generation_id:
-        raise SystemExit("masked_redraw payload.generation_id is required")
-    context, recipe = fetch_source(services.management, generation_id)
-    dials = dials_scope(recipe, "repair")
-    options = payload.get("options") or {}
-    try:
-        arguments = masked_redraw_arguments(options, dials)
-    except ValueError as error:
-        raise SystemExit(str(error)) from error
-    result = services.masked_redraw(generation_id, services.masked_redraw_services,
-                                    key_prefix=f"request:{row['id']}",
-                                    request_id=row["id"], context=context,
-                                    **arguments)
-    result["resolved_options"] = _resolved_options(
-        options, arguments, _MASKED_REDRAW_DIAL_KEYS)
-    return result
-
-
 def execute(services: WorkServices, row: Mapping) -> dict:
     ref = row.get("recipe_ref")
     if ref != services.git_metadata().get("branch"):
@@ -340,10 +284,6 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_redraw(services, row)
     if kind == "deliver":
         return _execute_deliver(services, row)
-    if kind == "repair":
-        return _execute_repair(services, row)
-    if kind == "masked_redraw":
-        return _execute_masked_redraw(services, row)
     if kind == "dof":
         return _execute_dof(services, row)
     if kind == "lens":
