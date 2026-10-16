@@ -151,14 +151,6 @@ def skin_mask(source: np.ndarray) -> np.ndarray:
     return np.isin(labels, 1 + np.nonzero(sizes >= SKIN_PIN_MIN_AREA)[0])
 
 
-def repin_png(data: bytes) -> tuple[bytes, list[str]]:
-    im = np.array(Image.open(io.BytesIO(data)).convert("RGB"))
-    rgb, report = repin(im)
-    output = io.BytesIO()
-    Image.fromarray(rgb).save(output, format="PNG")
-    return output.getvalue(), report
-
-
 def measure(data: bytes) -> dict:
     img = Image.open(io.BytesIO(data))
     if img.mode in ("RGBA", "LA"):

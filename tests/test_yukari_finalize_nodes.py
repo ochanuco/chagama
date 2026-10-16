@@ -130,7 +130,7 @@ class BridgeTest(unittest.TestCase):
 class NodeMappingTest(unittest.TestCase):
     def test_node_class_mappings_cover_every_node(self):
         self.assertEqual(set(nodes.NODE_CLASS_MAPPINGS), {
-            "YukariRepin", "YukariMatting",
+            "YukariMatting",
             "YukariForeground", "YukariSeeThrough", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
             "YukariStage", "YukariRelight", "YukariSaturation", "YukariPhotoDepthOfField",
@@ -153,12 +153,6 @@ class NodeRunTest(unittest.TestCase):
             sys.modules, {"torch": FakeTorch()})
         self._torch_patch.start()
         self.addCleanup(self._torch_patch.stop)
-
-    def test_repin_wiring_returns_an_image_and_a_report_string(self):
-        node = nodes.YukariRepin()
-        image, report = node.run(image_tensor(swatch()))
-        self.assertEqual(image.array.shape, (1, 64, 64, 3))
-        self.assertIsInstance(report, str)
 
     def test_deliver_wiring_returns_an_image_and_a_tag(self):
         node = nodes.YukariDeliver()

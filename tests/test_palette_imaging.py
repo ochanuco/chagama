@@ -10,7 +10,7 @@ from chagama.domain.yukari.delivery_style import (
     ACCENT_KEEP, REPIN_DARK, REPIN_LIGHT,
 )
 from chagama.infrastructure.imaging.palette import (
-    measure, repin, repin_png, summarize,
+    measure, repin, summarize,
 )
 
 KNEE, RATIO = REPIN_LIGHT
@@ -85,14 +85,6 @@ class RepinTest(unittest.TestCase):
         # palette target should not move much.
         self.assertLessEqual(after_s, before_s + 1)
         self.assertGreater(after_s, before_s - 3)
-
-    def test_repin_png_roundtrips_through_pil(self):
-        data = png(swatch((191, 200, 200)))
-        out, report = repin_png(data)
-        self.assertIsInstance(out, bytes)
-        image = Image.open(io.BytesIO(out))
-        self.assertEqual(image.size, (64, 64))
-        self.assertTrue(report)
 
 
 class SummarizeTest(unittest.TestCase):
