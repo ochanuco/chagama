@@ -114,12 +114,6 @@ class ComfyUIClient:
     def wait_for(self, prompt_id: str) -> list[dict]:
         return images_of(self._wait_for_entry(prompt_id))
 
-    def wait_for_outputs(self, prompt_id: str) -> dict:
-        """Like `wait_for`, but the raw node-keyed outputs instead of only
-        images -- e.g. a DWPreprocessor node's `openpose_json` text output,
-        which has no image to be found by `wait_for`."""
-        return self._wait_for_entry(prompt_id).get("outputs", {})
-
     def fetch(self, image: dict) -> bytes:
         query = urllib.parse.urlencode({
             "filename": image["filename"],

@@ -8,7 +8,6 @@ import unittest
 from chagama.domain.yukari import delivery_style
 from chagama.infrastructure.comfyui.base_graph import base_roles, hires_graph
 from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
-from chagama.infrastructure.comfyui.pose_graph import pose_graph
 from chagama.infrastructure.comfyui.roles import label_roles, snake_case
 
 from test_hires_graph import guided_graph, plain_graph
@@ -81,11 +80,6 @@ class LabelRolesTest(unittest.TestCase):
         self.assertEqual(len(set(labelled.values())), len(labelled))
         load = next(key for key, node in graph.items() if node["class_type"] == "LoadImage")
         self.assertTrue(labelled[load].startswith("load_image"))
-
-    def test_pose_graph(self):
-        labelled = titles(label_roles(pose_graph("a.png")))
-        self.assertEqual(labelled, {
-            "1": "load_image", "2": "dw_preprocessor", "3": "save_image"})
 
     def test_existing_titles_win_and_nothing_else_changes(self):
         graph = plain_graph()

@@ -41,8 +41,8 @@ the exact prompt can be inspected with `get_catalog_pose` on the MCP or
 An Illustrious redraw (`redraw` method `canvas`: hassaku-il-v22 at 2560,
 denoise 0.4) is a per-request opt-in the user names, and it makes a new
 picture that is delivered by a separate `deliver` request. A defect in a
-redraw is fixed by redrawing again with `denoise` or `keep_regions`, or by
-`repair_generation` on it, before it is delivered.
+redraw is fixed by redrawing again with `denoise` or `keep_regions` before it
+is delivered.
 
 Which model draws, which model redraws, and whether a picture is redrawn
 at all are the user's decisions. To change one: ask, then change the recipe default
@@ -77,8 +77,8 @@ One recipe is live, `yukari` under `src/chagama/domain/`: the Anima
 Turbo checkpoint's identity, costumes, poses and prompt edit order.
 `docs/yukari/anima.md` maps where each part lives. `domain/yukari/delivery_style.py`
 holds both the delivery identity (backdrop, purple stroke, acceptance band)
-every delivered picture wears, read by imaging, catalog, work, cli and
-repair alike, and the redraw settings (stage-2 model, sampler,
+every delivered picture wears, read by imaging, catalog, work and cli
+alike, and the redraw settings (stage-2 model, sampler,
 denoise); it is not itself a recipe.
 
 `redraw` takes an Anima source only (a `UNETLoader` node in its base
@@ -224,7 +224,6 @@ derive_request        from a rated generation: same recipe, parameters and
 redraw_generation     optional: the pick redrawn whole -- on a bigger canvas
                       (`canvas`), re-rendered larger (`hires`) or relit
                       (`light`); a new picture on the green key.
-repair_generation     optional: a masked local redraw of hands / feet.
 deliver_generation    the pick, delivered: one ComfyUI graph that cuts a matte
                       and composites the backdrop and outline bands; recorded
                       as a request that refines the source, with its layers
@@ -253,7 +252,7 @@ get_request           status of any of the above; list_requests for the queue.
 
 `create_request` is the raw form of all of them (kind + payload) for anything
 the dedicated tools do not cover. A round is not closed until the pick has
-been delivered: what `generate`, `redraw` and `repair` leave is the
+been delivered: what `generate` and `redraw` leave is the
 pre-delivery SaveImage output, and the delivery identity is what `deliver`
 adds on top of it. The cutout (`alpha`, and the `depth` a `dof` builds) is
 stored as assets of the picture that was delivered, so a delivery is redone from the record without
@@ -269,7 +268,7 @@ tracked file.
 - 生成の記録は chimera（https://chimera.chanu.co）。実行経路は chimera の
   requests 行を worker（GPU 機の `chagama work`）が実行する一本のみ。
   Mac 側の入口は MCP（`derive_request` / `redraw_generation` /
-  `deliver_generation` / `repair_generation` / `create_request`）か `POST /api/v1/requests`。
+  `deliver_generation` / `create_request`）か `POST /api/v1/requests`。
   semantic 判断（prompt 組み立て、reference の意味付け、検品）は呼び出し元
   エージェントの仕事で、chimera と worker は実行と記録だけを担う。
 - ComfyUI `/prompt` への直 POST は禁止。レシピが組めない graph は
