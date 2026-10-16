@@ -201,6 +201,22 @@ def _stroke_cover(shape: tuple[int, int], points: np.ndarray, diameter: float) -
     return cover
 
 
+def _slashes(shape: tuple[int, int], line_width: float) -> np.ndarray:
+    """The anti-aliased 0..1 coverage of `FRAME_SLASH` pairs of "/" for a
+    line `line_width` px wide, laid over the whole canvas `shape`."""
+    height, width = shape
+    rows, cols = np.mgrid[0:height, 0:width].astype(np.float32) + 0.5
+    slash = delivery_style.FRAME_SLASH
+    period = slash["period"] * line_width
+    thickness = slash["thickness"] * line_width
+    phase = ((cols + rows) / np.sqrt(2)) % period
+    cover = np.zeros(shape, np.float32)
+    for start in (0.2 * period, 0.2 * period + slash["offset"] * line_width):
+        inside = np.minimum(phase - start, start + thickness - phase)
+        cover = np.maximum(cover, np.clip(inside + 0.5, 0.0, 1.0))
+    return cover
+
+
 def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
     """The 0..1 share of each pixel of a delivery canvas `shape` that the
     `frame` keeps: nothing past a cut side's border inner edge, nothing
@@ -292,7 +308,8 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
     """`figure` and `outline` (straight HxWx4 0..255) in the `frame`: on
     the framed canvas painted `paper`, the box filled with the `backdrop`
     pattern rendered at the box's size, its line straddling the box's sides
-    with the rim along both its edges, and the figure and outline kept by
+    (solid, or `slash`: pairs of "/" on the paper colour) with the rim along
+    both its edges, and the figure and outline kept by
     `frame_keep` over all of it; the light `scene` and drop shadow as
     `on_pattern` sets them."""
     height, width = figure.shape[:2]
@@ -322,7 +339,13 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
         if band and half > 0:
             ring = (_rect(size, x0 - half, y0 - half, x1 + half, y1 + half)
                     & ~_rect(size, x0 + half, y0 + half, x1 - half, y1 - half))
-            backdrop_rgb[ring] = parse_color(band["color"])
+            colour = np.array(parse_color(band["color"]), float)
+            if band.get("pattern") == "slash":
+                cover = _slashes(size, 2 * half)[ring][:, None]
+                paper = np.array(parse_color(frame["paper"]), float)
+                backdrop_rgb[ring] = paper + cover * (colour - paper)
+            else:
+                backdrop_rgb[ring] = colour
     (figure_colour, figure_alpha), (outline_colour, outline_alpha) = layers
     return _on_backdrop(figure_colour, figure_alpha, outline_colour, outline_alpha,
                         backdrop_rgb, shadow_from, outlines, scene, light_from)

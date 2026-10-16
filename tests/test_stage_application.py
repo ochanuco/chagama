@@ -149,7 +149,7 @@ class StageTest(unittest.TestCase):
         frame = {"box": [0.25, 0.25, 1.0, 1.0],
                  "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"},
                  "line": {"color": "#885b80", "width": 5.0}, "paper": "#ffffff",
-                 "canvas": None, "strokes": []}
+                 "canvas": None, "expand": True, "strokes": []}
         management = ManagementFake({"dlv": (DELIVERY, layers)})
         with tempfile.TemporaryDirectory() as directory:
             services = services_for(StageServices, management, directory)
@@ -170,7 +170,8 @@ class StageTest(unittest.TestCase):
         frame = {"box": [0.25, 0.25, 1.0, 1.0],
                  "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"},
                  "line": {"color": "#885b80", "width": 5.0}, "paper": "#ffffff",
-                 "canvas": [None, -0.25, None, None], "expand": {"bottom": False},
+                 "canvas": [None, -0.25, None, None],
+                 "expand": {"top": True, "right": True, "bottom": False, "left": True},
                  "strokes": []}
         management = ManagementFake({"dlv": (DELIVERY, layers)})
         with tempfile.TemporaryDirectory() as directory:

@@ -104,6 +104,17 @@ class FrameTest(unittest.TestCase):
         # Above the box the left side does not reach: the figure stays.
         self.assertEqual(alpha[12, 17], 1.0)
 
+    def test_a_slash_line_lays_slashes_of_its_colour_on_the_paper(self):
+        figure, outline = layers(400, 300)
+        line = {"color": "#102030", "width": 5.0, "pattern": "slash"}
+        staged = stage.in_frame(figure, outline,
+                                framed(line=line, canvas=[0.0, 0.0, 1.0, 1.0]), "#ffffff")
+        # 400x300: the left side's line runs x 65..85.
+        band = staged.backdrop[200:240, 66:84]
+        self.assertLess(band.min(), 30)
+        self.assertGreater(band.max(), 250)
+        np.testing.assert_allclose(staged.backdrop[300, 150], (255, 255, 255))
+
     def test_the_backdrop_fills_the_box_and_paper_the_rest(self):
         staged = stage.in_frame(self.figure, self.outline,
                                 framed(line=None, canvas=[0.0, 0.0, 1.0, 1.0]), "#405060")
@@ -112,18 +123,21 @@ class FrameTest(unittest.TestCase):
 
     def test_the_default_canvas_holds_box_line_and_visible_figure_with_a_margin(self):
         canvas = stage.frame_canvas_share(
-            stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA"), framed())
+            stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA"),
+            framed(expand=True))
         # Left: the box's line at 13; top: the figure out to row 10; right and
         # bottom: the line 2 px past the delivery. 3.2 px around, rounded outward.
         np.testing.assert_allclose(canvas, [9 / 60, 6 / 80, 66 / 60, 86 / 80])
         layers = stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA")
         kept_in = stage.frame_canvas_share(*layers, framed(expand=False))
         np.testing.assert_allclose(kept_in, [9 / 60, 6 / 80, 1.0, 1.0])
-        right_only = stage.frame_canvas_share(*layers, framed(expand={"right": False}))
+        right_only = stage.frame_canvas_share(*layers, framed(expand={
+            "top": True, "right": False, "bottom": True, "left": True}))
         np.testing.assert_allclose(right_only, [9 / 60, 6 / 80, 1.0, 86 / 80])
-        dragged = stage.frame_canvas_share(*layers, framed(canvas=[None, -0.25, 1.5, None]))
+        dragged = stage.frame_canvas_share(
+            *layers, framed(canvas=[None, -0.25, 1.5, None], expand=True))
         np.testing.assert_allclose(dragged, [9 / 60, -0.25, 1.5, 86 / 80])
-        staged = stage.in_frame(self.figure, self.outline, framed(), "#ffffff")
+        staged = stage.in_frame(self.figure, self.outline, framed(expand=True), "#ffffff")
         self.assertEqual(staged.picture.shape, (round(canvas[3] * 80) - round(canvas[1] * 80),
                                                 round(canvas[2] * 60) - round(canvas[0] * 60), 3))
 

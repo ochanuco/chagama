@@ -74,7 +74,9 @@ A `stage` request's `frame` sets the delivery in a square panel:
   widths are percent of its longest side.
 - The canvas is painted `paper`, the box filled with the request's
   `backdrop` rendered at the box's size, and the `line` straddles the box's
-  sides with the `rim` along both its edges (either null or width 0 for
+  sides (its `pattern` `solid`, or `slash`: `FRAME_SLASH` pairs of "/" in
+  the line colour on the paper colour, the same direction on every side)
+  with the `rim` along both its edges (either null or width 0 for
   none, an omitted color or width the default); together they are the
   border.
 - A `cut` side ends the figure and outline at the border's inner edge, the
@@ -90,7 +92,7 @@ A `stage` request's `frame` sets the delivery in a square panel:
   is the box out to the border's outer edge with the visible figure and
   outline, `FRAME_MARGIN_PCT` around, rounded outward, and kept within the
   delivery's canvas where `expand` (one boolean, or `{top, right, bottom,
-  left}` with omitted sides true) is false.
+  left}`, `FRAME_EXPAND` (false) where omitted) is false.
   The worker records the frame with that canvas and reports it in
   `resolved_options`.
 - `dof` lays the source depth where the frame put the delivery's canvas.
