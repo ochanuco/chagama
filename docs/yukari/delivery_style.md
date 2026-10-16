@@ -90,7 +90,7 @@ A `stage` request's `frame` sets the delivery in a square panel:
   is the box out to the border's outer edge with the visible figure and
   outline, `FRAME_MARGIN_PCT` around, rounded outward, and kept within the
   delivery's canvas where `expand` (one boolean, or `{top, right, bottom,
-  left}` with omitted sides true) is false.
+  left}`, `FRAME_EXPAND` (false) where omitted) is false.
   The worker records the frame with that canvas and reports it in
   `resolved_options`.
 - `dof` lays the source depth where the frame put the delivery's canvas.

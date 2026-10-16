@@ -112,18 +112,21 @@ class FrameTest(unittest.TestCase):
 
     def test_the_default_canvas_holds_box_line_and_visible_figure_with_a_margin(self):
         canvas = stage.frame_canvas_share(
-            stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA"), framed())
+            stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA"),
+            framed(expand=True))
         # Left: the box's line at 13; top: the figure out to row 10; right and
         # bottom: the line 2 px past the delivery. 3.2 px around, rounded outward.
         np.testing.assert_allclose(canvas, [9 / 60, 6 / 80, 66 / 60, 86 / 80])
         layers = stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA")
         kept_in = stage.frame_canvas_share(*layers, framed(expand=False))
         np.testing.assert_allclose(kept_in, [9 / 60, 6 / 80, 1.0, 1.0])
-        right_only = stage.frame_canvas_share(*layers, framed(expand={"right": False}))
+        right_only = stage.frame_canvas_share(*layers, framed(expand={
+            "top": True, "right": False, "bottom": True, "left": True}))
         np.testing.assert_allclose(right_only, [9 / 60, 6 / 80, 1.0, 86 / 80])
-        dragged = stage.frame_canvas_share(*layers, framed(canvas=[None, -0.25, 1.5, None]))
+        dragged = stage.frame_canvas_share(
+            *layers, framed(canvas=[None, -0.25, 1.5, None], expand=True))
         np.testing.assert_allclose(dragged, [9 / 60, -0.25, 1.5, 86 / 80])
-        staged = stage.in_frame(self.figure, self.outline, framed(), "#ffffff")
+        staged = stage.in_frame(self.figure, self.outline, framed(expand=True), "#ffffff")
         self.assertEqual(staged.picture.shape, (round(canvas[3] * 80) - round(canvas[1] * 80),
                                                 round(canvas[2] * 60) - round(canvas[0] * 60), 3))
 

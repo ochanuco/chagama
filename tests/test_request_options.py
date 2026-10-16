@@ -355,7 +355,7 @@ class StageArgumentsTest(unittest.TestCase):
             "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "out"},
             "line": {"color": "#885b80", "width": 0.6},
             "rim": {"color": "#2e2236", "width": 0.25}, "paper": "#ffffff",
-            "canvas": None, "expand": True, "strokes": []})
+            "canvas": None, "expand": False, "strokes": []})
         frame = stage_arguments({"frame": {
             "box": [0, 0, 1, 1], "line": {"color": "#AABBCC", "width": 0}, "rim": None,
             "canvas": [-0.1, -0.1, 1.1, 1.1],
@@ -370,10 +370,10 @@ class StageArgumentsTest(unittest.TestCase):
         self.assertEqual(frame["line"], {"color": "#885b80", "width": 1.0})
         self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
         frame = stage_arguments({"frame": {"box": [0, 0, 1, 1], "canvas": [None, -0.1, None, None],
-                                           "expand": {"right": False}}})["frame"]
+                                           "expand": {"left": True}}})["frame"]
         self.assertEqual(frame["canvas"], [None, -0.1, None, None])
         self.assertEqual(frame["expand"],
-                         {"top": True, "right": False, "bottom": True, "left": True})
+                         {"top": False, "right": False, "bottom": False, "left": True})
         self.assertIsNone(stage_arguments({"frame": {
             "box": [0, 0, 1, 1], "canvas": [None, None, None, None]}})["frame"]["canvas"])
 
