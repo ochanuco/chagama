@@ -140,12 +140,10 @@ What one attempt records:
 - `claimed_at` when the claim response returned, `finished_at` when the
   final PATCH returned.
 - Per prompt: `submitted_at`, `outputs_ready_at` (the poll that saw the
-  finished history entry) and `ingested_at` (outputs registered in chimera;
-  null for the pose-detect prompt). `execution_start_at`, `execution_end_at`,
+  finished history entry) and `ingested_at` (outputs registered in chimera). `execution_start_at`, `execution_end_at`,
   the cached node ids and `status` come from the history entry's
   `status.messages`. A prompt picked up again after a restart is
-  `resumed: true` with no `submitted_at`. `purpose` is `render`, or
-  `pose_detect` for repair's DWPose pass.
+  `resumed: true` with no `submitted_at`. `purpose` is `render`.
 - Per node: `started_at` at the `executing` event for it, `ended_at` at the
   next `executing`, `steps_total` and `step_ms` (gaps between consecutive
   `progress` events, the first measured from the node's start) from ComfyUI's
