@@ -78,13 +78,17 @@ A `stage` request's `frame` sets the delivery in a square panel:
   none, an omitted color or width the default); together they are the
   border.
 - A `cut` side ends the figure and outline at the border's inner edge, the
-  half-plane running past the box; an `out` side leaves them over it.
+  half-plane running past the box; an `out` side leaves them over the
+  border; a `behind` side keeps them on both sides of it and takes them out
+  under its strip (the side's border out to the corners), so the border
+  lies over the figure.
 - `strokes` are round pens applied in order: an `erase` multiplies what is
   kept by one minus its anti-aliased coverage, a `restore` adds its
   coverage back, never past the figure's own alpha.
 - Pixels count by their centres, so cuts, line and box are hard-edged.
 - Without `canvas` it is the box out to the border's outer edge with the
-  visible figure and outline, `FRAME_MARGIN_PCT` around, rounded outward.
+  visible figure and outline, `FRAME_MARGIN_PCT` around, rounded outward,
+  and kept within the delivery's canvas when `expand` is false.
   The worker records the frame with that canvas and reports it in
   `resolved_options`.
 - `dof` lays the source depth where the frame put the delivery's canvas.

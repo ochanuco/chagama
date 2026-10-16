@@ -27,6 +27,7 @@ from ..domain.yukari.delivery_style import (
     DOF_SCOPE,
     DOF_VIEWFINDER,
     FRAME_COORD_RANGE,
+    FRAME_EXPAND,
     FRAME_LINE,
     FRAME_MARGIN_PCT,
     FRAME_PAPER,
@@ -261,6 +262,7 @@ def _stage_block() -> dict:
             "line_width_max": OUTLINE_WIDTH_MAX_PCT,
             "paper": FRAME_PAPER,
             "margin": FRAME_MARGIN_PCT,
+            "expand": FRAME_EXPAND,
             "range": list(FRAME_COORD_RANGE),
             "stroke_modes": list(FRAME_STROKE_MODES),
             "stroke_width_max": FRAME_STROKE_WIDTH_MAX_PCT,
@@ -271,7 +273,8 @@ def _stage_block() -> dict:
                     "fills. box and canvas are [x0, y0, x1, y1] shares of the "
                     "delivery's canvas; the rim edges both sides of the line; a cut "
                     "side clips the figure at the border's inner edge, an out side "
-                    "lets it over the border; strokes erase or "
+                    "lets it over the border, a behind side keeps it on both sides "
+                    "of the border with the border over it; strokes erase or "
                     "restore the figure in order. Widths are percent of the "
                     "delivery's longest side",
         },
