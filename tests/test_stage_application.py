@@ -92,9 +92,11 @@ class Notifier:
 
 
 def services_for(cls, management, directory):
+    extra = {"image_size": lambda data: (1448, 1808)} if cls is DofServices else {}
     return cls(management=management, comfyui=ComfyFake(),
                git_metadata=lambda: {"commit": "c", "dirty": False},
-               notifier=Notifier(), output_root=Path(directory), emit=lambda m: None)
+               notifier=Notifier(), output_root=Path(directory), emit=lambda m: None,
+               **extra)
 
 
 def node(services, class_type):

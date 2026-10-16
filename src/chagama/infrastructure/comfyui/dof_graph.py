@@ -14,6 +14,7 @@ VIEWFINDER_SUFFIX = "-viewfinder"
 
 def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
               prefix: str, *, depth_image: str | None, source_image: str | None,
+              source_size: tuple[int, int] | None = None,
               focus: tuple[float, float], f_number: float, scope: dict,
               viewfinder: str, depth_place: list[float] | None = None) -> dict:
     """The dof graph over the uploaded layer images of a delivery.
@@ -46,7 +47,8 @@ def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
     if depth_image is not None:
         depth_ref = depth_nodes(graph, allocate, [], prefix, depth_image)
     else:
-        depth_ref = depth_nodes(graph, allocate, [load(source_image), 0], prefix, None)
+        depth_ref = depth_nodes(graph, allocate, [load(source_image), 0], prefix, None,
+                                source_size)
 
     blur_id = allocate()
     graph[blur_id] = {"class_type": "YukariDepthOfField", "inputs": {
@@ -79,6 +81,7 @@ def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
 
 def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
                     prefix: str, *, depth_image: str | None, photo_image: str | None,
+                    photo_size: tuple[int, int] | None = None,
                     place: tuple[float, float], height: float,
                     stand_at: tuple[float, float] | None, nearer: float,
                     focus: tuple[float, float] | str, f_number: float,
@@ -111,7 +114,8 @@ def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
     if depth_image is not None:
         depth_ref = depth_nodes(graph, allocate, [], prefix, depth_image)
     else:
-        depth_ref = depth_nodes(graph, allocate, [load(photo_image), 0], prefix, None)
+        depth_ref = depth_nodes(graph, allocate, [load(photo_image), 0], prefix, None,
+                                photo_size)
     point = focus if focus != "subject" else (0.5, 0.5)
     stand = stand_at if stand_at is not None else (0.5, 0.5)
     blur_id = allocate()

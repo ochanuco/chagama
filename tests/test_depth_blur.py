@@ -9,7 +9,7 @@ import numpy as np
 from PIL import Image
 
 from chagama.infrastructure.comfyui.dof_graph import dof_graph
-from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE, depth_resolution
 from chagama.infrastructure.imaging.depth_blur import (
     blur_layers,
     placed_depth,
@@ -197,10 +197,12 @@ class DofGraphTest(unittest.TestCase):
     def test_without_a_stored_depth_it_is_built_from_the_source_and_saved(self):
         graph = dof_graph("figure.png", "outline.png", None, "dof-g",
                           depth_image=None, source_image="source.png",
-                          focus=(0.5, 0.5), f_number=2.8, scope=ALL, viewfinder="off")
+                          focus=(0.5, 0.5), f_number=2.8, scope=ALL, viewfinder="off",
+                          source_size=(3000, 4000))
         [(depth_id, depth)] = nodes_of(graph, DEPTH_NODE)
         loads = {node["inputs"]["image"]: key for key, node in nodes_of(graph, "LoadImage")}
         self.assertEqual(depth["inputs"]["image"], [loads["source.png"], 0])
+        self.assertEqual(depth["inputs"]["resolution"], depth_resolution((3000, 4000)))
         self.assertEqual(saved(graph), ["dof-g-depth", "dof-g-dof"])
         [(_, blur)] = nodes_of(graph, "YukariDepthOfField")
         self.assertNotIn("backdrop", blur["inputs"])

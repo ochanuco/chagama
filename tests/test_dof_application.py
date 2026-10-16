@@ -96,7 +96,8 @@ def run(management=None, **kwargs):
         services = DofServices(
             management=management, comfyui=ComfyFake(),
             git_metadata=lambda: {"commit": "c", "dirty": False},
-            notifier=Notifier(), output_root=Path(directory), emit=lambda m: None)
+            notifier=Notifier(), output_root=Path(directory), emit=lambda m: None,
+            image_size=lambda data: (1448, 1808))
         options = {"focus": (0.5, 0.4), "f_number": 2.8, "scope": ALL,
                    "viewfinder": "off", **kwargs}
         result = dof("dlv", services, **options)
@@ -149,6 +150,8 @@ class DofUseCaseTest(unittest.TestCase):
         services, result = run()
         graph = services.comfyui.submitted[0]
         self.assertIn(DEPTH_NODE, classes(graph))
+        [depth] = [node for node in graph.values() if node["class_type"] == DEPTH_NODE]
+        self.assertEqual(depth["inputs"]["resolution"], 1448)
         self.assertTrue(any(name.startswith("dof-dlv-source-") and data == b"image:src"
                             for name, data in services.comfyui.uploaded))
         uploads = services.management.asset_uploads()
@@ -165,6 +168,15 @@ class DofUseCaseTest(unittest.TestCase):
         self.assertNotIn(DEPTH_NODE, classes(services.comfyui.submitted[0]))
         self.assertIn(b"depth-png", [data for _, data in services.comfyui.uploaded])
         self.assertEqual(management.asset_uploads(), [])
+
+    def test_a_depth_cut_at_a_fixed_resolution_is_recomputed(self):
+        stale = {**current_cut(), "depth": {
+            "ckpt": current_cut()["depth"]["ckpt"], "resolution": 1024}}
+        management = ManagementFake(source_assets={
+            "depth": b"old-depth", "cut": json.dumps(stale).encode()})
+        services, _ = run(management)
+        self.assertIn(DEPTH_NODE, classes(services.comfyui.submitted[0]))
+        self.assertNotIn(b"old-depth", [data for _, data in services.comfyui.uploaded])
 
     def test_the_layers_are_uploaded_into_the_graph(self):
         services, _ = run()
@@ -199,7 +211,8 @@ class DofUseCaseTest(unittest.TestCase):
             services = DofServices(
                 management=ManagementFake(), comfyui=Silent(),
                 git_metadata=lambda: {"commit": "c", "dirty": False},
-                notifier=Notifier(), output_root=Path(directory), emit=lambda m: None)
+                notifier=Notifier(), output_root=Path(directory), emit=lambda m: None,
+            image_size=lambda data: (1448, 1808))
             with self.assertRaisesRegex(SystemExit, "dof"):
                 dof("dlv", services, focus=(0.5, 0.5), f_number=2.8, scope=ALL)
 

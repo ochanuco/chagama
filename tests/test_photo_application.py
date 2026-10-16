@@ -92,7 +92,8 @@ def run(management=None, **kwargs):
         services = PhotoServices(
             management=management, comfyui=ComfyFake(),
             git_metadata=lambda: {"commit": "c", "dirty": False},
-            notifier=Notifier(), output_root=Path(directory), emit=lambda m: None)
+            notifier=Notifier(), output_root=Path(directory), emit=lambda m: None,
+            image_size=lambda data: (1448, 1808))
         options = {"photo_id": "pic", "place": (0.3, 0.9), "height": 0.6,
                    "stand_at": None, "nearer": 0.0, "focus": "subject",
                    "f_number": 2.0, **kwargs}

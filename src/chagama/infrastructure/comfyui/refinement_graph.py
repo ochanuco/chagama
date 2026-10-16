@@ -18,7 +18,21 @@ LAYER_BACKDROP_SUFFIX = "-layer-backdrop"
 RMBG_MATTE_PREFIX = "rmbg:"
 DEPTH_NODE = "DepthAnythingV2Preprocessor"
 DEPTH_CKPT = "depth_anything_v2_vitl.pth"
-DEPTH_RESOLUTION = 1024
+# Depth is inferred at the picture's own size; a picture over this many
+# pixels is shrunk to fit it, keeping its aspect ratio.
+DEPTH_MAX_PIXELS = 2048 * 2560
+DEPTH_MIN_RESOLUTION = 64
+
+
+def depth_resolution(size: tuple[int, int]) -> int:
+    """The `resolution` input of the depth node (the target short side) for a
+    picture of `size`: its own short side, or the short side of it shrunk to
+    DEPTH_MAX_PIXELS. Never above the picture's own, rounded down."""
+    width, height = size
+    short = min(width, height)
+    if width * height > DEPTH_MAX_PIXELS:
+        short = int(short * (DEPTH_MAX_PIXELS / (width * height)) ** 0.5)
+    return max(short, DEPTH_MIN_RESOLUTION)
 
 
 def sizes(width: int, height: int, longest_side: int) -> tuple[int, int]:
@@ -83,12 +97,12 @@ def see_through_node(graph: dict, allocate: Callable[[], str], image_ref: list,
     return [node_id, 0]
 
 
-def _depth_nodes(graph: dict, allocate: Callable[[], str], image_ref: list
-                 ) -> list:
+def _depth_nodes(graph: dict, allocate: Callable[[], str], image_ref: list,
+                 size: tuple[int, int]) -> list:
     depth_id = allocate()
     graph[depth_id] = {"class_type": DEPTH_NODE, "inputs": {
         "image": image_ref, "ckpt_name": DEPTH_CKPT,
-        "resolution": DEPTH_RESOLUTION}}
+        "resolution": depth_resolution(size)}}
     return [depth_id, 0]
 
 

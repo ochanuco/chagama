@@ -53,7 +53,7 @@ class LightGraphTest(unittest.TestCase):
     def setUp(self):
         source = copy.deepcopy(SOURCE)
         self.graph = light_graph(source, base_roles(source), "up.png", "birefnet",
-                                 "moon", "se", "light-g")
+                                 "moon", "se", "light-g", size=(1448, 1808))
         self.source = source
 
     def test_the_sources_outputs_are_removed_and_the_source_is_untouched(self):
@@ -93,6 +93,7 @@ class LightGraphTest(unittest.TestCase):
         _, light_node = find(self.graph, "YukariLight")
         self.assertEqual(load["inputs"]["image"], "up.png")
         self.assertEqual(depth["inputs"]["image"], [load_id, 0])
+        self.assertEqual(depth["inputs"]["resolution"], 1448)
         self.assertEqual(light_node["inputs"]["image"], [load_id, 0])
         self.assertEqual(light_node["inputs"]["depth"], [depth_id, 0])
         remove_id, _ = find(self.graph, "RemoveBackground")
