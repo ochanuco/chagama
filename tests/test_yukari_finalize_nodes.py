@@ -8,6 +8,7 @@ file's own path rather than relying on the working directory.
 from __future__ import annotations
 
 import io
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -363,6 +364,15 @@ class NodeRunTest(unittest.TestCase):
         image, *_ = node.run(figure, figure_mask, outline, outline_mask, mode="pattern",
                              backdrop="stripes", light_scene="sunset", light_from="ne")
         self.assertEqual(image.array.shape, (1, 64, 64, 3))
+        image, staged_figure, *_ = node.run(
+            figure, figure_mask, outline, outline_mask, mode="pattern", backdrop="dots",
+            frame=json.dumps({"box": [0.25, 0.25, 1, 1], "canvas": [0, 0, 1.5, 1],
+                              "sides": {"top": "out", "right": "cut", "bottom": "cut",
+                                        "left": "cut"},
+                              "line": {"color": "#885b80", "width": 1.0},
+                              "paper": "#ffffff", "strokes": []}))
+        self.assertEqual(image.array.shape, (1, 64, 96, 3))
+        self.assertEqual(staged_figure.array.shape, (1, 64, 96, 4))
         photo = image_tensor(np.full((48, 80, 3), 120, np.uint8))
         image, staged_figure, _, backdrop = node.run(
             figure, figure_mask, outline, outline_mask, mode="photo", photo=photo,

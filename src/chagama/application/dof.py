@@ -60,30 +60,45 @@ def _layer_roles(parameters: dict) -> list[str]:
     return roles
 
 
-def _setting(management, context: dict) -> tuple[str | None, dict | None]:
-    """Where the picture's layers stand: ("photo", the stage parameters)
-    when a stage in its lineage set them in a photo, else (the delivery's
-    own source, None) for layers at the delivery's canvas."""
+def _setting(management, context: dict
+             ) -> tuple[str | None, dict | None, list[float] | None]:
+    """Where the picture's layers stand: ("photo", the stage parameters,
+    None) when a stage in its lineage set them in a photo, else (the
+    delivery's own source, None, the framed stage's canvas when a frame
+    moved the delivery's canvas)."""
     record = context
+    canvas = None
     for _ in range(SETTING_HOPS):
         parameters = record["request"].get("parameters") or {}
         kind = parameters.get("kind")
         if kind == "stage" and parameters.get("photo"):
-            return "photo", parameters
+            return "photo", parameters, None
+        if kind == "stage" and parameters.get("frame"):
+            canvas = parameters["frame"].get("canvas")
         if kind == "deliver":
             return (parameters.get("base_generation")
-                    or (record.get("refines_generation") or {}).get("id")), None
+                    or (record.get("refines_generation") or {}).get("id")), None, canvas
         if kind not in ("stage", "lighting") or not parameters.get("base_generation"):
             break
         record = management.request(
             "GET", f"/api/v1/generations/{parameters['base_generation']}/context")
-    return None, None
+    return None, None, None
+
+
+def _depth_place(canvas: list[float] | None) -> list[float] | None:
+    """The delivery's canvas as shares of a framed `canvas` (itself shares
+    of the delivery's)."""
+    if canvas is None:
+        return None
+    x0, y0, x1, y1 = canvas
+    return [-x0 / (x1 - x0), -y0 / (y1 - y0), (1 - x0) / (x1 - x0), (1 - y0) / (y1 - y0)]
 
 
 def _check_source(services: DofServices, generation_id: str,
-                  context: dict) -> tuple[str, dict | None, list[str]]:
-    """The delivery's own source (or "photo" and the stage parameters) and
-    the layer roles the picture carries."""
+                  context: dict) -> tuple[str, dict | None, list[float] | None, list[str]]:
+    """The delivery's own source (or "photo" and the stage parameters), the
+    framed canvas when there is one, and the layer roles the picture
+    carries."""
     request = context["request"]
     parameters = request.get("parameters") or {}
     if request.get("kind") == "dof" or parameters.get("kind") == "dof":
@@ -99,10 +114,10 @@ def _check_source(services: DofServices, generation_id: str,
                services.management.list_assets(generation_id)}
     if not set(roles) <= present:
         raise SystemExit(NO_LAYERS)
-    source, staged = _setting(services.management, context)
+    source, staged, canvas = _setting(services.management, context)
     if not source:
         raise SystemExit(NO_LAYERS)
-    return source, staged, roles
+    return source, staged, canvas, roles
 
 
 def _request_parameters(generation_id: str, *, focus: tuple[float, float],
@@ -134,7 +149,7 @@ def dof(generation_id: str, services: DofServices, *,
     if context is None:
         context = management.request(
             "GET", f"/api/v1/generations/{generation_id}/context")
-    source_id, staged, roles = _check_source(services, generation_id, context)
+    source_id, staged, framed, roles = _check_source(services, generation_id, context)
     if staged is None and photo_blur is not None:
         raise SystemExit(PHOTO_ONLY)
     if staged is not None:
@@ -171,7 +186,7 @@ def dof(generation_id: str, services: DofServices, *,
             uploaded["layer-figure"], uploaded["layer-outline"],
             uploaded.get("layer-backdrop"), prefix, depth_image=depth_image,
             source_image=source_image, focus=focus, f_number=f_number, scope=scope,
-            viewfinder=viewfinder)
+            viewfinder=viewfinder, depth_place=_depth_place(framed))
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)

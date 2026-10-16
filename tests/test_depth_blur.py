@@ -12,6 +12,7 @@ from chagama.infrastructure.comfyui.dof_graph import dof_graph
 from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 from chagama.infrastructure.imaging.depth_blur import (
     blur_layers,
+    placed_depth,
     blur_layers_png,
     sharp_reach_per_f,
 )
@@ -158,6 +159,17 @@ def build(**overrides) -> dict:
                   f_number=2.8, scope=ALL, viewfinder="off")
     kwargs.update(overrides)
     return dof_graph("figure.png", "outline.png", "backdrop.png", "dof-g", **kwargs)
+
+
+class PlacedDepthTest(unittest.TestCase):
+    def test_the_depth_fills_the_canvas_or_its_place_in_it(self):
+        depth = np.full((10, 8), 200, np.float32)
+        self.assertEqual(placed_depth(depth, 16, 20).shape, (20, 16))
+        placed = placed_depth(depth, 16, 20, (0.25, -0.5, 0.75, 0.5))
+        self.assertEqual(placed.shape, (20, 16))
+        self.assertEqual(placed[5, 8], 200)
+        self.assertEqual(placed[5, 2], 0)
+        self.assertEqual(placed[15, 8], 0)
 
 
 class DofGraphTest(unittest.TestCase):

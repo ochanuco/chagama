@@ -26,6 +26,17 @@ from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
     DOF_VIEWFINDER,
+    FRAME_COORD_RANGE,
+    FRAME_LINE,
+    FRAME_MARGIN_PCT,
+    FRAME_PAPER,
+    FRAME_POINTS_MAX,
+    FRAME_SIDE_CHOICES,
+    FRAME_SIDE_DEFAULTS,
+    FRAME_STROKE_MODES,
+    FRAME_STROKE_POINTS_MAX,
+    FRAME_STROKE_WIDTH_MAX_PCT,
+    FRAME_STROKES_MAX,
     LENS_CENTER_DEFAULT,
     LENS_RADIUS,
     LENS_SHAPE,
@@ -241,6 +252,26 @@ def _stage_block() -> dict:
                   "help": "without a photo: {scene, from} tints the backdrop as a "
                           "delivery in that scene does; null for none, absent for the "
                           "nearest light redraw in the lineage"},
+        "frame": {
+            "sides": dict(FRAME_SIDE_DEFAULTS),
+            "side_values": list(FRAME_SIDE_CHOICES),
+            "line": dict(FRAME_LINE),
+            "line_width_max": OUTLINE_WIDTH_MAX_PCT,
+            "paper": FRAME_PAPER,
+            "margin": FRAME_MARGIN_PCT,
+            "range": list(FRAME_COORD_RANGE),
+            "stroke_modes": list(FRAME_STROKE_MODES),
+            "stroke_width_max": FRAME_STROKE_WIDTH_MAX_PCT,
+            "limits": {"strokes": FRAME_STROKES_MAX,
+                       "points_per_stroke": FRAME_STROKE_POINTS_MAX,
+                       "points": FRAME_POINTS_MAX},
+            "help": "without a photo: set the delivery in a square panel the backdrop "
+                    "fills. box and canvas are [x0, y0, x1, y1] shares of the "
+                    "delivery's canvas; a cut side clips the figure at its line's "
+                    "inner edge, an out side lets it over the line; strokes erase or "
+                    "restore the figure in order. Widths are percent of the "
+                    "delivery's longest side",
+        },
     }
 
 

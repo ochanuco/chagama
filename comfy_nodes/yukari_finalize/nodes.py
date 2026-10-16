@@ -207,18 +207,20 @@ class YukariDepthOfField:
             "blur_backdrop": ("BOOLEAN", {"default": True}),
         }, "optional": {
             "backdrop": ("IMAGE",),
+            "depth_place": ("STRING", {"default": ""}),
         }}
 
     def run(self, figure, figure_mask, outline, outline_mask, depth, focus_x,
             focus_y, f_number, blur_figure, blur_outline, blur_backdrop,
-            backdrop=None):
+            backdrop=None, depth_place=""):
         scope = {"figure": blur_figure, "outline": blur_outline,
                  "backdrop": blur_backdrop}
         data = depth_blur.blur_layers_png(
             bridge.loaded_rgba_png(figure, figure_mask),
             bridge.loaded_rgba_png(outline, outline_mask),
             bridge.image_to_png(backdrop) if backdrop is not None else None,
-            bridge.image_to_png(depth), focus_x, focus_y, f_number, scope)
+            bridge.image_to_png(depth), focus_x, focus_y, f_number, scope,
+            depth_place=json.loads(depth_place) if depth_place else None)
         return (bridge.png_to_image(data, "RGB" if backdrop is not None else "RGBA"),)
 
 
@@ -384,11 +386,12 @@ class YukariStage:
             "height": ("FLOAT", {"default": 0.7, "min": 0.05, "max": 1.5, "step": 0.01}),
             "light_scene": ("STRING", {"default": ""}),
             "light_from": ("STRING", {"default": ""}),
+            "frame": ("STRING", {"default": ""}),
         }}
 
     def run(self, figure, figure_mask, outline, outline_mask, mode, photo=None,
             backdrop="", shadow_from="", outlines="", place_x=0.5, place_y=0.95,
-            height=0.7, light_scene="", light_from=""):
+            height=0.7, light_scene="", light_from="", frame=""):
         if mode == "photo" and photo is None:
             raise ValueError("YukariStage in photo mode needs a photo")
         picture, figure_png, outline_png, backdrop_png = staging.stage_pngs(
@@ -398,7 +401,7 @@ class YukariStage:
             backdrop=backdrop or None, shadow_from=shadow_from or None,
             outlines=json.loads(outlines) if outlines else None,
             place=(place_x, place_y), height=height, scene=light_scene or None,
-            light_from=light_from or None)
+            light_from=light_from or None, frame=json.loads(frame) if frame else None)
         return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
                 bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
 

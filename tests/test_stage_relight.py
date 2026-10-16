@@ -50,6 +50,64 @@ class PatternTest(unittest.TestCase):
         np.testing.assert_allclose(moon.picture[40, 30], (200, 60, 120))
 
 
+def framed(**frame):
+    return {"box": [0.25, 0.25, 1.0, 1.0],
+            "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"},
+            "line": {"color": "#102030", "width": 5.0}, "paper": "#ffffff",
+            "canvas": None, "strokes": [], **frame}
+
+
+class FrameTest(unittest.TestCase):
+    def setUp(self):
+        self.figure, self.outline = layers()
+        self.outline[..., 3] = 0
+
+    def test_a_cut_side_clips_at_the_line_and_an_out_side_lets_the_figure_over(self):
+        # 80x60 delivery: the line is 4 px wide, the box's left edge at x 15.
+        staged = stage.in_frame(self.figure, self.outline,
+                                framed(canvas=[0.0, 0.0, 1.0, 1.0]), "#ffffff")
+        self.assertEqual(staged.picture.shape, (80, 60, 3))
+        alpha = staged.figure_alpha
+        self.assertEqual(alpha[40, 16], 0.0)
+        self.assertEqual(alpha[40, 17], 1.0)
+        np.testing.assert_allclose(staged.picture[40, 14], (16, 32, 48))
+        # The top side is out: the figure stays above the box and over its line.
+        self.assertEqual(alpha[12, 30], 1.0)
+        np.testing.assert_allclose(staged.picture[20, 30], (200, 60, 120))
+        np.testing.assert_allclose(staged.backdrop[20, 30], (16, 32, 48))
+
+    def test_the_backdrop_fills_the_box_and_paper_the_rest(self):
+        staged = stage.in_frame(self.figure, self.outline,
+                                framed(line=None, canvas=[0.0, 0.0, 1.0, 1.0]), "#405060")
+        np.testing.assert_allclose(staged.backdrop[2, 2], (255, 255, 255))
+        np.testing.assert_allclose(staged.backdrop[30, 20], (64, 80, 96))
+
+    def test_the_default_canvas_holds_box_line_and_visible_figure_with_a_margin(self):
+        canvas = stage.frame_canvas_share(
+            stage._png(self.figure, "RGBA"), stage._png(self.outline, "RGBA"), framed())
+        # Left: the box's line at 13; top: the figure out to row 10; right and
+        # bottom: the line 2 px past the delivery. 3.2 px around, rounded outward.
+        np.testing.assert_allclose(canvas, [9 / 60, 6 / 80, 66 / 60, 86 / 80])
+        staged = stage.in_frame(self.figure, self.outline, framed(), "#ffffff")
+        self.assertEqual(staged.picture.shape, (round(canvas[3] * 80) - round(canvas[1] * 80),
+                                                round(canvas[2] * 60) - round(canvas[0] * 60), 3))
+
+    def test_strokes_erase_then_restore_in_order(self):
+        erase = {"mode": "erase", "width": 10.0, "points": [[0.5, 0.5]]}
+        restore = {"mode": "restore", "width": 10.0, "points": [[0.5, 0.5], [0.5, 0.95]]}
+        whole = [0.0, 0.0, 1.0, 1.0]
+        erased = stage.in_frame(self.figure, self.outline,
+                                framed(canvas=whole, strokes=[erase]), "#ffffff")
+        self.assertEqual(erased.figure_alpha[40, 30], 0.0)
+        self.assertEqual(erased.figure_alpha[30, 30], 1.0)
+        back = stage.in_frame(self.figure, self.outline,
+                              framed(canvas=whole, strokes=[erase, restore]), "#ffffff")
+        self.assertEqual(back.figure_alpha[40, 30], 1.0)
+        # A restore below the bottom cut brings back the figure, never more of it.
+        self.assertEqual(back.figure_alpha[69, 30], 1.0)
+        self.assertEqual(back.figure_alpha[74, 30], 0.0)
+
+
 class PhotoTest(unittest.TestCase):
     def test_figure_and_outline_scale_together_onto_the_photo(self):
         figure, outline = layers()

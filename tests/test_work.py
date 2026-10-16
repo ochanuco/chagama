@@ -536,6 +536,27 @@ class ExecuteTest(unittest.TestCase):
                 execute(services, dof_row(payload={"options": {"focus": [0, 0]}}))
             self.assertEqual(calls, [])
 
+    def test_stage_kind_reports_the_frame_as_the_stage_resolved_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            resolved = {"box": [0.1, 0.2, 1.0, 1.0], "canvas": [-0.05, -0.04, 1.05, 1.04]}
+
+            def fake_stage(generation_id, stage_services, **kwargs):
+                calls.append(kwargs)
+                return {"generation_ids": ["g5"], "frame": resolved}
+
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake()), stage=fake_stage)
+            result = execute(services, {
+                "id": "req-9", "kind": "stage", "status": "running",
+                "recipe_ref": "dev/requests-worker", "run_id": None, "attempt": 1,
+                "payload": {"generation_id": "gen-1", "options": {
+                    "backdrop": "stripes", "frame": {"box": [0.1, 0.2, 1, 1]}}}})
+            self.assertEqual(calls[0]["frame"]["sides"]["top"], "out")
+            self.assertEqual(result["resolved_options"],
+                             {"backdrop": "stripes", "frame": resolved})
+            self.assertNotIn("frame", {k for k in result if k != "resolved_options"})
+
     def test_lens_kind_maps_options_and_uses_the_lens_services(self):
         with tempfile.TemporaryDirectory() as directory:
             calls = []

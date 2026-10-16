@@ -212,6 +212,11 @@ def _stage_options_from_args(args) -> dict:
     elif args.light:
         light = _light_from_args(args)
         options["light"] = {"scene": light.scene, "from": light.direction}
+    if args.frame is not None:
+        try:
+            options["frame"] = json.loads(args.frame)
+        except json.JSONDecodeError as error:
+            raise SystemExit(f"--frame must be JSON: {error}") from error
     return options
 
 
@@ -503,6 +508,10 @@ def parser() -> argparse.ArgumentParser:
         help="without a photo: tint the backdrop to this scene "
              f"({', '.join(sorted(LIGHT_SCENES))}); 'none' for no scene "
              "(default: the nearest light redraw in the lineage)")
+    stage_parser.add_argument(
+        "--frame", metavar="JSON",
+        help="without a photo: the frame as JSON ({box, sides, line, paper, canvas, "
+             "strokes}); the backdrop fills its box")
 
     lighting_parser = commands.add_parser(
         "lighting", help="light a staged picture's figure by its backdrop")
