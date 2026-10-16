@@ -593,7 +593,12 @@ LIGHTING_STRENGTH = {"min": 0.0, "max": 1.0, "default": 0.7}
 FRAME_SIDES = ("top", "right", "bottom", "left")
 FRAME_SIDE_CHOICES = ("cut", "out", "behind")
 FRAME_SIDE_DEFAULTS = {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"}
-FRAME_LINE = {"color": "#885b80", "width": 0.6}
+FRAME_LINE = {"color": "#4a3152", "width": 0.6, "pattern": "solid"}
+FRAME_LINE_PATTERNS = ("solid", "slash")
+# The slash pattern's pairs of "/" across the line, as shares of the line's
+# width: the pair's period along the line, each slash's thickness and the
+# offset of its second slash.
+FRAME_SLASH = {"period": 2.2, "thickness": 0.14, "offset": 0.34}
 FRAME_RIM = {"color": "#2e2236", "width": 0.25}
 FRAME_PAPER = "#ffffff"
 FRAME_COORD_RANGE = (-1.0, 2.0)

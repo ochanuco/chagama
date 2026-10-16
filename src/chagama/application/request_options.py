@@ -18,6 +18,7 @@ from ..domain.yukari.delivery_style import (
     FRAME_COORD_RANGE,
     FRAME_EXPAND,
     FRAME_LINE,
+    FRAME_LINE_PATTERNS,
     FRAME_PAPER,
     FRAME_POINTS_MAX,
     FRAME_RIM,
@@ -281,15 +282,22 @@ def _frame_strokes(value: object, *, key: str) -> list[dict]:
 def _frame_band(value: object, default: Mapping, *, key: str) -> dict | None:
     if value is None:
         return None
-    if not isinstance(value, Mapping) or not set(value) <= {"color", "width"}:
-        raise ValueError(f"{key} must be null or {{\"color\", \"width\"}}, got {value!r}")
+    keys = set(default)
+    if not isinstance(value, Mapping) or not set(value) <= keys:
+        raise ValueError(f"{key} must be null or an object of {sorted(keys)}, got {value!r}")
     value = {**default, **value}
     width = _number(value["width"], key=f"{key}.width")
     if not (0 <= width <= OUTLINE_WIDTH_MAX_PCT):
         raise ValueError(f"{key}.width must be within 0..{OUTLINE_WIDTH_MAX_PCT:g}, got {width!r}")
     if width == 0:
         return None
-    return {"color": _hex_colour(value["color"], key=f"{key}.color"), "width": width}
+    band = {"color": _hex_colour(value["color"], key=f"{key}.color"), "width": width}
+    if "pattern" in value:
+        if value["pattern"] not in FRAME_LINE_PATTERNS:
+            raise ValueError(f"{key}.pattern must be one of {list(FRAME_LINE_PATTERNS)}, "
+                             f"got {value['pattern']!r}")
+        band["pattern"] = value["pattern"]
+    return band
 
 
 def _frame_argument(value: object, *, key: str = "frame") -> dict | None:

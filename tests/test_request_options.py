@@ -353,7 +353,7 @@ class StageArgumentsTest(unittest.TestCase):
         self.assertEqual(frame, {
             "box": [0.1, 0.25, 1.0, 1.0],
             "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "out"},
-            "line": {"color": "#885b80", "width": 0.6},
+            "line": {"color": "#4a3152", "width": 0.6, "pattern": "solid"},
             "rim": {"color": "#2e2236", "width": 0.25}, "paper": "#ffffff",
             "canvas": None, "expand": False, "strokes": []})
         frame = stage_arguments({"frame": {
@@ -367,7 +367,9 @@ class StageArgumentsTest(unittest.TestCase):
                          [{"mode": "restore", "width": 3.0, "points": [[0.5, 1.2]]}])
         frame = stage_arguments({"frame": {"box": [0, 0, 1, 1], "line": {"width": 1},
                                            "rim": {"color": "#000000"}}})["frame"]
-        self.assertEqual(frame["line"], {"color": "#885b80", "width": 1.0})
+        self.assertEqual(frame["line"], {"color": "#4a3152", "width": 1.0, "pattern": "solid"})
+        self.assertEqual(stage_arguments({"frame": {"box": [0, 0, 1, 1], "line": {
+            "pattern": "slash"}}})["frame"]["line"]["pattern"], "slash")
         self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
         frame = stage_arguments({"frame": {"box": [0, 0, 1, 1], "canvas": [None, -0.1, None, None],
                                            "expand": {"left": True}}})["frame"]
@@ -385,6 +387,8 @@ class StageArgumentsTest(unittest.TestCase):
                     {"box": box, "sides": {"top": "over"}}, {"box": box, "line": {"color": "red", "width": 1}},
                     {"box": box, "line": {"color": "#000000", "width": 6}},
                     {"box": box, "rim": {"color": "#000000", "alpha": 1}},
+                    {"box": box, "line": {"pattern": "dots"}},
+                    {"box": box, "rim": {"pattern": "slash"}},
                     {"box": box, "paper": "white"}, {"box": box, "zoom": 1},
                     {"box": box, "expand": "no"}, {"box": box, "expand": {"up": False}},
                     {"box": box, "expand": {"top": 0}},

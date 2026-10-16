@@ -104,6 +104,17 @@ class FrameTest(unittest.TestCase):
         # Above the box the left side does not reach: the figure stays.
         self.assertEqual(alpha[12, 17], 1.0)
 
+    def test_a_slash_line_lays_slashes_of_its_colour_on_the_paper(self):
+        figure, outline = layers(400, 300)
+        line = {"color": "#102030", "width": 5.0, "pattern": "slash"}
+        staged = stage.in_frame(figure, outline,
+                                framed(line=line, canvas=[0.0, 0.0, 1.0, 1.0]), "#ffffff")
+        # 400x300: the left side's line runs x 65..85.
+        band = staged.backdrop[200:240, 66:84]
+        self.assertLess(band.min(), 30)
+        self.assertGreater(band.max(), 250)
+        np.testing.assert_allclose(staged.backdrop[300, 150], (255, 255, 255))
+
     def test_the_backdrop_fills_the_box_and_paper_the_rest(self):
         staged = stage.in_frame(self.figure, self.outline,
                                 framed(line=None, canvas=[0.0, 0.0, 1.0, 1.0]), "#405060")

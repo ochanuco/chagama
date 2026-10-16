@@ -74,7 +74,9 @@ A `stage` request's `frame` sets the delivery in a square panel:
   widths are percent of its longest side.
 - The canvas is painted `paper`, the box filled with the request's
   `backdrop` rendered at the box's size, and the `line` straddles the box's
-  sides with the `rim` along both its edges (either null or width 0 for
+  sides (its `pattern` `solid`, or `slash`: `FRAME_SLASH` pairs of "/" in
+  the line colour on the paper colour, the same direction on every side)
+  with the `rim` along both its edges (either null or width 0 for
   none, an omitted color or width the default); together they are the
   border.
 - A `cut` side ends the figure and outline at the border's inner edge, the
