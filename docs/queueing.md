@@ -213,7 +213,7 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 
 ### Lens options
 
-- The source must be a delivered picture: a delivery, a dof picture without
+- The source must be a delivered picture: a delivery, a cut redraw, a dof picture without
   the viewfinder overlay, or a lens picture. A picture that was not
   delivered and a viewfinder picture (`viewfinder: on`, or the second output
   of `both`) are refused. A dof on a lens picture is refused too: its depth

@@ -17,9 +17,10 @@ from .ingest import (
     record_job,
     upload_generation,
 )
-from .picture_source import is_delivered
+from .picture_source import is_cut_redraw, is_delivered
 
-NOT_DELIVERED = "lens をかけられるのは納品の絵だけです。先に deliver してください"
+NOT_DELIVERED = ("lens をかけられるのは納品の絵か切り抜いた描き直し（redraw の cut）だけです。"
+                 "先に deliver してください")
 VIEWFINDER = ("ビューファインダーを重ねた絵には lens はかけられません。"
               "ビューファインダー無しの dof の絵を指定してください")
 
@@ -44,11 +45,11 @@ def _output_index(context: dict) -> int | None:
 
 
 def _check_source(context: dict) -> None:
-    """A delivered picture, a dof picture or a lens picture, but not one that
+    """A delivered picture (or a cut redraw), a dof picture or a lens picture, but not one that
     carries the viewfinder overlay, which a lens would bend along with it."""
     request = context["request"]
     parameters = request.get("parameters") or {}
-    if not is_delivered(request):
+    if not is_delivered(request) and not is_cut_redraw(parameters):
         raise SystemExit(NOT_DELIVERED)
     if parameters.get("kind") == "dof":
         viewfinder = parameters.get("viewfinder", "off")

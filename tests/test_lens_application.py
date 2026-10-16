@@ -85,8 +85,13 @@ class LensSourceTest(unittest.TestCase):
     def test_a_picture_that_was_not_delivered_is_refused(self):
         for kind, parameters in (("generate", {}),
                                  ("redraw", {"kind": "redraw", "method": "canvas"})):
-            with self.subTest(kind=kind), self.assertRaisesRegex(SystemExit, "納品の絵だけ"):
+            with self.subTest(kind=kind), self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
                 run(ManagementFake(request_kind=kind, parameters=parameters))
+
+    def test_a_cut_redraw_is_accepted(self):
+        cut = {"kind": "redraw", "method": "canvas", "cut": True}
+        _, result = run(ManagementFake(request_kind="redraw", parameters=cut))
+        self.assertEqual(result["generation_ids"], ["lens-1"])
 
     def test_dof_and_lens_pictures_are_accepted(self):
         for kind, parameters in (
