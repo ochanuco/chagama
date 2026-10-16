@@ -7,9 +7,6 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..domain.repair.controlnet import CONTROL_MODELS, DEFAULT_CONTROL_STRENGTH
-from ..domain.repair.loras import DEFAULT_PART_LORA_WEIGHT
-from ..domain.repair.models import MODELS
 from ..domain.yukari.delivery_style import (
     DELIVER_DEFAULTS,
     DOF_F_NUMBER,
@@ -88,21 +85,6 @@ _KNOWN_REDRAW_OPTIONS = {
     "light": frozenset({"scene", "from"}),
 }
 
-_KNOWN_REPAIR_OPTIONS = frozenset({
-    "parts", "regions", "denoise", "seeds", "size", "pad", "lora", "model",
-    "control", "control_strength",
-})
-
-_KNOWN_MASKED_REDRAW_OPTIONS = frozenset({
-    "regions", "prompt_patch", "denoise", "mask_padding", "mask_feather",
-    "size", "seeds",
-})
-
-_REPAIR_PARTS = frozenset({"hands", "feet"})
-
-_MASKED_REDRAW_PROMPT_PATCH_MAX_LENGTH = 4096
-_MASKED_REDRAW_SEEDS_MAX = 16
-
 # `generation.recipe` -> its published `dials` block (see domain/*/dials.py).
 _RECIPE_DIALS = {
     "yukari": DIALS,
@@ -112,8 +94,6 @@ _RECIPE_DIALS = {
 # functions. Public: interfaces/cli.py reads them too, to resolve the same
 # keys' words from its own parsed args.
 REDRAW_DIAL_KEYS = ("denoise",)
-REPAIR_DIAL_KEYS = ("denoise", "lora")
-_MASKED_REDRAW_DIAL_KEYS = ("denoise",)
 
 
 def dials_scope(recipe: str, scope: str) -> Mapping[str, Mapping[str, float]]:
@@ -141,16 +121,6 @@ def _resolved_options(options: Mapping, arguments: Mapping,
     """
     return {key: (arguments[key] if key in dial_keys else value)
            for key, value in options.items()}
-
-
-def _parts_argument(value: object, *, key: str = "parts") -> list[str]:
-    if (not isinstance(value, list)
-            or any(not isinstance(part, str) for part in value)):
-        raise ValueError(f"{key} must be a list of strings, got {value!r}")
-    invalid = sorted(set(value) - _REPAIR_PARTS)
-    if invalid:
-        raise ValueError(f"unknown {key}: {invalid}")
-    return value
 
 
 def _regions_argument(value: object, *, key: str = "regions") -> list[list[float]]:
@@ -352,75 +322,11 @@ def _denoise_argument(value: object, *, key: str = "denoise", max_value: float =
     return float(value)
 
 
-def _pixel_argument(value: object, *, key: str, max_value: float) -> float:
-    if not (isinstance(value, (int, float)) and not isinstance(value, bool)):
-        raise ValueError(f"{key} must be a number, got {type(value).__name__}")
-    if not (0 <= value <= max_value):
-        raise ValueError(f"{key} must be between 0 and {max_value}, got {value!r}")
-    return float(value)
-
-
-def _pad_argument(value: object, *, key: str = "pad") -> float:
-    if not (isinstance(value, (int, float)) and not isinstance(value, bool)):
-        raise ValueError(f"{key} must be a number, got {type(value).__name__}")
-    if not (0.5 <= value <= 3):
-        raise ValueError(f"{key} must be between 0.5 and 3, got {value!r}")
-    return float(value)
-
-
 def _keep_strength_argument(value: object, *, key: str = "keep_strength") -> float:
     if not (isinstance(value, (int, float)) and not isinstance(value, bool)):
         raise ValueError(f"{key} must be a number, got {type(value).__name__}")
     if not (0 < value < 1):
         raise ValueError(f"{key} must be > 0 and < 1, got {value!r}")
-    return float(value)
-
-
-def _crop_size_argument(value: object, *, key: str = "size") -> int:
-    if not isinstance(value, int) or isinstance(value, bool):
-        raise ValueError(f"{key} must be an integer, got {type(value).__name__}")
-    if value < 256 or value % 8 != 0:
-        raise ValueError(f"{key} must be a multiple of 8, at least 256, got {value!r}")
-    return value
-
-
-def _part_lora_argument(value: object, *, key: str = "lora") -> float | None:
-    if value is True:
-        return DEFAULT_PART_LORA_WEIGHT
-    if value is None:
-        return None
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
-        if not (0 < value <= 2):
-            raise ValueError(f"{key} must be > 0 and <= 2, got {value!r}")
-        return float(value)
-    raise ValueError(
-        f"{key} must be null, true or a number, got {type(value).__name__}")
-
-
-def _model_argument(value: object, *, key: str = "model") -> str | None:
-    if value is None:
-        return None
-    if value not in MODELS:
-        valid = ", ".join(repr(word) for word in sorted(MODELS))
-        raise ValueError(f"{key} must be null or one of {valid}, got {value!r}")
-    return value
-
-
-def _control_argument(value: object, *, key: str = "control") -> str | None:
-    if value is None:
-        return None
-    if value not in CONTROL_MODELS:
-        valid = ", ".join(repr(word) for word in sorted(CONTROL_MODELS))
-        raise ValueError(f"{key} must be null or one of {valid}, got {value!r}")
-    return value
-
-
-def _control_strength_argument(value: object, *,
-                               key: str = "control_strength") -> float:
-    if not (isinstance(value, (int, float)) and not isinstance(value, bool)):
-        raise ValueError(f"{key} must be a number, got {type(value).__name__}")
-    if not (0 < value <= 2):
-        raise ValueError(f"{key} must be > 0 and <= 2, got {value!r}")
     return float(value)
 
 
@@ -829,98 +735,3 @@ def lighting_arguments(options: Mapping) -> dict:
             "scene": scene}
 
 
-def repair_arguments(options: Mapping,
-                     dials: Mapping[str, Mapping[str, float]] | None = None) -> dict:
-    """Validate a repair request's `options` and map it to repair() kwargs.
-
-    Unknown keys or a wrong type raise ValueError naming the offending key.
-    """
-    if not isinstance(options, Mapping):
-        raise ValueError(
-            f"repair options must be an object, got {type(options).__name__}")
-    unknown = sorted(set(options) - _KNOWN_REPAIR_OPTIONS)
-    if unknown:
-        raise ValueError(f"unknown repair options keys: {unknown}")
-    dials = dials or {}
-
-    parts = _parts_argument(options.get("parts", ["hands", "feet"]))
-    parsed_regions = _regions_argument(options.get("regions", []))
-
-    if not parts and not parsed_regions:
-        raise ValueError("repair needs at least one of parts or regions")
-
-    denoise = _denoise_argument(
-        resolve_dial("denoise", options.get("denoise", 0.6), dials))
-
-    seeds = options.get("seeds", [1, 2, 3, 4])
-    if (not isinstance(seeds, list) or not seeds
-            or any(not isinstance(seed, int) or isinstance(seed, bool)
-                   for seed in seeds)):
-        raise ValueError(f"seeds must be a non-empty array of integers, got {seeds!r}")
-
-    size = _crop_size_argument(options.get("size", 1024))
-    pad = _pad_argument(options.get("pad", 1.0))
-    lora = _part_lora_argument(resolve_dial("lora", options.get("lora"), dials))
-    model = _model_argument(options.get("model"))
-    control = _control_argument(options.get("control"))
-    control_strength = _control_strength_argument(
-        options.get("control_strength", DEFAULT_CONTROL_STRENGTH))
-
-    return {
-        "parts": parts, "regions": parsed_regions, "denoise": denoise,
-        "seeds": seeds, "size": size, "pad": pad, "lora": lora, "model": model,
-        "control": control, "control_strength": control_strength,
-    }
-
-
-def masked_redraw_arguments(options: Mapping,
-                            dials: Mapping[str, Mapping[str, float]] | None = None) -> dict:
-    """Validate a masked_redraw request's `options` and map it to
-    masked_redraw() kwargs.
-
-    `dials` is the source recipe's `dials.repair` vocabulary; masked_redraw
-    has no `dials.masked_redraw` of its own and shares repair's `denoise`.
-    """
-    if not isinstance(options, Mapping):
-        raise ValueError(
-            f"masked_redraw options must be an object, got {type(options).__name__}")
-    unknown = sorted(set(options) - _KNOWN_MASKED_REDRAW_OPTIONS)
-    if unknown:
-        raise ValueError(f"unknown masked_redraw options keys: {unknown}")
-    dials = dials or {}
-
-    regions = _regions_argument(options.get("regions", []))
-    if not regions:
-        raise ValueError("masked_redraw needs at least one region")
-
-    prompt_patch = options.get("prompt_patch")
-    if not isinstance(prompt_patch, str) or not prompt_patch:
-        raise ValueError(
-            f"prompt_patch must be a non-empty string, got {prompt_patch!r}")
-    if len(prompt_patch) > _MASKED_REDRAW_PROMPT_PATCH_MAX_LENGTH:
-        raise ValueError(
-            "prompt_patch must be at most "
-            f"{_MASKED_REDRAW_PROMPT_PATCH_MAX_LENGTH} characters, got {len(prompt_patch)}")
-
-    denoise = _denoise_argument(
-        resolve_dial("denoise", options.get("denoise", 0.45), dials), max_value=0.75)
-    mask_padding = _pixel_argument(
-        options.get("mask_padding", 0), key="mask_padding", max_value=512)
-    mask_feather = _pixel_argument(
-        options.get("mask_feather", 32), key="mask_feather", max_value=256)
-    size = _crop_size_argument(options.get("size", 1024))
-
-    seeds = options.get("seeds", [1, 2, 3, 4])
-    if (not isinstance(seeds, list) or not seeds
-            or any(not isinstance(seed, int) or isinstance(seed, bool)
-                   for seed in seeds)):
-        raise ValueError(f"seeds must be a non-empty array of integers, got {seeds!r}")
-    if len(seeds) > _MASKED_REDRAW_SEEDS_MAX:
-        raise ValueError(
-            f"seeds must have at most {_MASKED_REDRAW_SEEDS_MAX} entries, got {len(seeds)}")
-
-    return {
-        "regions": regions, "prompt_patch": prompt_patch, "denoise": denoise,
-        "mask_padding": mask_padding, "mask_feather": mask_feather, "size": size,
-        "seeds": seeds,
-    }

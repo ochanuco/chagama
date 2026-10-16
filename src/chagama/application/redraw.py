@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..domain.generation.models import PromptPair
-from ..domain.repair.regions import rects_from_fractions
+from ..domain.regions import rects_from_fractions
 from ..domain.yukari import delivery_style
 from ..domain.yukari.delivery_style import Light
 from ..domain.yukari.prompt_style import HEIGHT, WIDTH

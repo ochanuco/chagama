@@ -76,49 +76,6 @@ class CliTest(unittest.TestCase):
                          {"interval": 5.0, "once": True, "dry_run": True,
                           "publish_catalog": True})
 
-    @patch.object(cli, "repair")
-    @patch.object(cli, "ChimeraClient")
-    def test_repair_dispatches_without_network(self, chimera_class, run_repair):
-        cli.main(["repair", "gen-1", "--parts", "hands, feet",
-                  "--region", "0.1,0.2,0.3,0.4", "--region", "0.5,0.5,0.9,0.9",
-                  "--denoise", "0.7", "--seeds", "1,2,3", "--size", "768",
-                  "--pad", "1.5"])
-        args, kwargs = run_repair.call_args
-        self.assertEqual(args[0], "gen-1")
-        self.assertIs(args[1].management, chimera_class.return_value)
-        self.assertEqual(kwargs["parts"], ["hands", "feet"])
-        self.assertEqual(kwargs["regions"], [[0.1, 0.2, 0.3, 0.4], [0.5, 0.5, 0.9, 0.9]])
-        self.assertEqual(kwargs["denoise"], 0.7)
-        self.assertEqual(kwargs["seeds"], [1, 2, 3])
-        self.assertEqual(kwargs["size"], 768)
-        self.assertEqual(kwargs["pad"], 1.5)
-
-    @patch.object(cli, "repair")
-    @patch.object(cli, "ChimeraClient")
-    def test_repair_defaults_need_no_flags(self, chimera_class, run_repair):
-        cli.main(["repair", "gen-1"])
-        args, kwargs = run_repair.call_args
-        self.assertEqual(kwargs["parts"], ["hands", "feet"])
-        self.assertEqual(kwargs["regions"], [])
-        self.assertEqual(kwargs["denoise"], 0.6)
-        self.assertEqual(kwargs["seeds"], [1, 2, 3, 4])
-        self.assertEqual(kwargs["size"], 1024)
-        self.assertEqual(kwargs["pad"], 1.0)
-        self.assertIsNone(kwargs["model"])
-
-    @patch.object(cli, "repair")
-    @patch.object(cli, "ChimeraClient")
-    def test_repair_model_flag_dispatches_without_network(
-            self, chimera_class, run_repair):
-        cli.main(["repair", "gen-1", "--model", "anima"])
-        kwargs = run_repair.call_args.kwargs
-        self.assertEqual(kwargs["model"], "anima")
-
-    def test_repair_unknown_model_is_rejected_by_argparse(self):
-        with redirect_stderr(io.StringIO()):
-            with self.assertRaises(SystemExit):
-                cli.main(["repair", "gen-1", "--model", "nope"])
-
     @patch.object(cli, "deliver")
     @patch.object(cli, "ChimeraClient")
     def test_deliver_without_flags_runs_the_recipe_defaults(
@@ -300,36 +257,6 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs["denoise"], 0.7)
         self.assertIsNone(kwargs["context"])
 
-    @patch.object(cli, "dials_scope")
-    @patch.object(cli, "fetch_source")
-    @patch.object(cli, "repair")
-    @patch.object(cli, "ChimeraClient")
-    def test_repair_denoise_and_lora_words_resolve_through_the_source_recipe(
-            self, chimera_class, run_repair, fetch_source, dials_scope):
-        context = object()
-        fetch_source.return_value = (context, "yukari")
-        dials_scope.return_value = {"denoise": {"keep": 0.6}, "lora": {"on": 0.8}}
-        cli.main(["repair", "gen-1", "--denoise", "keep", "--lora", "on"])
-        fetch_source.assert_called_once_with(chimera_class.return_value, "gen-1")
-        dials_scope.assert_called_once_with("yukari", "repair")
-        args, kwargs = run_repair.call_args
-        self.assertEqual(kwargs["denoise"], 0.6)
-        self.assertEqual(kwargs["lora"], 0.8)
-        # The context fetch_source already made is passed through so
-        # repair() does not fetch it again.
-        self.assertIs(kwargs["context"], context)
-
-    @patch.object(cli, "fetch_source")
-    @patch.object(cli, "repair")
-    @patch.object(cli, "ChimeraClient")
-    def test_repair_numeric_args_never_look_up_the_recipe(
-            self, chimera_class, run_repair, fetch_source):
-        cli.main(["repair", "gen-1", "--denoise", "0.7"])
-        fetch_source.assert_not_called()
-        kwargs = run_repair.call_args.kwargs
-        self.assertEqual(kwargs["denoise"], 0.7)
-        self.assertIsNone(kwargs["context"])
-
     @patch.object(cli, "work")
     @patch.object(cli, "ChimeraClient")
     def test_work_default_kinds_include_every_request_kind(
@@ -338,8 +265,8 @@ class CliTest(unittest.TestCase):
         work_services = run_work.call_args.args[0]
         self.assertEqual(
             work_services.kinds,
-            ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof", "lens", "photo",
-             "stage", "lighting"))
+            ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
+             "lighting"))
         self.assertIs(
             work_services.stage_services.management, chimera_class.return_value)
         self.assertIs(
@@ -352,10 +279,6 @@ class CliTest(unittest.TestCase):
             work_services.redraw_services.management, chimera_class.return_value)
         self.assertIs(
             work_services.deliver_services.management, chimera_class.return_value)
-        self.assertIs(
-            work_services.repair_services.management, chimera_class.return_value)
-        self.assertIs(
-            work_services.masked_redraw_services.management, chimera_class.return_value)
 
     @patch.object(cli, "work")
     @patch.object(cli, "ChimeraClient")

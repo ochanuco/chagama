@@ -13,7 +13,6 @@ from chagama.application.ingest import (
     classify_dof_outputs,
     classify_redraw_outputs,
     import_images,
-    ingest_seed_render,
     open_request,
     record_job,
 )
@@ -76,43 +75,6 @@ class ClassifyOutputsTests(unittest.TestCase):
         found = classify_cut_outputs(outputs)
         self.assertEqual([found[role] for role in ("alpha", "depth", "foreground")],
                          [[outputs[0]], [outputs[1]], [outputs[2]]])
-
-
-class IngestSeedRenderTests(unittest.TestCase):
-    class Comfyui:
-        def __init__(self, outputs):
-            self.outputs = outputs
-
-        def wait_for(self, _prompt_id):
-            return self.outputs
-
-        def fetch(self, out):
-            return out["filename"].encode()
-
-    def ingest(self, outputs):
-        management = ManagementFake()
-        with tempfile.TemporaryDirectory() as root:
-            result = ingest_seed_render(
-                comfyui=self.Comfyui(outputs), management=management,
-                output_root=Path(root), emit=lambda _line: None,
-                request_id="request-1", key_prefix=None, index=0, seed=3,
-                prompt_id="prompt-1", graph={}, job_prefix="rep-s3",
-                mask_png=b"mask")
-        return management, result
-
-    def test_records_one_picture_and_its_repair_mask(self):
-        management, result = self.ingest([{"filename": "rep-s3_00001_.png"}])
-        self.assertEqual(len(result["generation_ids"]), 1)
-        uploads = [call for call in management.calls
-                   if call[1].endswith("/generations")]
-        self.assertEqual(len(uploads), 1)
-        assets = [call[3][0]["role"] for call in management.calls
-                  if call[1].endswith("/assets")]
-        self.assertEqual(assets, ["repair-mask"])
-
-    def test_no_output_fails(self):
-        with self.assertRaises(SystemExit):
-            self.ingest([])
 
 
 class RecordJobTests(unittest.TestCase):

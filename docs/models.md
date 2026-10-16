@@ -13,9 +13,6 @@ The code names the files; this is where to look.
 |---|---|---|
 | Stage 1 | `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` (SilvermoonMix-Anima-Evolved v2.3_2.9B_Turbo) + `qwen_3_06b_base` + `qwen_image_vae` | `domain/yukari/prompt_style.py` `MODEL`, `GUIDED_STEPS` |
 | Opt-in canvas redraw | `diffusers/hassaku-il-v22` | `domain/yukari/delivery_style.py` `REDRAW_MODEL` |
-| Repair reroll models | `sudachiAnima_v10`, `hassakuAnima_v13`, `anima_baseV10` | `domain/repair/models.py` |
-| Repair part LoRAs | `feet-xl-ill`, `hands-xl-ill` | `domain/repair/loras.py` |
-| Repair ControlNet | `noob-lineart-anime-fp16` | `domain/repair/controlnet.py` |
 | Stage 1 reserve, opt-in by `render.model` patch | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | — |
 | Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | Comfy-Org Pixal3D, TRELLIS.2, MoGe and BiRefNet files | `manifests/worker-models.toml` |
 
@@ -23,8 +20,7 @@ The code names the files; this is where to look.
 the leading steps at the recipe's own CFG, the rest at CFG 1.0 off the same
 noise. It needs a ComfyUI build that loads a 2.9B UNET; the pinned v0.40.0
 does. `anima-turbo-v1.1`, the previous stage-1 model, stays on the box. It
-is not in the verified inventory below, and neither are the three repair
-checkpoints. Everything else in the
+is not in the verified inventory below. Everything else in the
 inventory was used by retired recipes and is kept only for provenance.
 
 Each has its own upstream license — the Illustrious-family checkpoints are
