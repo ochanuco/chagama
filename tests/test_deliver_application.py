@@ -26,9 +26,9 @@ from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 LAYERS = ["dlv-g-layer-figure", "dlv-g-layer-outline", "dlv-g-layer-backdrop"]
 OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]
 GRAPH_KWARGS = dict(
-    skin=False, repin=True, recolor=False, keep_legwear=None, keep_scene=False,
+    repin=True, keep_scene=False,
     transparent=False, backdrop="dots", stroke_light="n", outlines=OUTLINES,
-    deliver_size=None, canvas=(832, 1664), light_scene=None, light_from=None)
+    light_scene=None, light_from=None)
 
 
 def classes(graph: dict) -> list[str]:
@@ -108,14 +108,12 @@ class DeliverGraphTest(unittest.TestCase):
         self.assertEqual(saved_prefixes(graph),
                          ["dlv-g-delivered", *LAYERS[:2]])
 
-    def test_repin_skin_recolor_follow_the_delivery_rules(self):
-        graph = build(skin=True, recolor=True, repin=True)
+    def test_repin_runs_on_the_source_only_when_asked(self):
+        graph = build(repin=True)
         [(load_id, _)] = nodes_of(graph, "LoadImage")
-        [(skin_id, skin)] = nodes_of(graph, "YukariRepinSkin")
-        self.assertEqual(skin["inputs"], {"image": [load_id, 0], "source": [load_id, 0]})
-        [(_, recolor)] = nodes_of(graph, "YukariRecolor")
-        self.assertEqual(recolor["inputs"]["image"], [skin_id, 0])
-        self.assertNotIn("YukariRepin", classes(graph))
+        [(_, repin)] = nodes_of(graph, "YukariRepin")
+        self.assertEqual(repin["inputs"], {"image": [load_id, 0]})
+        self.assertNotIn("YukariRepin", classes(build(repin=False)))
 
     def test_see_through_scales_the_tail_alpha_not_the_saved_one(self):
         graph = build(see_through=3.0)
@@ -146,17 +144,8 @@ class DeliverGraphTest(unittest.TestCase):
         self.assertIn("dlv-g-alpha", saved_prefixes(graph))
         self.assertIn("dlv-g-layer-backdrop", saved_prefixes(graph))
 
-    def test_deliver_size_scales_the_delivered_picture_and_every_layer(self):
-        graph = build(deliver_size=832)
-        scales = nodes_of(graph, "ImageScale")
-        self.assertEqual(len(scales), 4)
-        for _, scale in scales:
-            self.assertEqual((scale["inputs"]["width"], scale["inputs"]["height"]),
-                             (416, 832))
-        scaled = {key for key, _ in scales}
-        for _, save in nodes_of(graph, "SaveImage"):
-            if save["inputs"]["filename_prefix"] != "dlv-g-alpha":
-                self.assertIn(save["inputs"]["images"][0], scaled)
+    def test_the_delivered_picture_is_never_rescaled(self):
+        self.assertNotIn("ImageScale", classes(build()))
 
     def test_a_bad_backdrop_or_stroke_light_is_refused(self):
         with self.assertRaisesRegex(ValueError, "backdrop"):
@@ -262,7 +251,6 @@ def services(directory, **overrides) -> DeliverServices:
     kwargs = dict(
         management=ManagementFake(), comfyui=ComfyFake(),
         graph_from_png=lambda data: None,
-        image_size=lambda data: (832, 1664),
         git_metadata=lambda: {"commit": "commit", "dirty": False},
         notifier=RecordingNotifier(), output_root=Path(directory),
         emit=lambda message: None)

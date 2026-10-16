@@ -8,9 +8,6 @@ DIALS = {
     "redraw": {
         "denoise": {"keep": REDRAW_DENOISE},
     },
-    "deliver": {
-        "keep_legwear": {},
-    },
     "patches": {
         "render.width": {"draft": 1024, "full": 1280},
         "render.height": {"draft": 1640, "full": 2048},

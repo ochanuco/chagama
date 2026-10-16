@@ -125,9 +125,8 @@ class RedrawArgumentsTest(unittest.TestCase):
 class DeliverArgumentsTest(unittest.TestCase):
     def test_defaults_are_the_recipes_delivery(self):
         self.assertEqual(deliver_arguments({}), {
-            "repin": True, "skin": False, "recolor": False, "keep_legwear": None,
-            "keep_scene": False, "transparent": False, "backdrop": "dots",
-            "stroke_light": RECIPE_DEFAULT, "deliver_size": None,
+            "repin": True, "keep_scene": False, "transparent": False,
+            "backdrop": "dots", "stroke_light": RECIPE_DEFAULT,
             "outlines": [{"color": "#ffffff", "width": 0.8},
                          {"color": "#885b80", "width": 1.04}],
             "light": None})
@@ -185,22 +184,13 @@ class DeliverArgumentsTest(unittest.TestCase):
         arguments = deliver_arguments({"keep_scene": True, "transparent": True})
         self.assertIs(arguments["transparent"], False)
 
-    def test_recolor_wins_over_repin(self):
-        arguments = deliver_arguments({"recolor": True})
-        self.assertIs(arguments["recolor"], True)
-        self.assertIs(arguments["repin"], False)
-
     def test_repin_can_be_turned_off(self):
         self.assertIs(deliver_arguments({"repin": False})["repin"], False)
 
-    def test_keep_legwear_resolves_dial_words_and_true(self):
-        dials = {"keep_legwear": {"on": 0.5}}
-        self.assertEqual(
-            deliver_arguments({"keep_legwear": "on"}, dials)["keep_legwear"], 0.5)
-        self.assertEqual(
-            deliver_arguments({"keep_legwear": True})["keep_legwear"], 0.62)
-        with self.assertRaisesRegex(ValueError, "unknown keep_legwear word"):
-            deliver_arguments({"keep_legwear": "off"}, dials)
+    def test_removed_options_are_rejected_as_unknown(self):
+        for key in ("recolor", "skin", "keep_legwear", "deliver_size"):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
+                deliver_arguments({key: True})
 
     def test_stroke_light_follows_the_light_direction(self):
         arguments = deliver_arguments({"light": {"scene": "moon", "from": "se"}})
@@ -245,12 +235,6 @@ class DeliverArgumentsTest(unittest.TestCase):
                     [{"color": "#885b80", "width": 1, "extra": 1}], ["#885b80"]):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "outlines"):
                 deliver_arguments({"outlines": bad})
-
-    def test_deliver_size_must_be_a_positive_integer(self):
-        self.assertEqual(deliver_arguments({"deliver_size": 1536})["deliver_size"], 1536)
-        for bad in (0, "big", True):
-            with self.subTest(bad=bad), self.assertRaises(ValueError):
-                deliver_arguments({"deliver_size": bad})
 
 
 class DofArgumentsTest(unittest.TestCase):

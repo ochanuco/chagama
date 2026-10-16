@@ -94,7 +94,6 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 - Matte model: `BiRefNet-general` kept the enclosed gaps under the chin in 3
   fragments; RMBG `BiRefNet-HR` filled them as figure and `HR-matting` split
   the edge into 35. `[Anima]`
-- `recolor` is for the lap palette; a sketch delivery uses repin or nothing. `[all]`
 
 ## Redraw passes (IL opt-in)
 

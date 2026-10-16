@@ -22,7 +22,6 @@ from ..application.redraw import redraw
 from ..application.repair import repair
 from ..application.stage import lighting, stage
 from ..application.request_options import (
-    DELIVER_DIAL_KEYS,
     REDRAW_DIAL_KEYS,
     REPAIR_DIAL_KEYS,
     deliver_arguments,
@@ -349,15 +348,6 @@ def parser() -> argparse.ArgumentParser:
         "--no-repin", dest="repin", action="store_false",
         help="leave the palette as drawn instead of repinning it")
     deliver_parser.add_argument(
-        "--skin", action="store_true",
-        help="pin the skin back to the picture's own tones")
-    deliver_parser.add_argument("--recolor", action="store_true")
-    deliver_parser.add_argument(
-        "--keep-legwear", nargs="?", const=0.62, type=_number_or_word, default=None,
-        metavar="COL_CUT",
-        help="keep the asserted legwear verbatim through repin; the value is "
-             "the width share the legs stay left of (default 0.62)")
-    deliver_parser.add_argument(
         "--keep-scene", action="store_true",
         help="deliver the picture uncut, background and all")
     deliver_transparent = deliver_parser.add_mutually_exclusive_group()
@@ -382,9 +372,6 @@ def parser() -> argparse.ArgumentParser:
              "longest side; repeatable (default: the recipe's own bands)")
     deliver_outlines.add_argument(
         "--no-outlines", action="store_true", help="deliver without outlines")
-    deliver_parser.add_argument(
-        "--deliver-size", type=int, metavar="LONGEST",
-        help="downscale the delivered file to this longest side (lanczos)")
     deliver_parser.add_argument(
         "--light", metavar="SCENE[,FROM]",
         help="light the delivery as a scene "
@@ -747,23 +734,14 @@ def main(argv: list[str] | None = None) -> None:
             chimera, comfyui, notifier, repository, repository_metadata)
         outlines = _outlines_from_args(args)
         light = _light_from_args(args)
-        context, dial_values = _resolve_word_args(
-            chimera, args.generation_id, "deliver",
-            {key: getattr(args, key) for key in DELIVER_DIAL_KEYS})
         options = {
             **({} if args.repin else {"repin": False}),
-            **({"skin": True} if args.skin else {}),
-            **({"recolor": True} if args.recolor else {}),
-            **({"keep_legwear": dial_values["keep_legwear"]}
-               if dial_values["keep_legwear"] is not None else {}),
             **({"keep_scene": True} if args.keep_scene else {}),
             **({"transparent": args.transparent}
                if args.transparent is not None else {}),
             **({"backdrop": args.backdrop} if args.backdrop is not None else {}),
             **({"stroke_light": args.stroke_light}
                if args.stroke_light is not None else {}),
-            **({"deliver_size": args.deliver_size}
-               if args.deliver_size is not None else {}),
             **({"outlines": outlines} if outlines is not None else {}),
             **({"light": {"scene": light.scene, "from": light.direction}}
                if light is not None else {}),
@@ -772,7 +750,7 @@ def main(argv: list[str] | None = None) -> None:
             arguments = deliver_arguments(options)
         except ValueError as error:
             raise SystemExit(str(error)) from error
-        deliver(args.generation_id, services, context=context, **arguments)
+        deliver(args.generation_id, services, **arguments)
         return
     if args.command == "dof":
         services = build_dof_services(

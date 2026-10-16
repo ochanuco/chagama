@@ -436,11 +436,11 @@ class ExecuteTest(unittest.TestCase):
                 deliver_services="deliver-services-sentinel")
             row = deliver_row(payload={
                 "generation_id": "gen-1",
-                "options": {"keep_legwear": True, "transparent": True}})
+                "options": {"transparent": True}})
             result = execute(services, row)
             self.assertEqual(result, {
                 "generation_ids": ["g2"],
-                "resolved_options": {"keep_legwear": 0.62, "transparent": True,
+                "resolved_options": {"transparent": True,
                                      "outlines": DEFAULT_OUTLINES}})
             generation_id, deliver_services, kwargs = calls[0]
             self.assertEqual(generation_id, "gen-1")
@@ -477,20 +477,6 @@ class ExecuteTest(unittest.TestCase):
             })
             result = execute(services, row)
             self.assertEqual(result["generation_ids"], ["g2"])
-
-    def test_deliver_resolves_words_against_the_source_requests_recipe(self):
-        with tempfile.TemporaryDirectory() as directory:
-            services = make_services(
-                directory, ManagementFake(),
-                deliver=lambda generation_id, deliver_services, **kwargs: {
-                    "generation_ids": ["g2"]})
-            row = deliver_row(payload={
-                "generation_id": "gen-1",
-                "options": {"repin": True, "keep_legwear": True}})
-            result = execute(services, row)
-            self.assertEqual(result["resolved_options"],
-                             {"repin": True, "keep_legwear": 0.62,
-                              "outlines": DEFAULT_OUTLINES})
 
     def test_a_word_unknown_to_the_source_recipe_fails_the_request(self):
         with tempfile.TemporaryDirectory() as directory:

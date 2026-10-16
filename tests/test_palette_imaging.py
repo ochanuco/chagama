@@ -144,36 +144,3 @@ class RGBAMeasureTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class ProtectedRepinTest(unittest.TestCase):
-    def wide(self) -> np.ndarray:
-        """128 wide: saturated purple legs left, saturated purple hair right."""
-        pixels = np.full((64, 128, 3), 0x80, dtype=np.uint8)
-        hsv = np.zeros((32, 32, 3), dtype=np.uint8)
-        hsv[..., 0], hsv[..., 1], hsv[..., 2] = (191, 120, 200)
-        block = np.array(Image.fromarray(hsv, "HSV").convert("RGB"))
-        pixels[16:48, 8:40] = block
-        pixels[16:48, 88:120] = block
-        return pixels
-
-    def test_protected_pixels_survive_while_the_rest_is_pinned(self):
-        pixels = self.wide()
-        protect = np.zeros(pixels.shape[:2], dtype=bool)
-        protect[:, :64] = True
-        rgb, _ = repin(pixels, protect)
-        hsv = np.array(Image.fromarray(rgb).convert("HSV")).astype(float)
-        legs_s = hsv[16:48, 12:36, 1].mean()
-        hair_s = hsv[16:48, 92:116, 1].mean()
-        self.assertGreater(legs_s, 110)
-        self.assertAlmostEqual(hair_s, compressed(120), delta=10)
-
-    def test_repin_png_keep_legwear_reports_the_kept_share(self):
-        pixels = self.wide()
-        data = png(pixels)
-        out, report = repin_png(data, keep_legwear=0.5)
-        self.assertIn("legwear kept verbatim", report[0])
-        hsv = np.array(
-            Image.open(io.BytesIO(out)).convert("HSV")).astype(float)
-        self.assertGreater(hsv[16:48, 12:36, 1].mean(),
-                           hsv[16:48, 92:116, 1].mean() + 40)

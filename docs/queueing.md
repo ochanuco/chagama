@@ -96,9 +96,9 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
 
 - The source must be a picture: a delivered picture and a LayerDiffuse
   picture are refused. Any other recipe or model is delivered as drawn.
-- The options are `repin`, `recolor`, `skin`, `keep_legwear`, `keep_scene`,
-  `transparent`, `backdrop`, `stroke_light`, `outlines`, `deliver_size` and
-  `light`; any other key is an error. An absent `repin`, `stroke_light` or
+- The options are `repin`, `keep_scene`, `transparent`, `backdrop`,
+  `stroke_light`, `outlines`, `light` and `see_through`; any other key is an
+  error. An absent `repin`, `stroke_light` or
   `backdrop` takes the recipe's `deliver.defaults`, the same values the WebUI
   sends. `light` only shades the stroke and tints the backdrop; it does not
   redraw. An explicit `backdrop: null` without `transparent` delivers a
@@ -127,7 +127,7 @@ requests in one order: `deliver` (transparent, for the workbench), `stage`,
   the depth checkpoint and resolution. A later deliver loads an asset when
   its `cut` entry equals the worker's current values, and cuts again (and
   replaces the asset) when it differs or the asset is missing. Both are cut
-  from the unrepinned source, so changing `repin` or `recolor` reuses
+  from the unrepinned source, so changing `repin` reuses
   them; the foreground colour is estimated again after the repin each time.
 - The delivered Generation refines the source and carries its layers as
   PNG assets at the delivered size: `layer-figure` (RGBA, the repinned

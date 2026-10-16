@@ -26,7 +26,6 @@ from .stage import StageServices, lighting, stage
 from .redraw import RedrawServices, redraw
 from .repair import RepairServices, repair
 from .request_options import (
-    DELIVER_DIAL_KEYS,
     REDRAW_DIAL_KEYS,
     REPAIR_DIAL_KEYS,
     _MASKED_REDRAW_DIAL_KEYS,
@@ -143,20 +142,17 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
     generation_id = payload.get("generation_id")
     if not generation_id:
         raise SystemExit("deliver payload.generation_id is required")
-    context, recipe = fetch_source(services.management, generation_id)
-    dials = dials_scope(recipe, "deliver")
+    context, _ = fetch_source(services.management, generation_id)
     options = payload.get("options") or {}
     try:
-        arguments = deliver_arguments(options, dials)
+        arguments = deliver_arguments(options)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     result = services.deliver(generation_id, services.deliver_services,
                               key_prefix=f"request:{row['id']}",
                               request_id=row["id"], context=context,
                               **arguments)
-    result["resolved_options"] = {
-        **_resolved_options(options, arguments, DELIVER_DIAL_KEYS),
-        "outlines": arguments["outlines"]}
+    result["resolved_options"] = {**options, "outlines": arguments["outlines"]}
     return result
 
 
