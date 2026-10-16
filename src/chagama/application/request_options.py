@@ -36,6 +36,7 @@ from ..domain.yukari.delivery_style import (
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     LIGHTING_STRENGTH,
+    SATURATION_STRENGTH,
     PHOTO_BOKEH,
     PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
@@ -56,7 +57,7 @@ from .picture_source import stroke_light_conflict
 from .redraw import HIRES_DENOISE
 
 _KNOWN_DELIVER_OPTIONS = frozenset({
-    "repin", "recolor", "skin", "keep_legwear", "keep_scene", "transparent",
+    "recolor", "skin", "keep_legwear", "keep_scene", "transparent",
     "backdrop", "stroke_light", "outlines", "deliver_size", "light",
     "see_through",
 })
@@ -81,6 +82,7 @@ _KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas",
                                "strokes"})
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
+_KNOWN_SATURATION_OPTIONS = frozenset({"strength"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -598,7 +600,6 @@ def deliver_arguments(options: Mapping,
 
     recolor = boolean("recolor")
     return {
-        "repin": boolean("repin", DELIVER_DEFAULTS["repin"]) and not recolor,
         "skin": boolean("skin"),
         "recolor": recolor,
         "keep_legwear": float(keep_legwear) if keep_legwear is not None else None,
@@ -854,6 +855,18 @@ def lighting_arguments(options: Mapping) -> dict:
     return {"direction": direction,
             "strength": _ranged(options, "strength", LIGHTING_STRENGTH),
             "scene": scene}
+
+
+def saturation_arguments(options: Mapping) -> dict:
+    """Validate a saturation request's `options` and map it to saturation()
+    kwargs: `strength` (absent for full compression)."""
+    if not isinstance(options, Mapping):
+        raise ValueError(
+            f"saturation options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_SATURATION_OPTIONS)
+    if unknown:
+        raise ValueError(f"saturation が受け付けない option です: {', '.join(unknown)}")
+    return {"strength": _ranged(options, "strength", SATURATION_STRENGTH)}
 
 
 def repair_arguments(options: Mapping,

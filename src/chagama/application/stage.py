@@ -1,5 +1,6 @@
 """Set a delivery on a backdrop (stage), light it by that backdrop (lighting),
-and record each result with the layers it now stands in."""
+compress its layers' saturation (saturation), and record each result with the
+layers it now stands in."""
 
 from __future__ import annotations
 
@@ -9,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
-from ..infrastructure.comfyui.stage_graph import lighting_graph, stage_graph
+from ..infrastructure.comfyui.stage_graph import lighting_graph, saturation_graph, stage_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.stage import frame_canvas_share
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -18,14 +19,19 @@ from .ingest import (
     asset_key,
     attach_asset,
     classify_lighting_outputs,
+    classify_saturation_outputs,
     classify_stage_outputs,
     generation_key,
     open_request,
     record_job,
     upload_generation,
 )
+from .picture_source import delivery_parameters
 
-STAGE_SOURCE = "背景を付けられるのは納品の絵（deliver の出力）だけです。先に deliver してください"
+STAGE_SOURCE = ("背景を付けられるのは納品の絵（deliver または saturation の出力）だけです。"
+                "先に deliver してください")
+SATURATION_SOURCE = ("彩度を調整できるのは納品の絵（deliver の出力）だけです。"
+                     "先に deliver してください")
 LIGHTING_SOURCE = ("光を当てられるのは背景を付けた絵（stage の出力、または背景ありの納品）"
                    "だけです。先に stage してください")
 LIGHTING_TWICE = "この絵にはもう光が当たっています。stage の出力からかけ直してください"
@@ -44,6 +50,7 @@ class StageServices:
     emit: Callable[[str], None] = print
     stage_graph: Callable[..., dict] = stage_graph
     lighting_graph: Callable[..., dict] = lighting_graph
+    saturation_graph: Callable[..., dict] = saturation_graph
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
@@ -169,9 +176,10 @@ def stage(generation_id: str, services: StageServices, *,
     if context is None:
         context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
     parameters = _parameters(context)
-    if parameters.get("kind") != "deliver":
+    if parameters.get("kind") not in ("deliver", "saturation"):
         raise SystemExit(STAGE_SOURCE)
     _require_layers(services, generation_id, FIGURE_ROLES)
+    parameters = delivery_parameters(management, context)
     if photo_id is not None:
         light = None
     elif inherit_light:
@@ -247,7 +255,9 @@ def lighting(generation_id: str, services: StageServices, *,
     kind = parameters.get("kind")
     if kind == "lighting":
         raise SystemExit(LIGHTING_TWICE)
-    if kind not in ("stage", "deliver") or (kind == "deliver" and parameters.get("transparent")):
+    if kind not in ("stage", "deliver", "saturation"):
+        raise SystemExit(LIGHTING_SOURCE)
+    if kind != "stage" and delivery_parameters(management, context).get("transparent"):
         raise SystemExit(LIGHTING_SOURCE)
     _require_layers(services, generation_id, LAYER_ROLES)
 
@@ -276,4 +286,48 @@ def lighting(generation_id: str, services: StageServices, *,
         references=[{"source_generation_id": generation_id, "purpose": "rebuild",
                      "aspect": "composition", "instruction": "この絵を背景の光で照らす"}],
         title="lighting")
+    return _finish(services, state_path, state, result)
+
+
+def saturation(generation_id: str, services: StageServices, *, strength: float,
+               key_prefix: str | None = None, request_id: str | None = None,
+               context: dict | None = None) -> dict:
+    """Compress the saturation of the delivery `generation_id`'s figure and
+    outline layers on repin's curve (`strength` 0..1 blends it in) and put
+    them back together over its backdrop, if it has one."""
+    state_path, state = _load_state(services, "saturation", key_prefix)
+    if state.get("status") == "completed" and state.get("result"):
+        return state["result"]
+    management = services.management
+    if context is None:
+        context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
+    if _parameters(context).get("kind") != "deliver":
+        raise SystemExit(SATURATION_SOURCE)
+    _require_layers(services, generation_id, FIGURE_ROLES)
+    has_backdrop = "layer-backdrop" in {
+        asset["role"] for asset in management.list_assets(generation_id)}
+    roles = LAYER_ROLES if has_backdrop else FIGURE_ROLES
+
+    prefix = f"sat-{generation_id}"
+    token = uuid.uuid4().hex[:8]
+    uploaded = {role: services.comfyui.upload_image(
+        f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
+        for role in roles}
+    graph = services.saturation_graph(
+        uploaded["layer-figure"], uploaded["layer-outline"], prefix,
+        backdrop_image=uploaded.get("layer-backdrop"), strength=strength)
+    prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
+                     state_path=state_path)
+    outputs = classify_saturation_outputs(services.comfyui.wait_for(prompt_id))
+    fetched = _fetch(services, outputs, ("delivered", *roles), prefix)
+    result = _record(
+        services, generation_id=generation_id, context=context, key_prefix=key_prefix,
+        request_id=request_id, prompt_id=prompt_id, graph=graph,
+        picture=fetched["delivered"], layers={role: fetched[role] for role in roles},
+        raw_instruction=f"{generation_id} の彩度を調整",
+        parameters={"kind": "saturation", "base_generation": generation_id,
+                    "strength": strength},
+        references=[{"source_generation_id": generation_id, "purpose": "rebuild",
+                     "aspect": "composition", "instruction": "この納品の絵の彩度を調整する"}],
+        title="saturation")
     return _finish(services, state_path, state, result)

@@ -37,7 +37,7 @@ the junction already registered on the worker box) wraps its functions unchanged
 as ComfyUI nodes rather than duplicating them.
 `YukariMatting` turns the image and the coarse matte into the alpha, and
 `YukariForeground` estimates the figure's colour under an alpha; the deliver
-graph runs the first once per source picture and the second after every repin.
+graph runs the first once per source picture and the second on the picture it delivers.
 `YukariSeeThrough` scales the key showing through see-through clothing for a
 delivery's `see_through` option, after the colour is solved.
 

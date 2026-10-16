@@ -20,7 +20,7 @@ from ..application.masked_redraw import masked_redraw
 from ..application.photo import photo
 from ..application.redraw import redraw
 from ..application.repair import repair
-from ..application.stage import lighting, stage
+from ..application.stage import lighting, saturation, stage
 from ..application.request_options import (
     DELIVER_DIAL_KEYS,
     REDRAW_DIAL_KEYS,
@@ -32,6 +32,7 @@ from ..application.request_options import (
     photo_arguments,
     stage_arguments,
     lighting_arguments,
+    saturation_arguments,
     redraw_arguments,
     resolve_dial,
 )
@@ -49,6 +50,7 @@ from ..domain.yukari.delivery_style import (
     LENS_SHAPE,
     LENS_STRENGTH,
     LIGHTING_STRENGTH,
+    SATURATION_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     PHOTO_FOCAL_LENGTH,
@@ -282,7 +284,9 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--dry-run", action="store_true")
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
-        "--kinds", default="generate,redraw,repair,masked_redraw,deliver,dof,lens,photo,stage,lighting",
+        "--kinds",
+        default="generate,redraw,repair,masked_redraw,deliver,dof,lens,photo,stage,"
+                "lighting,saturation",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",
@@ -345,9 +349,6 @@ def parser() -> argparse.ArgumentParser:
     deliver_parser = commands.add_parser(
         "deliver", help="cut and decorate one picture generation")
     deliver_parser.add_argument("generation_id")
-    deliver_parser.add_argument(
-        "--no-repin", dest="repin", action="store_false",
-        help="leave the palette as drawn instead of repinning it")
     deliver_parser.add_argument(
         "--skin", action="store_true",
         help="pin the skin back to the picture's own tones")
@@ -530,6 +531,14 @@ def parser() -> argparse.ArgumentParser:
         "--strength", type=float, default=None,
         help=f"{LIGHTING_STRENGTH['min']}..{LIGHTING_STRENGTH['max']} "
              f"(default {LIGHTING_STRENGTH['default']})")
+
+    saturation_parser = commands.add_parser(
+        "saturation", help="compress a delivery's layers' saturation")
+    saturation_parser.add_argument("generation_id")
+    saturation_parser.add_argument(
+        "--strength", type=float, default=None,
+        help=f"{SATURATION_STRENGTH['min']}..{SATURATION_STRENGTH['max']} "
+             f"(default {SATURATION_STRENGTH['default']})")
 
     repair_parser = commands.add_parser(
         "repair", help="masked local redraw of hands/feet on an existing generation")
@@ -751,7 +760,6 @@ def main(argv: list[str] | None = None) -> None:
             chimera, args.generation_id, "deliver",
             {key: getattr(args, key) for key in DELIVER_DIAL_KEYS})
         options = {
-            **({} if args.repin else {"repin": False}),
             **({"skin": True} if args.skin else {}),
             **({"recolor": True} if args.recolor else {}),
             **({"keep_legwear": dial_values["keep_legwear"]}
@@ -820,6 +828,16 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as error:
             raise SystemExit(str(error)) from error
         lighting(args.generation_id, services, **arguments)
+        return
+    if args.command == "saturation":
+        services = build_stage_services(
+            chimera, comfyui, notifier, repository, repository_metadata)
+        options = {} if args.strength is None else {"strength": args.strength}
+        try:
+            arguments = saturation_arguments(options)
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+        saturation(args.generation_id, services, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()

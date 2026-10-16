@@ -31,7 +31,7 @@ the exact prompt can be inspected with `get_catalog_pose` on the MCP or
    composition, proportion and hands obey the prompt there, and the artist
    tags set the face and line.
 2. **Deliver cuts and decorates the raw pick.** `deliver` cuts a matte,
-   repins the palette and composites the backdrop and the outline bands
+   composites the backdrop and the outline bands
    onto the Anima pick itself -- no redraw. The raw is drawn on a green key;
    ViTMatte cuts it out, and the bands (`outlines`: a white band, then the
    purple stroke) sit right outside it. It is the recipe default

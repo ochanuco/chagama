@@ -6,6 +6,7 @@ import json
 from collections.abc import Callable
 
 from .refinement_graph import (
+    DELIVERED_SUFFIX,
     LAYER_BACKDROP_SUFFIX,
     LAYER_FIGURE_SUFFIX,
     LAYER_OUTLINE_SUFFIX,
@@ -89,4 +90,28 @@ def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str,
     _save(graph, allocate, [light_id, 1], prefix + LAYER_FIGURE_SUFFIX)
     _save(graph, allocate, [light_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
     _save(graph, allocate, [light_id, 3], prefix + LAYER_BACKDROP_SUFFIX)
+    return graph
+
+
+def saturation_graph(figure_image: str, outline_image: str, prefix: str, *,
+                     backdrop_image: str | None = None, strength: float) -> dict:
+    """Compress the uploaded layer images' saturation by `strength`, over
+    the uploaded `backdrop_image` when there is one. The picture is saved
+    under `prefix` + DELIVERED_SUFFIX and the layers beside it, the
+    backdrop as it came."""
+    graph, allocate, load = _builder()
+    figure_id, outline_id = load(figure_image), load(outline_image)
+    inputs = {"figure": [figure_id, 0], "figure_mask": [figure_id, 1],
+              "outline": [outline_id, 0], "outline_mask": [outline_id, 1],
+              "strength": strength}
+    backdrop_id = load(backdrop_image) if backdrop_image is not None else None
+    if backdrop_id is not None:
+        inputs["backdrop"] = [backdrop_id, 0]
+    saturation_id = allocate()
+    graph[saturation_id] = {"class_type": "YukariSaturation", "inputs": inputs}
+    _save(graph, allocate, [saturation_id, 0], prefix + DELIVERED_SUFFIX)
+    _save(graph, allocate, [saturation_id, 1], prefix + LAYER_FIGURE_SUFFIX)
+    _save(graph, allocate, [saturation_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
+    if backdrop_id is not None:
+        _save(graph, allocate, [backdrop_id, 0], prefix + LAYER_BACKDROP_SUFFIX)
     return graph

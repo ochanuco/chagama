@@ -297,7 +297,7 @@ class DeliverSectionTest(unittest.TestCase):
 
     def test_defaults_are_the_delivery_recipe_and_valid_options(self):
         defaults = self.section()["defaults"]
-        self.assertEqual(defaults, {"repin": True, "stroke_light": "n",
+        self.assertEqual(defaults, {"stroke_light": "n",
                                     "backdrop": "dots"})
         self.assertLessEqual(set(defaults), _KNOWN_DELIVER_OPTIONS)
         deliver_arguments(defaults)
@@ -321,6 +321,10 @@ class DeliverSectionTest(unittest.TestCase):
                                          "default": "fisheye"})
         self.assertEqual((lens["radius"]["min"], lens["radius"]["max"],
                           lens["radius"]["default"]), (0.05, 1.0, 0.3))
+
+    def test_publishes_the_saturation_section_at_the_catalog_root(self):
+        self.assertEqual(build_catalog(GIT)["saturation"],
+                         {"strength": {"min": 0.0, "max": 1.0, "default": 1.0}})
 
     def test_publishes_the_photo_section_at_the_catalog_root(self):
         photo = build_catalog(GIT)["photo"]

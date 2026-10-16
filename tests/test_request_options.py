@@ -15,6 +15,7 @@ from chagama.application.request_options import (
     masked_redraw_arguments,
     redraw_arguments,
     repair_arguments,
+    saturation_arguments,
 )
 from chagama.domain.yukari.delivery_style import Light
 from chagama.domain.repair.controlnet import DEFAULT_CONTROL_STRENGTH
@@ -122,10 +123,28 @@ class RedrawArgumentsTest(unittest.TestCase):
                     redraw_arguments({"method": method, **valid[method], key: 1})
 
 
+class SaturationArgumentsTest(unittest.TestCase):
+    def test_strength_defaults_to_full_compression(self):
+        self.assertEqual(saturation_arguments({}), {"strength": 1.0})
+
+    def test_strength_is_a_number_from_zero_to_one(self):
+        self.assertEqual(saturation_arguments({"strength": 0}), {"strength": 0.0})
+        self.assertEqual(saturation_arguments({"strength": 0.4}), {"strength": 0.4})
+        for bad in (1.1, -0.1, "1", True, None):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "strength"):
+                saturation_arguments({"strength": bad})
+
+    def test_unknown_keys_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "repin"):
+            saturation_arguments({"repin": True})
+        with self.assertRaises(ValueError):
+            saturation_arguments([])
+
+
 class DeliverArgumentsTest(unittest.TestCase):
     def test_defaults_are_the_recipes_delivery(self):
         self.assertEqual(deliver_arguments({}), {
-            "repin": True, "skin": False, "recolor": False, "keep_legwear": None,
+            "skin": False, "recolor": False, "keep_legwear": None,
             "keep_scene": False, "transparent": False, "backdrop": "dots",
             "stroke_light": RECIPE_DEFAULT, "deliver_size": None,
             "outlines": [{"color": "#ffffff", "width": 0.8},
@@ -185,13 +204,9 @@ class DeliverArgumentsTest(unittest.TestCase):
         arguments = deliver_arguments({"keep_scene": True, "transparent": True})
         self.assertIs(arguments["transparent"], False)
 
-    def test_recolor_wins_over_repin(self):
-        arguments = deliver_arguments({"recolor": True})
-        self.assertIs(arguments["recolor"], True)
-        self.assertIs(arguments["repin"], False)
-
-    def test_repin_can_be_turned_off(self):
-        self.assertIs(deliver_arguments({"repin": False})["repin"], False)
+    def test_repin_is_no_longer_an_option(self):
+        with self.assertRaisesRegex(ValueError, "repin"):
+            deliver_arguments({"repin": True})
 
     def test_keep_legwear_resolves_dial_words_and_true(self):
         dials = {"keep_legwear": {"on": 0.5}}

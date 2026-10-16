@@ -47,7 +47,7 @@ DRAIN_FILE = "worker/drain"
 # Must track the `work` subparser's own defaults in interfaces/cli.py by
 # hand -- no single source both can read.
 DEFAULT_KINDS = ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-                 "lens", "photo", "stage", "lighting")
+                 "lens", "photo", "stage", "lighting", "saturation")
 
 
 def default_worker_id() -> str:

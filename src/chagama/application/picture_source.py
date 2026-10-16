@@ -4,7 +4,8 @@ from __future__ import annotations
 
 # "hires-chain" and the request kind "finalize" name pictures delivered before
 # deliver existed; their rows are still read.
-DELIVERED_KINDS = ("deliver", "dof", "lens", "photo", "stage", "lighting", "hires-chain")
+DELIVERED_KINDS = ("deliver", "saturation", "dof", "lens", "photo", "stage", "lighting",
+                   "hires-chain")
 DERIVED_KINDS = ("repair", "masked_redraw", "redraw")
 
 
@@ -12,10 +13,21 @@ def is_delivered(request: dict) -> bool:
     """Whether the request's output is a delivered picture, not a drawing."""
     parameters = request.get("parameters") or {}
     kind = parameters.get("kind")
-    return bool(request.get("kind") in ("deliver", "dof", "lens", "photo", "stage",
-                                        "lighting", "finalize")
+    return bool(request.get("kind") in ("deliver", "saturation", "dof", "lens", "photo",
+                                        "stage", "lighting", "finalize")
                 or kind in DELIVERED_KINDS
                 or (kind == "repair" and parameters.get("deliver_only")))
+
+
+def delivery_parameters(management, context: dict) -> dict:
+    """The request parameters of the delivery the picture stands on: its
+    own, or for a saturation the deliver it was made from."""
+    parameters = context["request"].get("parameters") or {}
+    if parameters.get("kind") != "saturation":
+        return parameters
+    base = management.request(
+        "GET", f"/api/v1/generations/{parameters['base_generation']}/context")
+    return base["request"].get("parameters") or {}
 
 
 def stroke_light_conflict(direction: str) -> str:

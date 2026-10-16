@@ -76,17 +76,21 @@ def legwear_mask(im: np.ndarray, col_cut: float) -> np.ndarray:
     return ndimage.binary_dilation(legs, iterations=3)
 
 
-def repin(im: np.ndarray,
-          protect: np.ndarray | None = None) -> tuple[np.ndarray, list[str]]:
+def repin(im: np.ndarray, protect: np.ndarray | None = None,
+          figure: np.ndarray | None = None,
+          strength: float = 1.0) -> tuple[np.ndarray, list[str]]:
     """RGB array in, RGB array out, plus a report of what moved.
 
     Saturation is compressed per V band toward fixed knees rather than
     scaled by a measured factor, so the curve is the same for every picture
     and a pale render passes through untouched. `protect` marks pixels kept
-    verbatim; the correction fades to zero over a feathered edge.
+    verbatim; the correction fades to zero over a feathered edge. `figure`
+    is the boolean pixel range the curve applies to, estimated from the
+    picture when None; `strength` scales the correction (0 leaves the
+    picture as it is).
     """
     hsv = np.array(Image.fromarray(im).convert("HSV")).astype(float)
-    fig = figure_mask(im)
+    fig = figure_mask(im) if figure is None else figure
     keep = (ndimage.gaussian_filter(protect.astype(float), 5)
             if protect is not None else 0.0)
     if protect is not None:
@@ -103,7 +107,7 @@ def repin(im: np.ndarray,
         kept = ratio + (ACCENT_KEEP - ratio) * accent
         return np.where(S > knee, knee + (S - knee) * kept, S)
 
-    w_base = fig * smoothstep((S - 10) / 20) * (1 - keep)
+    w_base = fig * smoothstep((S - 10) / 20) * (1 - keep) * strength
     wl, _ = band_w(V)
     wd = smoothstep((90 - V) / 30)
     target_c = wl * compress(REPIN_LIGHT) + (1 - wl) * compress(REPIN_MID)

@@ -83,8 +83,7 @@ def cut_graph(source_image: str, matte_model: str, prefix: str) -> dict:
 
 def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   alpha_image: str | None = None,
-                  skin: bool, repin: bool, recolor: bool,
-                  keep_legwear: float | None, keep_scene: bool,
+                  skin: bool, recolor: bool, keep_scene: bool,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   deliver_size: int | None, canvas: tuple[int, int],
@@ -93,7 +92,7 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
     """The deliver graph over the uploaded `source_image`.
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
-    computing; without it the graph cuts the unrepinned source itself and
+    computing; without it the graph cuts the source itself and
     saves the result under `prefix` + ALPHA_SUFFIX. `see_through` scales the
     key showing through see-through clothing after the colour is solved;
     the saved alpha stays unscaled.
@@ -132,13 +131,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         graph[recolor_id] = {"class_type": "YukariRecolor", "inputs": {
             "image": image_ref}}
         image_ref = [recolor_id, 0]
-    elif repin:
-        repin_id = allocate()
-        graph[repin_id] = {"class_type": "YukariRepin", "inputs": {
-            "image": image_ref,
-            "keep_legwear": keep_legwear is not None,
-            "keep_legwear_cut": keep_legwear if keep_legwear is not None else 0.62}}
-        image_ref = [repin_id, 0]
     silhouette_ref = None
     if not keep_scene:
         image_ref = foreground_node(graph, allocate, image_ref, alpha_ref)

@@ -584,6 +584,11 @@ PHOTO_SUBJECT_MM = 1500.0
 # A lighting request then lights the figure and outline by that backdrop.
 LIGHTING_STRENGTH = {"min": 0.0, "max": 1.0, "default": 0.7}
 
+# A saturation request compresses a delivery's figure and outline layers on
+# repin's curve; `strength` blends the compression in (0 leaves the layers as
+# they are).
+SATURATION_STRENGTH = {"min": 0.0, "max": 1.0, "default": 1.0}
+
 # A framed stage sets the delivery in a square panel: the backdrop
 # fills the panel, the paper colour the canvas around it, and each side of the
 # panel cuts the figure at the inner edge of its border (the line and the rim
@@ -651,7 +656,7 @@ LIGHT_SCENES = {
              "skin_keep": 0.5},
 }
 
-DELIVER_DEFAULTS = {"repin": True, "stroke_light": "n", "backdrop": "dots",
+DELIVER_DEFAULTS = {"stroke_light": "n", "backdrop": "dots",
                     "outlines": [dict(outline) for outline in OUTLINES]}
 
 # Replaces `STYLE`'s flat/cel-shaded finish with a rough, unfinished line

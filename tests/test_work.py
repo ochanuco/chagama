@@ -317,6 +317,16 @@ def dof_row(**overrides):
     return row
 
 
+def saturation_row(**overrides):
+    row = {
+        "id": "req-11", "kind": "saturation", "status": "running",
+        "recipe_ref": "dev/requests-worker", "run_id": None, "attempt": 1,
+        "payload": {"generation_id": "gen-1", "options": {"strength": 0.5}},
+    }
+    row.update(overrides)
+    return row
+
+
 def lens_row(**overrides):
     row = {
         "id": "req-8", "kind": "lens", "status": "running",
@@ -447,7 +457,6 @@ class ExecuteTest(unittest.TestCase):
             self.assertEqual(deliver_services, "deliver-services-sentinel")
             self.assertEqual(kwargs["request_id"], "req-5")
             self.assertEqual(kwargs["key_prefix"], "request:req-5")
-            self.assertIs(kwargs["repin"], True)
             self.assertIs(kwargs["transparent"], True)
             self.assertIsNone(kwargs["backdrop"])
             self.assertIn("context", kwargs)
@@ -486,10 +495,10 @@ class ExecuteTest(unittest.TestCase):
                     "generation_ids": ["g2"]})
             row = deliver_row(payload={
                 "generation_id": "gen-1",
-                "options": {"repin": True, "keep_legwear": True}})
+                "options": {"keep_legwear": True}})
             result = execute(services, row)
             self.assertEqual(result["resolved_options"],
-                             {"repin": True, "keep_legwear": 0.62,
+                             {"keep_legwear": 0.62,
                               "outlines": DEFAULT_OUTLINES})
 
     def test_a_word_unknown_to_the_source_recipe_fails_the_request(self):
@@ -556,6 +565,36 @@ class ExecuteTest(unittest.TestCase):
             self.assertEqual(result["resolved_options"],
                              {"backdrop": "stripes", "frame": resolved})
             self.assertNotIn("frame", {k for k in result if k != "resolved_options"})
+
+    def test_saturation_kind_maps_options_and_uses_the_stage_services(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_saturation(generation_id, stage_services, **kwargs):
+                calls.append((generation_id, stage_services, kwargs))
+                return {"generation_ids": ["g6"]}
+
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake()), saturation=fake_saturation)
+            result = execute(services, saturation_row())
+            self.assertEqual(result["resolved_options"], {"strength": 0.5})
+            generation_id, stage_services, kwargs = calls[0]
+            self.assertEqual((generation_id, stage_services), ("gen-1", "stage-services"))
+            self.assertEqual((kwargs["request_id"], kwargs["strength"]), ("req-11", 0.5))
+            self.assertEqual(kwargs["key_prefix"], "request:req-11")
+
+    def test_saturation_kind_rejects_unknown_options_and_a_missing_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake()),
+                saturation=lambda *a, **k: calls.append((a, k)))
+            with self.assertRaisesRegex(SystemExit, "repin"):
+                execute(services, saturation_row(payload={
+                    "generation_id": "gen-1", "options": {"repin": True}}))
+            with self.assertRaisesRegex(SystemExit, "generation_id"):
+                execute(services, saturation_row(payload={"options": {}}))
+            self.assertEqual(calls, [])
 
     def test_lens_kind_maps_options_and_uses_the_lens_services(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -627,15 +666,15 @@ class ExecuteTest(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "no longer supported"):
                 execute(services, finalize_row())
 
-    def test_the_default_kinds_are_exactly_the_ten(self):
+    def test_the_default_kinds_are_exactly_the_eleven(self):
         self.assertEqual(
             WorkServices.__dataclass_fields__["kinds"].default,
             ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-             "lens", "photo", "stage", "lighting"))
+             "lens", "photo", "stage", "lighting", "saturation"))
         self.assertEqual(
             DEFAULT_KINDS,
             ("generate", "redraw", "repair", "masked_redraw", "deliver", "dof",
-             "lens", "photo", "stage", "lighting"))
+             "lens", "photo", "stage", "lighting", "saturation"))
 
     def test_unsupported_kind_fails(self):
         with tempfile.TemporaryDirectory() as directory:

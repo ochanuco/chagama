@@ -58,6 +58,7 @@ from ..domain.yukari.delivery_style import (
     OUTLINES_MAX,
     REDRAW_DENOISE,
     REDRAW_SIZE,
+    SATURATION_STRENGTH,
     STROKE_CHOICES,
     STROKE_LIGHTS,
 )
@@ -312,6 +313,7 @@ def build_catalog(git: dict) -> dict:
         "photo": _photo_block(),
         "stage": _stage_block(),
         "lighting": _lighting_block(),
+        "saturation": {"strength": SATURATION_STRENGTH},
         "backdrops": _backdrops_block(),
     }
 

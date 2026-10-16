@@ -24,7 +24,7 @@ from .ingest import (
     record_job,
     upload_generation,
 )
-from .picture_source import is_delivered
+from .picture_source import delivery_parameters, is_delivered
 
 DOF_OUTPUT = "dof の出力に dof はかけられません。納品の絵を指定してください"
 LENS_OUTPUT = ("lens の出力に dof はかけられません。dof を先にかけて、"
@@ -33,7 +33,7 @@ NOT_DELIVERED = "dof をかけられるのは納品の絵だけです。先に d
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
 PHOTO_ONLY = ("stand_at / nearer / tilt / bokeh / focal_length は"
               "写真に置いた絵（stage の photo）の dof だけで使えます")
-LAYERED_KINDS = ("deliver", "stage", "lighting")
+LAYERED_KINDS = ("deliver", "saturation", "stage", "lighting")
 SETTING_HOPS = 4
 PHOTO_BLUR_DEFAULTS = {"stand_at": None, "nearer": PHOTO_NEARER["default"],
                        "tilt": PHOTO_TILT["default"], "bokeh": PHOTO_BOKEH["default"],
@@ -54,6 +54,7 @@ class DofServices:
 
 
 def _layer_roles(parameters: dict) -> list[str]:
+    """`parameters` are the request's own, or for a saturation its deliver's."""
     roles = ["layer-figure", "layer-outline"]
     if parameters.get("kind") != "deliver" or not parameters.get("transparent"):
         roles.append("layer-backdrop")
@@ -78,7 +79,8 @@ def _setting(management, context: dict
         if kind == "deliver":
             return (parameters.get("base_generation")
                     or (record.get("refines_generation") or {}).get("id")), None, canvas
-        if kind not in ("stage", "lighting") or not parameters.get("base_generation"):
+        if (kind not in ("saturation", "stage", "lighting")
+                or not parameters.get("base_generation")):
             break
         record = management.request(
             "GET", f"/api/v1/generations/{parameters['base_generation']}/context")
@@ -109,7 +111,7 @@ def _check_source(services: DofServices, generation_id: str,
         raise SystemExit(NOT_DELIVERED)
     if parameters.get("kind") not in LAYERED_KINDS:
         raise SystemExit(NO_LAYERS)
-    roles = _layer_roles(parameters)
+    roles = _layer_roles(delivery_parameters(services.management, context))
     present = {asset["role"] for asset in
                services.management.list_assets(generation_id)}
     if not set(roles) <= present:
