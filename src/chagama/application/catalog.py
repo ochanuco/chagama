@@ -271,7 +271,8 @@ def _stage_block() -> dict:
                     "fills. box and canvas are [x0, y0, x1, y1] shares of the "
                     "delivery's canvas; the rim edges both sides of the line; a cut "
                     "side clips the figure at the border's inner edge, an out side "
-                    "lets it over the border; strokes erase or "
+                    "lets it over the border, a behind side keeps it on both sides "
+                    "of the border with the border over it; strokes erase or "
                     "restore the figure in order. Widths are percent of the "
                     "delivery's longest side",
         },

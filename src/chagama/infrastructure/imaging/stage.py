@@ -203,19 +203,27 @@ def _stroke_cover(shape: tuple[int, int], points: np.ndarray, diameter: float) -
 
 def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
     """The 0..1 share of each pixel of a delivery canvas `shape` that the
-    `frame` keeps: nothing past a cut side's border inner edge, then each
-    stroke in order, an erase taking its coverage away and a restore
-    giving it back."""
+    `frame` keeps: nothing past a cut side's border inner edge, nothing
+    under a behind side's border, then each stroke in order, an erase taking
+    its coverage away and a restore giving it back."""
     height, width = shape
     longest = max(height, width)
     x0, y0, x1, y1 = _share_px(frame["box"], width, height)
     half = _border_half(frame, longest)
     sides = frame["sides"]
-    keep = _rect(shape,
+    kept = _rect(shape,
                  x0 + half if sides["left"] == "cut" else None,
                  y0 + half if sides["top"] == "cut" else None,
                  x1 - half if sides["right"] == "cut" else None,
-                 y1 - half if sides["bottom"] == "cut" else None).astype(np.float32)
+                 y1 - half if sides["bottom"] == "cut" else None)
+    strips = {"top": (x0 - half, y0 - half, x1 + half, y0 + half),
+              "right": (x1 - half, y0 - half, x1 + half, y1 + half),
+              "bottom": (x0 - half, y1 - half, x1 + half, y1 + half),
+              "left": (x0 - half, y0 - half, x0 + half, y1 + half)}
+    for side, strip in strips.items():
+        if sides[side] == "behind":
+            kept &= ~_rect(shape, *strip)
+    keep = kept.astype(np.float32)
     for stroke in frame.get("strokes") or ():
         points = np.asarray(stroke["points"], float) * (width, height)
         cover = _stroke_cover(shape, points, longest * stroke["width"] / 100)

@@ -78,7 +78,10 @@ A `stage` request's `frame` sets the delivery in a square panel:
   none, an omitted color or width the default); together they are the
   border.
 - A `cut` side ends the figure and outline at the border's inner edge, the
-  half-plane running past the box; an `out` side leaves them over it.
+  half-plane running past the box; an `out` side leaves them over the
+  border; a `behind` side keeps them on both sides of it and takes them out
+  under its strip (the side's border out to the corners), so the border
+  lies over the figure.
 - `strokes` are round pens applied in order: an `erase` multiplies what is
   kept by one minus its anti-aliased coverage, a `restore` adds its
   coverage back, never past the figure's own alpha.

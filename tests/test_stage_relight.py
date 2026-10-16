@@ -89,6 +89,21 @@ class FrameTest(unittest.TestCase):
         self.assertEqual(staged.figure_alpha[40, 18], 0.0)
         self.assertEqual(staged.figure_alpha[40, 19], 1.0)
 
+    def test_a_behind_side_keeps_the_figure_both_sides_with_the_border_over_it(self):
+        sides = {"top": "out", "right": "cut", "bottom": "cut", "left": "behind"}
+        staged = stage.in_frame(
+            self.figure, self.outline,
+            framed(box=[0.3, 0.25, 1.0, 1.0], sides=sides, canvas=[0.0, 0.0, 1.0, 1.0]),
+            "#ffffff")
+        # Box left edge at x 18: the strip is x 16..20, the figure stays either side.
+        alpha = staged.figure_alpha
+        self.assertEqual(alpha[40, 15], 1.0)
+        self.assertEqual(alpha[40, 17], 0.0)
+        self.assertEqual(alpha[40, 20], 1.0)
+        np.testing.assert_allclose(staged.picture[40, 17], (16, 32, 48))
+        # Above the box the left side does not reach: the figure stays.
+        self.assertEqual(alpha[12, 17], 1.0)
+
     def test_the_backdrop_fills_the_box_and_paper_the_rest(self):
         staged = stage.in_frame(self.figure, self.outline,
                                 framed(line=None, canvas=[0.0, 0.0, 1.0, 1.0]), "#405060")
