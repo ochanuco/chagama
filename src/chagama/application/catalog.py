@@ -274,7 +274,9 @@ def _stage_block() -> dict:
                     "delivery's canvas; the rim edges both sides of the line; a cut "
                     "side clips the figure at the border's inner edge, an out side "
                     "lets it over the border, a behind side keeps it on both sides "
-                    "of the border with the border over it; strokes erase or "
+                    "of the border with the border over it; canvas sides left null "
+                    "are resolved, past the delivery's canvas only where expand "
+                    "(one boolean or one per side) allows; strokes erase or "
                     "restore the figure in order. Widths are percent of the "
                     "delivery's longest side",
         },

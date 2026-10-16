@@ -158,7 +158,8 @@ def stage(generation_id: str, services: StageServices, *,
           context: dict | None = None) -> dict:
     """Set the delivery `generation_id` in the photo `photo_id`, or on the
     `backdrop` pattern when there is none (filling the `frame`'s box when
-    one is given, its canvas resolved from the layers when it names none),
+    one is given, the sides of its canvas it leaves None resolved from the
+    layers),
     in the `light` scene (inherited from the lineage's light redraw when
     `inherit_light`). The result carries the frame as resolved."""
     state_path, state = _load_state(services, "stage", key_prefix)
@@ -182,7 +183,7 @@ def stage(generation_id: str, services: StageServices, *,
     prefix = f"set-{generation_id}"
     token = uuid.uuid4().hex[:8]
     layer_bytes = {role: management.fetch_asset(generation_id, role) for role in FIGURE_ROLES}
-    if frame is not None and frame.get("canvas") is None:
+    if frame is not None and (frame.get("canvas") is None or None in frame["canvas"]):
         frame = {**frame, "canvas": frame_canvas_share(
             layer_bytes["layer-figure"], layer_bytes["layer-outline"], frame)}
     uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)

@@ -369,6 +369,13 @@ class StageArgumentsTest(unittest.TestCase):
                                            "rim": {"color": "#000000"}}})["frame"]
         self.assertEqual(frame["line"], {"color": "#885b80", "width": 1.0})
         self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
+        frame = stage_arguments({"frame": {"box": [0, 0, 1, 1], "canvas": [None, -0.1, None, None],
+                                           "expand": {"right": False}}})["frame"]
+        self.assertEqual(frame["canvas"], [None, -0.1, None, None])
+        self.assertEqual(frame["expand"],
+                         {"top": True, "right": False, "bottom": True, "left": True})
+        self.assertIsNone(stage_arguments({"frame": {
+            "box": [0, 0, 1, 1], "canvas": [None, None, None, None]}})["frame"]["canvas"])
 
     def test_bad_frames_fail(self):
         box = [0, 0, 1, 1]
@@ -379,7 +386,10 @@ class StageArgumentsTest(unittest.TestCase):
                     {"box": box, "line": {"color": "#000000", "width": 6}},
                     {"box": box, "rim": {"color": "#000000", "alpha": 1}},
                     {"box": box, "paper": "white"}, {"box": box, "zoom": 1},
-                    {"box": box, "expand": "no"},
+                    {"box": box, "expand": "no"}, {"box": box, "expand": {"up": False}},
+                    {"box": box, "expand": {"top": 0}},
+                    {"box": box, "canvas": [0.5, None, 0.4, None]},
+                    {"box": box, "canvas": [None, None, None]},
                     {"box": box, "strokes": [{"mode": "smudge", "width": 1, "points": [[0, 0]]}]},
                     {"box": box, "strokes": [{"mode": "erase", "width": 0, "points": [[0, 0]]}]},
                     {"box": box, "strokes": [{"mode": "erase", "width": 1, "points": []}]},

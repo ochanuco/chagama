@@ -162,6 +162,22 @@ class StageTest(unittest.TestCase):
         self.assertEqual(resolution["parameters"]["frame"], resolved)
         self.assertIn("枠", resolution["raw_instruction"])
 
+    def test_the_canvas_sides_left_null_are_resolved(self):
+        figure = np.zeros((80, 60, 4), np.float32)
+        figure[10:70, 15:45] = (200, 60, 120, 255)
+        layers = {"layer-figure": _png(figure, "RGBA"),
+                  "layer-outline": _png(np.zeros_like(figure), "RGBA")}
+        frame = {"box": [0.25, 0.25, 1.0, 1.0],
+                 "sides": {"top": "out", "right": "cut", "bottom": "cut", "left": "cut"},
+                 "line": {"color": "#885b80", "width": 5.0}, "paper": "#ffffff",
+                 "canvas": [None, -0.25, None, None], "expand": {"bottom": False},
+                 "strokes": []}
+        management = ManagementFake({"dlv": (DELIVERY, layers)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            result = stage("dlv", services, backdrop="stripes", frame=frame)
+        self.assertEqual(result["frame"]["canvas"], [9 / 60, -0.25, 66 / 60, 1.0])
+
     def test_a_frame_with_its_own_canvas_is_sent_as_given(self):
         frame = {"box": [0, 0, 1, 1], "sides": {}, "line": None, "paper": "#ffffff",
                  "canvas": [0, 0, 1, 1], "strokes": []}
