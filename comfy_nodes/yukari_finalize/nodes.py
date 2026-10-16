@@ -16,7 +16,6 @@ from chagama.infrastructure.imaging import (
     depth_blur,
     lens,
     matting,
-    palette,
     photo_stage,
     relight,
     viewfinder,
@@ -26,21 +25,6 @@ from chagama.infrastructure.imaging import saturation as saturating
 from chagama.infrastructure.imaging import stage as staging
 
 from . import bridge, vitmatte
-
-
-class YukariRepin:
-    CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE", "STRING")
-    RETURN_NAMES = ("image", "report")
-    FUNCTION = "run"
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {"image": ("IMAGE",)}}
-
-    def run(self, image):
-        data, report = palette.repin_png(bridge.image_to_png(image))
-        return (bridge.png_to_image(data), "\n".join(report))
 
 
 class YukariMatting:
@@ -480,7 +464,6 @@ class YukariPhotoDepthOfField:
 
 
 NODE_CLASS_MAPPINGS = {
-    "YukariRepin": YukariRepin,
     "YukariSaturation": YukariSaturation,
     "YukariMatting": YukariMatting,
     "YukariForeground": YukariForeground,
@@ -497,7 +480,6 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "YukariRepin": "Yukari Repin",
     "YukariSaturation": "Yukari Saturation",
     "YukariMatting": "Yukari Matting",
     "YukariForeground": "Yukari Foreground",
