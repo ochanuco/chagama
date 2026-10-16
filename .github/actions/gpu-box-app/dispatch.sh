@@ -28,8 +28,8 @@ done
 
 if [[ -z "$run_id" ]]; then
   for _ in $(seq 12); do
-    run_id=$(gh api "repos/$repo/actions/workflows/$workflow/runs?event=workflow_dispatch&created=>=$dispatched_at" \
-      --jq --arg id "$REQUEST_ID" '[.workflow_runs[] | select(.display_title | contains($id))][0].id // empty' 2>/dev/null || true)
+    run_id=$(gh api "repos/$repo/actions/workflows/$workflow/runs?event=workflow_dispatch&created=>=$dispatched_at" 2>/dev/null \
+      | jq -r --arg id "$REQUEST_ID" '[.workflow_runs[] | select(.display_title | contains($id))][0].id // empty' || true)
     [[ -n "$run_id" ]] && break
     sleep 10
   done
