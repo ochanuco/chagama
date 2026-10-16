@@ -15,6 +15,7 @@ from ..domain.yukari.delivery_style import (
 )
 from ..infrastructure.comfyui.dof_graph import dof_graph, photo_dof_graph
 from ..infrastructure.comfyui.timings import note_ingested
+from ..infrastructure.imaging.delivery import image_size
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import DEPTH_ROLE, attach_cut, current_cut, reusable, stored_cut
 from .ingest import (
@@ -50,6 +51,7 @@ class DofServices:
     emit: Callable[[str], None] = print
     dof_graph: Callable[..., dict] = dof_graph
     photo_dof_graph: Callable[..., dict] = photo_dof_graph
+    image_size: Callable[[bytes], tuple[int, int]] = image_size
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
@@ -165,14 +167,15 @@ def dof(generation_id: str, services: DofServices, *,
     stored, source_roles = stored_cut(services, source_id)
     depth_bytes = reusable(services, source_id, DEPTH_ROLE, stored,
                            source_roles, current)
-    depth_image = source_image = None
+    depth_image = source_image = source_size = None
     if depth_bytes is not None:
         depth_image = services.comfyui.upload_image(
             f"{prefix}-depth-in-{token}.png", depth_bytes)
     else:
+        source_bytes = management.fetch_generation_image(source_id)
+        source_size = services.image_size(source_bytes)
         source_image = services.comfyui.upload_image(
-            f"{prefix}-source-{token}.png",
-            management.fetch_generation_image(source_id))
+            f"{prefix}-source-{token}.png", source_bytes)
     uploaded = {role: services.comfyui.upload_image(
         f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
         for role in roles}
@@ -180,14 +183,14 @@ def dof(generation_id: str, services: DofServices, *,
         graph = services.photo_dof_graph(
             uploaded["layer-figure"], uploaded["layer-outline"],
             uploaded["layer-backdrop"], prefix, depth_image=depth_image,
-            photo_image=source_image, place=tuple(staged["place"]),
+            photo_image=source_image, photo_size=source_size, place=tuple(staged["place"]),
             height=staged["height"], focus=focus, f_number=f_number,
             viewfinder=viewfinder, **photo_blur)
     else:
         graph = services.dof_graph(
             uploaded["layer-figure"], uploaded["layer-outline"],
             uploaded.get("layer-backdrop"), prefix, depth_image=depth_image,
-            source_image=source_image, focus=focus, f_number=f_number, scope=scope,
+            source_image=source_image, source_size=source_size, focus=focus, f_number=f_number, scope=scope,
             viewfinder=viewfinder, depth_place=_depth_place(framed))
 
     prompt_id = state.get("prompt_id")

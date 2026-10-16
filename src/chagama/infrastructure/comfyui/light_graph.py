@@ -25,7 +25,8 @@ def light_graph(graph: Mapping, roles: BaseRoles, source_image: str,
                 matte_model: str, scene: str, direction: str,
                 prefix: str, *, cut: bool = False,
                 alpha_image: str | None = None,
-                depth_image: str | None = None) -> dict:
+                depth_image: str | None = None,
+                size: tuple[int, int]) -> dict:
     """A copy of `graph` without its outputs, so its own sampling does not
     run again, that lights the uploaded `source_image` and re-samples it with
     the source's seed and negative and a positive that adds the scene's words.
@@ -33,7 +34,7 @@ def light_graph(graph: Mapping, roles: BaseRoles, source_image: str,
     With `cut`, the matte is the ViTMatte alpha and the depth is the cut
     asset of the picture: loaded from `alpha_image` / `depth_image` when
     given, otherwise built here and saved under `prefix` + "-alpha" /
-    "-depth". Without it the matte is the coarse background-removal one."""
+    "-depth", at the source's `size`. Without it the matte is the coarse background-removal one."""
     result = {key: node for key, node in copy.deepcopy(dict(graph)).items()
               if node.get("class_type") not in OUTPUT_CLASSES}
     settings = sampler_settings(result, roles.sampler_id)
@@ -57,9 +58,9 @@ def light_graph(graph: Mapping, roles: BaseRoles, source_image: str,
         matte_ref = alpha_nodes(
             result, allocate, image_ref, matte_model, prefix, alpha_image)
         depth_ref = depth_nodes(
-            result, allocate, image_ref, prefix, depth_image)
+            result, allocate, image_ref, prefix, depth_image, size)
     else:
-        depth_ref = _depth_nodes(result, allocate, image_ref)
+        depth_ref = _depth_nodes(result, allocate, image_ref, size)
         matte_ref = _matte_nodes(result, allocate, image_ref, matte_model)
     light_id = allocate()
     result[light_id] = {"class_type": "YukariLight", "inputs": {

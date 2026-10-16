@@ -10,6 +10,7 @@ STAGED_SUFFIX = "-staged"
 
 def photo_graph(photo_image: str, figure_image: str, outline_image: str,
                 prefix: str, *, depth_image: str | None,
+                photo_size: tuple[int, int] | None = None,
                 place: tuple[float, float], height: float,
                 stand_at: tuple[float, float] | None, nearer: float,
                 focus: tuple[float, float] | str, f_number: float,
@@ -18,7 +19,7 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
     """The photo graph over the uploaded photo and layer images.
 
     The photo's depth is the uploaded `depth_image`, or is built from the
-    photo and saved under `prefix` + DEPTH_SUFFIX. The composite is saved
+    photo (of `photo_size`) and saved under `prefix` + DEPTH_SUFFIX. The composite is saved
     under `prefix` + STAGED_SUFFIX.
     """
     graph: dict = {}
@@ -40,7 +41,7 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
     if depth_image is not None:
         depth_ref = depth_nodes(graph, allocate, [], prefix, depth_image)
     else:
-        depth_ref = depth_nodes(graph, allocate, [photo_id, 0], prefix, None)
+        depth_ref = depth_nodes(graph, allocate, [photo_id, 0], prefix, None, photo_size)
 
     stage_id = allocate()
     point = focus if focus != "subject" else (0.5, 0.5)

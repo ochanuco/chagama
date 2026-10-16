@@ -42,25 +42,30 @@ def alpha_nodes(graph: dict, allocate: Callable[[], str], source_ref: list,
 
 
 def depth_nodes(graph: dict, allocate: Callable[[], str], source_ref: list,
-                prefix: str, depth_image: str | None) -> list:
+                prefix: str, depth_image: str | None,
+                size: tuple[int, int] | None = None) -> list:
     """The depth of `source_ref`: loaded from the uploaded `depth_image`, or
-    built here and saved under `prefix` + DEPTH_SUFFIX. Returns the depth ref."""
+    built here at the picture's `size` and saved under `prefix` + DEPTH_SUFFIX.
+    Returns the depth ref."""
     if depth_image is not None:
         load_depth = allocate()
         graph[load_depth] = {"class_type": "LoadImage", "inputs": {
             "image": depth_image}}
         return [load_depth, 0]
-    depth_ref = _depth_nodes(graph, allocate, source_ref)
+    if size is None:
+        raise ValueError("depth_nodes needs a depth_image or the source size")
+    depth_ref = _depth_nodes(graph, allocate, source_ref, size)
     save_depth = allocate()
     graph[save_depth] = {"class_type": "SaveImage", "inputs": {
         "images": depth_ref, "filename_prefix": prefix + DEPTH_SUFFIX}}
     return depth_ref
 
 
-def cut_graph(source_image: str, matte_model: str, prefix: str) -> dict:
+def cut_graph(source_image: str, matte_model: str, prefix: str,
+              size: tuple[int, int]) -> dict:
     """The cut of the uploaded `source_image` as a deliver makes it: the
     alpha and depth saved under `prefix` + ALPHA_SUFFIX / DEPTH_SUFFIX, and
-    the figure's colour under that alpha under `prefix` + FOREGROUND_SUFFIX."""
+    the depth inferred at the source's `size`, and the figure's colour under that alpha under `prefix` + FOREGROUND_SUFFIX."""
     graph: dict = {}
     cursor = 1
 
@@ -74,7 +79,7 @@ def cut_graph(source_image: str, matte_model: str, prefix: str) -> dict:
     graph[load] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
     source_ref = [load, 0]
     alpha_ref = alpha_nodes(graph, allocate, source_ref, matte_model, prefix, None)
-    depth_nodes(graph, allocate, source_ref, prefix, None)
+    depth_nodes(graph, allocate, source_ref, prefix, None, size)
     graph[allocate()] = {"class_type": "SaveImage", "inputs": {
         "images": foreground_node(graph, allocate, source_ref, alpha_ref),
         "filename_prefix": prefix + FOREGROUND_SUFFIX}}

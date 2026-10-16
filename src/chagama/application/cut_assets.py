@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable
 
 from ..domain.yukari import delivery_style
-from ..infrastructure.comfyui.refinement_graph import DEPTH_CKPT, DEPTH_RESOLUTION
+from ..infrastructure.comfyui.refinement_graph import DEPTH_CKPT, DEPTH_MAX_PIXELS
 from .ingest import asset_key, attach_asset
 
 CUT_ROLE = "cut"
@@ -29,7 +29,8 @@ def current_cut() -> dict:
             "translucent_min_key_share": delivery_style.TRANSLUCENT_MIN_KEY_SHARE,
             "translucent_min_area": delivery_style.TRANSLUCENT_MIN_AREA,
         },
-        "depth": {"ckpt": DEPTH_CKPT, "resolution": DEPTH_RESOLUTION},
+        "depth": {"ckpt": DEPTH_CKPT, "max_pixels": DEPTH_MAX_PIXELS,
+                  "size": "native"},
     }
 
 

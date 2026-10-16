@@ -120,7 +120,9 @@ stage-and-blur.
 - The cut is stored on the source Generation: `alpha` (ViTMatte alpha),
   `depth` (built by `dof`) and a json `cut` asset recording
   the matte model, matting model and revision, trimap and tile sizes, and
-  the depth checkpoint and resolution. A later deliver loads an asset when
+  the depth checkpoint and size rule (inferred at the picture's own size;
+  only a picture over 2048x2560 pixels is shrunk to fit, aspect kept, never
+  upscaled). A later deliver loads an asset when
   its `cut` entry equals the worker's current values, and cuts again (and
   replaces the asset) when it differs or the asset is missing. The
   foreground colour is estimated again each time.

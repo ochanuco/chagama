@@ -10,6 +10,7 @@ from pathlib import Path
 from ..domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH
 from ..infrastructure.comfyui.photo_graph import photo_graph
 from ..infrastructure.comfyui.timings import note_ingested
+from ..infrastructure.imaging.delivery import image_size
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import DEPTH_ROLE, attach_cut, current_cut, reusable, stored_cut
 from .ingest import (
@@ -35,6 +36,7 @@ class PhotoServices:
     output_root: Path
     emit: Callable[[str], None] = print
     photo_graph: Callable[..., dict] = photo_graph
+    image_size: Callable[[bytes], tuple[int, int]] = image_size
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
@@ -93,14 +95,16 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
     if depth_bytes is not None:
         depth_image = services.comfyui.upload_image(
             f"{prefix}-depth-in-{token}.png", depth_bytes)
+    photo_bytes = management.fetch_generation_image(photo_id)
     photo_image = services.comfyui.upload_image(
-        f"{prefix}-photo-{token}.png", management.fetch_generation_image(photo_id))
+        f"{prefix}-photo-{token}.png", photo_bytes)
     layers = {role: services.comfyui.upload_image(
         f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
         for role in LAYER_ROLES}
     graph = services.photo_graph(
         photo_image, layers["layer-figure"], layers["layer-outline"], prefix,
-        depth_image=depth_image, place=place, height=height, stand_at=stand_at,
+        depth_image=depth_image, photo_size=services.image_size(photo_bytes),
+        place=place, height=height, stand_at=stand_at,
         nearer=nearer, focus=focus, f_number=f_number, tilt=tilt, bokeh=bokeh,
         focal_length=focal_length)
 

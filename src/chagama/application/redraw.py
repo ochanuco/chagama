@@ -237,7 +237,8 @@ def _prepare_light(generation_id: str, services: RedrawServices,
         graph = services.light_graph(
             source.graph, source.roles, source_image, delivery_style.MATTE_MODEL,
             light.scene, light.direction, prefix, cut=True,
-            alpha_image=alpha_image, depth_image=depth_image)
+            alpha_image=alpha_image, depth_image=depth_image,
+            size=services.image_size(source.picked))
     except ValueError as error:
         raise SystemExit(str(error)) from error
     cut_roles = tuple(role for role, found in (
@@ -261,7 +262,8 @@ def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, 
         image = services.comfyui.upload_image(
             f"{prefix}-in-{uuid.uuid4().hex[:8]}.png", picture[1])
         prompt_id = services.comfyui.submit(
-            services.cut_graph(image, delivery_style.MATTE_MODEL, prefix))
+            services.cut_graph(image, delivery_style.MATTE_MODEL, prefix,
+                                services.image_size(picture[1])))
         if state_path:
             state["cut_prompt_id"] = prompt_id
             services.state.save(state_path, state)
