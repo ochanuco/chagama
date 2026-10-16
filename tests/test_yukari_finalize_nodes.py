@@ -133,7 +133,7 @@ class NodeMappingTest(unittest.TestCase):
             "YukariRepin", "YukariMatting",
             "YukariForeground", "YukariSeeThrough", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
-            "YukariStage", "YukariRelight", "YukariPhotoDepthOfField",
+            "YukariStage", "YukariRelight", "YukariSaturation", "YukariPhotoDepthOfField",
         })
         self.assertEqual(
             set(nodes.NODE_DISPLAY_NAME_MAPPINGS),
@@ -366,6 +366,20 @@ class NodeRunTest(unittest.TestCase):
         self.assertEqual(image.array.shape, (1, 48, 80, 3))
         self.assertEqual(staged_figure.array.shape, (1, 48, 80, 4))
         self.assertEqual(backdrop.array.shape, (1, 48, 80, 3))
+
+    def test_saturation_returns_the_picture_and_the_compressed_layers(self):
+        node = nodes.YukariSaturation()
+        figure, figure_mask = image_tensor(swatch()), mask_tensor(255 - matte_array())
+        outline = image_tensor(np.zeros((64, 64, 3), np.uint8))
+        outline_mask = mask_tensor(np.full((64, 64), 255, np.uint8))
+        backdrop = image_tensor(np.full((64, 64, 3), 200, np.uint8))
+        image, saturated_figure, saturated_outline = node.run(
+            figure, figure_mask, outline, outline_mask, strength=1.0, backdrop=backdrop)
+        self.assertEqual(image.array.shape, (1, 64, 64, 3))
+        self.assertEqual(saturated_figure.array.shape, (1, 64, 64, 4))
+        self.assertEqual(saturated_outline.array.shape, (1, 64, 64, 4))
+        image, *_ = node.run(figure, figure_mask, outline, outline_mask, strength=0.5)
+        self.assertEqual(image.array.shape, (1, 64, 64, 4))
 
     def test_relight_returns_the_picture_and_its_layers(self):
         node = nodes.YukariRelight()

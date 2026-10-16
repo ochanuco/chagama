@@ -33,6 +33,7 @@ from ..domain.yukari.delivery_style import (
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     LIGHTING_STRENGTH,
+    SATURATION_STRENGTH,
     PHOTO_BOKEH,
     PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
@@ -53,8 +54,8 @@ from .picture_source import stroke_light_conflict
 from .redraw import HIRES_DENOISE
 
 _KNOWN_DELIVER_OPTIONS = frozenset({
-    "repin", "keep_scene", "transparent", "backdrop", "stroke_light",
-    "outlines", "light", "see_through",
+    "keep_scene", "transparent", "backdrop", "stroke_light", "outlines", "light",
+    "see_through",
 })
 # The see-through gain's range; 1 is the cut as solved.
 _SEE_THROUGH_RANGE = (1.0, 5.0)
@@ -77,6 +78,7 @@ _KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas",
                                "strokes"})
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
+_KNOWN_SATURATION_OPTIONS = frozenset({"strength"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
@@ -481,7 +483,6 @@ def deliver_arguments(options: Mapping) -> dict:
         raise ValueError(f"see_through must be between {low:g} and {high:g}, got {see_through!r}")
 
     return {
-        "repin": boolean("repin", DELIVER_DEFAULTS["repin"]),
         "keep_scene": keep_scene,
         "transparent": transparent,
         "backdrop": backdrop,
@@ -733,5 +734,17 @@ def lighting_arguments(options: Mapping) -> dict:
     return {"direction": direction,
             "strength": _ranged(options, "strength", LIGHTING_STRENGTH),
             "scene": scene}
+
+
+def saturation_arguments(options: Mapping) -> dict:
+    """Validate a saturation request's `options` and map it to saturation()
+    kwargs: `strength` (absent for full compression)."""
+    if not isinstance(options, Mapping):
+        raise ValueError(
+            f"saturation options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_SATURATION_OPTIONS)
+    if unknown:
+        raise ValueError(f"saturation が受け付けない option です: {', '.join(unknown)}")
+    return {"strength": _ranged(options, "strength", SATURATION_STRENGTH)}
 
 

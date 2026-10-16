@@ -84,8 +84,8 @@ class CliTest(unittest.TestCase):
         args, kwargs = run_deliver.call_args
         self.assertEqual(args[0], "gen-1")
         self.assertEqual(kwargs, {
-            "repin": True, "keep_scene": False, "transparent": False,
-            "backdrop": "dots", "stroke_light": RECIPE_DEFAULT,
+            "keep_scene": False, "transparent": False, "backdrop": "dots",
+            "stroke_light": RECIPE_DEFAULT,
             "outlines": [{"color": "#ffffff", "width": 0.8},
                          {"color": "#885b80", "width": 1.04}],
             "light": None})
@@ -94,11 +94,9 @@ class CliTest(unittest.TestCase):
     @patch.object(cli, "ChimeraClient")
     def test_deliver_flags_dispatch_without_network(
             self, chimera_class, run_deliver):
-        cli.main(["deliver", "gen-1", "--no-repin", "--transparent",
-                  "--light", "moon,se",
+        cli.main(["deliver", "gen-1", "--transparent", "--light", "moon,se",
                   "--outline", "#ffffff,0.8", "--outline", "#885b80,2"])
         kwargs = run_deliver.call_args.kwargs
-        self.assertIs(kwargs["repin"], False)
         self.assertIs(kwargs["transparent"], True)
         self.assertIsNone(kwargs["backdrop"])
         self.assertEqual(kwargs["outlines"], [{"color": "#ffffff", "width": 0.8},
@@ -141,6 +139,17 @@ class CliTest(unittest.TestCase):
                          {"figure": True, "outline": True, "backdrop": True})
         with self.assertRaisesRegex(SystemExit, "scope"):
             cli.main(["dof", "gen-1", "--focus", "0.5,0.4", "--scope", "rim"])
+
+    @patch.object(cli, "saturation")
+    @patch.object(cli, "ChimeraClient")
+    def test_saturation_dispatches_without_network(self, chimera_class, run_saturation):
+        cli.main(["saturation", "gen-1"])
+        args, kwargs = run_saturation.call_args
+        self.assertEqual((args[0], kwargs), ("gen-1", {"strength": 1.0}))
+        cli.main(["saturation", "gen-1", "--strength", "0.4"])
+        self.assertEqual(run_saturation.call_args.kwargs, {"strength": 0.4})
+        with self.assertRaises(SystemExit):
+            cli.main(["saturation", "gen-1", "--strength", "2"])
 
     @patch.object(cli, "lens")
     @patch.object(cli, "ChimeraClient")
@@ -266,7 +275,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(
             work_services.kinds,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting"))
+             "lighting", "saturation"))
         self.assertIs(
             work_services.stage_services.management, chimera_class.return_value)
         self.assertIs(

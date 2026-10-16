@@ -21,7 +21,7 @@ from .dof import DofServices, dof
 from .generate import GenerateServices, generate, request_file_path
 from .lens import LensServices, lens
 from .photo import PhotoServices, photo
-from .stage import StageServices, lighting, stage
+from .stage import StageServices, lighting, saturation, stage
 from .redraw import RedrawServices, redraw
 from .request_options import (
     REDRAW_DIAL_KEYS,
@@ -31,6 +31,7 @@ from .request_options import (
     dof_arguments,
     lens_arguments,
     lighting_arguments,
+    saturation_arguments,
     photo_arguments,
     stage_arguments,
     redraw_arguments,
@@ -71,11 +72,12 @@ class WorkServices:
     photo: Callable[..., dict] = photo
     stage: Callable[..., dict] = stage
     lighting: Callable[..., dict] = lighting
+    saturation: Callable[..., dict] = saturation
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
     kinds: tuple[str, ...] = ("generate", "redraw", "deliver", "dof", "lens",
-                              "photo", "stage", "lighting")
+                              "photo", "stage", "lighting", "saturation")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
@@ -254,6 +256,23 @@ def _execute_lighting(services: WorkServices, row: Mapping) -> dict:
     return result
 
 
+def _execute_saturation(services: WorkServices, row: Mapping) -> dict:
+    payload = row.get("payload") or {}
+    generation_id = payload.get("generation_id")
+    if not generation_id:
+        raise SystemExit("saturation payload.generation_id is required")
+    context, _ = fetch_source(services.management, generation_id)
+    try:
+        arguments = saturation_arguments(payload.get("options") or {})
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    result = services.saturation(generation_id, services.stage_services,
+                                 key_prefix=f"request:{row['id']}",
+                                 request_id=row["id"], context=context, **arguments)
+    result["resolved_options"] = dict(arguments)
+    return result
+
+
 def execute(services: WorkServices, row: Mapping) -> dict:
     ref = row.get("recipe_ref")
     if ref != services.git_metadata().get("branch"):
@@ -275,6 +294,8 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_stage(services, row)
     if kind == "lighting":
         return _execute_lighting(services, row)
+    if kind == "saturation":
+        return _execute_saturation(services, row)
     if kind == "finalize":
         raise SystemExit(
             "finalize requests are no longer supported; use redraw and deliver")

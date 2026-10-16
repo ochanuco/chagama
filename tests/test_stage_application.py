@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from chagama.application.dof import DofServices, dof
-from chagama.application.stage import StageServices, lighting, stage
+from chagama.application.stage import StageServices, lighting, saturation, stage
 from chagama.infrastructure.imaging.stage import _png
 
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
@@ -204,7 +204,7 @@ class StageTest(unittest.TestCase):
         management = ManagementFake({"stg": ({"kind": "stage", "base_generation": "dlv"},
                                              LAYERS)})
         with (tempfile.TemporaryDirectory() as directory,
-              self.assertRaisesRegex(SystemExit, "deliver の出力")):
+              self.assertRaisesRegex(SystemExit, "saturation の出力")):
             stage("stg", services_for(StageServices, management, directory),
                   backdrop="dots")
 
@@ -247,6 +247,107 @@ class LightingTest(unittest.TestCase):
                 lighting("lit", services, direction=None, strength=0.5)
             with self.assertRaisesRegex(SystemExit, "stage"):
                 lighting("dlv", services, direction=None, strength=0.5)
+
+
+SATURATED = {"kind": "saturation", "base_generation": "dlv", "strength": 1.0}
+OPAQUE_DELIVERY = {"kind": "deliver", "base_generation": "src", "transparent": False,
+                   "stroke_light": "n", "outlines": [{"color": "#ffffff", "width": 1.0}]}
+
+
+class SaturationTest(unittest.TestCase):
+    def test_a_delivery_with_a_backdrop_is_saturated_and_keeps_all_layers(self):
+        management = ManagementFake({"dlv": (OPAQUE_DELIVERY, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            result = saturation("dlv", services, strength=0.6)
+        graph = services.comfyui.submitted[0]
+        inputs = node(services, "YukariSaturation")["inputs"]
+        self.assertEqual(inputs["strength"], 0.6)
+        self.assertIn("backdrop", inputs)
+        self.assertEqual(sorted(n["inputs"]["filename_prefix"] for n in graph.values()
+                                if n["class_type"] == "SaveImage"),
+                         ["sat-dlv-delivered", "sat-dlv-layer-backdrop",
+                          "sat-dlv-layer-figure", "sat-dlv-layer-outline"])
+        self.assertEqual(result, {"generation_ids": ["out-1"]})
+        self.assertEqual(management.resolution()["parameters"], {
+            "kind": "saturation", "base_generation": "dlv", "strength": 0.6})
+        self.assertEqual(management.asset_roles(),
+                         ["layer-figure", "layer-outline", "layer-backdrop"])
+
+    def test_a_transparent_delivery_has_no_backdrop_to_pass_through(self):
+        management = ManagementFake({"dlv": (DELIVERY, {
+            "layer-figure": b"figure-png", "layer-outline": b"outline-png"})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            saturation("dlv", services, strength=1.0)
+        self.assertNotIn("backdrop", node(services, "YukariSaturation")["inputs"])
+        self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
+
+    def test_only_a_delivery_with_layers_can_be_saturated(self):
+        management = ManagementFake({
+            "stg": ({"kind": "stage", "base_generation": "dlv"}, LAYERS),
+            "lit": ({"kind": "lighting", "base_generation": "stg"}, LAYERS),
+            "sat": (SATURATED, LAYERS),
+            "pic": ({"kind": "photo", "base_generation": "dlv"}, LAYERS),
+            "gen": ({"kind": "generate"}, {}),
+            "bare": (DELIVERY, {"layer-figure": b"f"})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            for source in ("stg", "lit", "sat", "pic", "gen"):
+                with self.subTest(source=source), self.assertRaisesRegex(
+                        SystemExit, "deliver の出力"):
+                    saturation(source, services, strength=1.0)
+            with self.assertRaisesRegex(SystemExit, "層が無い"):
+                saturation("bare", services, strength=1.0)
+        self.assertEqual(services.comfyui.submitted, [])
+
+
+class SaturatedSourceTest(unittest.TestCase):
+    def records(self):
+        return ManagementFake({"sat": (SATURATED, LAYERS), "dlv": (DELIVERY, LAYERS),
+                               "src": ({"kind": "generate"}, {})})
+
+    def test_a_saturated_delivery_can_be_staged_with_its_delivery_shadow(self):
+        management = self.records()
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            stage("sat", services, backdrop="stripes", inherit_shadow=True)
+        inputs = node(services, "YukariStage")["inputs"]
+        self.assertEqual((inputs["backdrop"], inputs["shadow_from"]), ("stripes", "nw"))
+        self.assertEqual(json.loads(inputs["outlines"]), DELIVERY["outlines"])
+        self.assertEqual(management.resolution()["parameters"]["base_generation"], "sat")
+
+    def test_lighting_follows_the_saturated_deliverys_transparency(self):
+        management = ManagementFake({
+            "sat-opaque": ({**SATURATED, "base_generation": "opaque"}, LAYERS),
+            "sat-clear": (SATURATED, LAYERS),
+            "opaque": (OPAQUE_DELIVERY, LAYERS), "dlv": (DELIVERY, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            lighting("sat-opaque", services, direction=None, strength=0.5)
+            self.assertIn("YukariRelight",
+                          [n["class_type"] for n in services.comfyui.submitted[-1].values()])
+            with self.assertRaisesRegex(SystemExit, "stage"):
+                lighting("sat-clear", services, direction=None, strength=0.5)
+
+    def test_dof_passes_through_the_saturation_to_the_delivery(self):
+        management = self.records()
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(DofServices, management, directory)
+            dof("sat", services, focus=(0.5, 0.5), f_number=2.8,
+                scope={"figure": True, "outline": True, "backdrop": False})
+        self.assertIn(b"image:src", [data for _, data in services.comfyui.uploaded])
+        self.assertEqual(management.resolution()["parameters"]["base_generation"], "sat")
+
+    def test_dof_asks_a_saturated_opaque_delivery_for_its_backdrop_layer(self):
+        management = ManagementFake({
+            "sat": ({**SATURATED, "base_generation": "opaque"}, {
+                "layer-figure": b"f", "layer-outline": b"o"}),
+            "opaque": (OPAQUE_DELIVERY, LAYERS), "src": ({"kind": "generate"}, {})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(DofServices, management, directory)
+            with self.assertRaisesRegex(SystemExit, "層が無い"):
+                dof("sat", services, focus=(0.5, 0.5), f_number=2.8, scope={})
 
 
 class StagedDofTest(unittest.TestCase):

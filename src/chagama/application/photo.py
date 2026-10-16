@@ -44,7 +44,7 @@ def _check_source(services: PhotoServices, generation_id: str, context: dict) ->
     parameters = request.get("parameters") or {}
     if not is_delivered(request):
         raise SystemExit(NOT_DELIVERED)
-    if parameters.get("kind") != "deliver":
+    if parameters.get("kind") not in ("deliver", "saturation"):
         raise SystemExit(NO_LAYERS)
     present = {asset["role"] for asset in services.management.list_assets(generation_id)}
     if not set(LAYER_ROLES) <= present:

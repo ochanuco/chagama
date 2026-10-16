@@ -18,7 +18,7 @@ from ..application.ingest import import_images
 from ..application.lens import lens
 from ..application.photo import photo
 from ..application.redraw import redraw
-from ..application.stage import lighting, stage
+from ..application.stage import lighting, saturation, stage
 from ..application.request_options import (
     REDRAW_DIAL_KEYS,
     deliver_arguments,
@@ -28,6 +28,7 @@ from ..application.request_options import (
     photo_arguments,
     stage_arguments,
     lighting_arguments,
+    saturation_arguments,
     redraw_arguments,
     resolve_dial,
 )
@@ -42,6 +43,7 @@ from ..domain.yukari.delivery_style import (
     LENS_SHAPE,
     LENS_STRENGTH,
     LIGHTING_STRENGTH,
+    SATURATION_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     PHOTO_FOCAL_LENGTH,
@@ -273,7 +275,8 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--dry-run", action="store_true")
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
-        "--kinds", default="generate,redraw,deliver,dof,lens,photo,stage,lighting",
+        "--kinds",
+        default="generate,redraw,deliver,dof,lens,photo,stage,lighting,saturation",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",
@@ -336,9 +339,6 @@ def parser() -> argparse.ArgumentParser:
     deliver_parser = commands.add_parser(
         "deliver", help="cut and decorate one picture generation")
     deliver_parser.add_argument("generation_id")
-    deliver_parser.add_argument(
-        "--no-repin", dest="repin", action="store_false",
-        help="leave the palette as drawn instead of repinning it")
     deliver_parser.add_argument(
         "--keep-scene", action="store_true",
         help="deliver the picture uncut, background and all")
@@ -510,6 +510,14 @@ def parser() -> argparse.ArgumentParser:
         help=f"{LIGHTING_STRENGTH['min']}..{LIGHTING_STRENGTH['max']} "
              f"(default {LIGHTING_STRENGTH['default']})")
 
+    saturation_parser = commands.add_parser(
+        "saturation", help="compress a delivery's layers' saturation")
+    saturation_parser.add_argument("generation_id")
+    saturation_parser.add_argument(
+        "--strength", type=float, default=None,
+        help=f"{SATURATION_STRENGTH['min']}..{SATURATION_STRENGTH['max']} "
+             f"(default {SATURATION_STRENGTH['default']})")
+
     catalog_parser = commands.add_parser(
         "catalog", help="print the recipe catalog chimera composes requests from")
     catalog_parser.add_argument(
@@ -662,7 +670,6 @@ def main(argv: list[str] | None = None) -> None:
         outlines = _outlines_from_args(args)
         light = _light_from_args(args)
         options = {
-            **({} if args.repin else {"repin": False}),
             **({"keep_scene": True} if args.keep_scene else {}),
             **({"transparent": args.transparent}
                if args.transparent is not None else {}),
@@ -725,6 +732,16 @@ def main(argv: list[str] | None = None) -> None:
         except ValueError as error:
             raise SystemExit(str(error)) from error
         lighting(args.generation_id, services, **arguments)
+        return
+    if args.command == "saturation":
+        services = build_stage_services(
+            chimera, comfyui, notifier, repository, repository_metadata)
+        options = {} if args.strength is None else {"strength": args.strength}
+        try:
+            arguments = saturation_arguments(options)
+        except ValueError as error:
+            raise SystemExit(str(error)) from error
+        saturation(args.generation_id, services, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()

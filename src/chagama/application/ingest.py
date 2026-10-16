@@ -80,6 +80,12 @@ def classify_lighting_outputs(outputs: list) -> dict[str, list]:
     return _by_suffix(outputs, {"lit": LIT_SUFFIX, **LAYER_ROLES})
 
 
+def classify_saturation_outputs(outputs: list) -> dict[str, list]:
+    """A saturation submission's outputs by role: the `delivered` picture and
+    its `layer-*` layers."""
+    return _by_suffix(outputs, {"delivered": DELIVERED_SUFFIX, **LAYER_ROLES})
+
+
 def classify_redraw_outputs(outputs: list) -> dict[str, list]:
     """A redraw submission's outputs by role: the redrawn `picture`, plus
     `alpha` and `depth` when the graph cut them itself."""

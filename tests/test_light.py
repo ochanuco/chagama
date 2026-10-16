@@ -102,7 +102,7 @@ class LightGraphTest(unittest.TestCase):
 class DeliverGraphTest(unittest.TestCase):
     def deliver(self, **kwargs) -> dict:
         graph = deliver_graph(
-            "src.png", "birefnet", "fin", repin=True, keep_scene=False,
+            "src.png", "birefnet", "fin", keep_scene=False,
             transparent=False, backdrop=None, stroke_light=None,
             outlines=[],
             **{"light_scene": None, "light_from": None, **kwargs})

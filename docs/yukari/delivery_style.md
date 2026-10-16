@@ -15,7 +15,9 @@ in [`findings/delivery.md`](../findings/delivery.md).
 | `STROKE_LIGHT_*`, `STROKE_LIGHTS`, `STROKE_CHOICES`, `STICKER_SHADOW_*` | the `stroke_light` deliver option |
 | `STRIPES_*`, `WAVEFORM_*`, `EARS_*`, `BACKDROP_*` | named backdrops in `infrastructure/imaging/backdrops.py` |
 | `SAT_BAND`, `BG_SAT_MAX`, `FIGURE_SAT_*`, `BACKDROP_SPREAD_MAX` | `measure`/`verdict` in `palette.py`: the gate at ingest and in `palette_check.py` |
-| `FIGURE_LIGHT_*`, `PALETTE_WINDOWS`, `REPIN_*` | `repin` in `infrastructure/imaging/palette.py` |
+| `FIGURE_LIGHT_*`, `PALETTE_WINDOWS`, `REPIN_*` | `repin` in `infrastructure/imaging/palette.py`, applied by the `saturation` request through `infrastructure/imaging/saturation.py` |
+| `SATURATION_STRENGTH` | the `saturation` request's `strength` and the catalog's top-level `saturation` section |
+
 | `MATTE_*`, `KEY_*`, `ENCLOSED_*`, `FRAME_WINDOW_*`, `DRAWN_OUTLINE_*` | matte, keyed edge, pocket cuts and the drawn outline in `delivery.py` |
 | `REDRAW_*`, `ROUGH_STYLE`, `DELIVER_DEFAULTS` | the opt-in IL `canvas` redraw and the deliver defaults the catalog publishes |
 | `DOF_*` | the `dof` request's options and the catalog's top-level `dof` section |
@@ -51,7 +53,7 @@ in [`findings/delivery.md`](../findings/delivery.md).
   once. The dark band greys every hue
   except `REPIN_DARK_EXEMPT`. Light skin (from `REPIN_SKIN_CAP_V`) is
   capped on `REPIN_SKIN_CAP`; shadowed skin is not.
-- The matte is cut from the raw render, never from repinned colour.
+- The matte is cut from the raw render, never from skin-pinned or recoloured colour.
 - Only the outermost `KEY_EDGE_RING_PX` of the figure is soft. Despill runs
   on the rim only, and only when the corner key's dominant channel clears the
   others by `KEY_DESPILL_MIN_EXCESS`.

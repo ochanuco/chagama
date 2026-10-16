@@ -83,7 +83,7 @@ def cut_graph(source_image: str, matte_model: str, prefix: str) -> dict:
 
 def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   alpha_image: str | None = None,
-                  repin: bool, keep_scene: bool,
+                  keep_scene: bool,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   light_scene: str | None, light_from: str | None,
@@ -91,7 +91,7 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
     """The deliver graph over the uploaded `source_image`.
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
-    computing; without it the graph cuts the unrepinned source itself and
+    computing; without it the graph cuts the source itself and
     saves the result under `prefix` + ALPHA_SUFFIX. `see_through` scales the
     key showing through see-through clothing after the colour is solved;
     the saved alpha stays unscaled.
@@ -120,11 +120,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         graph, allocate, source_ref, matte_model, prefix, alpha_image)
 
     image_ref = source_ref
-    if repin:
-        repin_id = allocate()
-        graph[repin_id] = {"class_type": "YukariRepin", "inputs": {
-            "image": image_ref}}
-        image_ref = [repin_id, 0]
     silhouette_ref = None
     if not keep_scene:
         image_ref = foreground_node(graph, allocate, image_ref, alpha_ref)

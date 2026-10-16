@@ -22,6 +22,7 @@ from chagama.infrastructure.imaging import (
     viewfinder,
 )
 from chagama.infrastructure.imaging import light as lighting
+from chagama.infrastructure.imaging import saturation as saturating
 from chagama.infrastructure.imaging import stage as staging
 
 from . import bridge, vitmatte
@@ -364,6 +365,35 @@ class YukariStage:
                 bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
 
 
+class YukariSaturation:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("image", "figure", "outline")
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "figure": ("IMAGE",),
+            "figure_mask": ("MASK",),
+            "outline": ("IMAGE",),
+            "outline_mask": ("MASK",),
+            "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+        }, "optional": {
+            "backdrop": ("IMAGE",),
+        }}
+
+    def run(self, figure, figure_mask, outline, outline_mask, strength, backdrop=None):
+        picture, figure_png, outline_png = saturating.saturation_pngs(
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
+            bridge.image_to_png(backdrop) if backdrop is not None else None,
+            strength=strength)
+        return (bridge.png_to_image(picture, "RGB" if backdrop is not None else "RGBA"),
+                bridge.png_to_image(figure_png, "RGBA"),
+                bridge.png_to_image(outline_png, "RGBA"))
+
+
 class YukariRelight:
     CATEGORY = "yukari"
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE")
@@ -446,6 +476,7 @@ class YukariPhotoDepthOfField:
 
 NODE_CLASS_MAPPINGS = {
     "YukariRepin": YukariRepin,
+    "YukariSaturation": YukariSaturation,
     "YukariMatting": YukariMatting,
     "YukariForeground": YukariForeground,
     "YukariSeeThrough": YukariSeeThrough,
@@ -462,6 +493,7 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariRepin": "Yukari Repin",
+    "YukariSaturation": "Yukari Saturation",
     "YukariMatting": "Yukari Matting",
     "YukariForeground": "Yukari Foreground",
     "YukariSeeThrough": "Yukari See Through",

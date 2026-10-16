@@ -117,10 +117,21 @@ class PhotoSourceTest(unittest.TestCase):
                 run(management)
 
 
+class PhotoSaturatedSourceTest(unittest.TestCase):
+    def test_a_saturated_delivery_can_be_stood_in_a_photo(self):
+        management = ManagementFake(request_kind="saturation", parameters={
+            "kind": "saturation", "base_generation": "src", "strength": 1.0})
+        _, result = run(management)
+        self.assertEqual(result["generation_ids"], ["staged-1"])
+
+
 class PhotoOutputTest(unittest.TestCase):
     def test_photo_outputs_count_as_delivered(self):
         from chagama.application.picture_source import is_delivered
         self.assertTrue(is_delivered({"kind": "photo"}))
+        self.assertTrue(is_delivered({"kind": "saturation"}))
+        self.assertTrue(is_delivered({"kind": "import",
+                                      "parameters": {"kind": "saturation"}}))
 
 
 class PhotoUseCaseTest(unittest.TestCase):

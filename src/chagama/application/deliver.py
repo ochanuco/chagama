@@ -90,7 +90,7 @@ def _check_source(generation_id: str, services: DeliverServices, context: dict,
         raise SystemExit("LayerDiffuse 由来の絵は deliver できません")
 
 
-def _request_parameters(generation_id: str, *, repin: bool,
+def _request_parameters(generation_id: str, *,
                         keep_scene: bool, transparent: bool,
                         backdrop: str | None, stroke_light: str | None,
                         outlines: list[dict], light: Light | None,
@@ -98,7 +98,6 @@ def _request_parameters(generation_id: str, *, repin: bool,
     return {
         "kind": "deliver",
         "base_generation": generation_id,
-        "repin": repin,
         **({"keep_scene": True} if keep_scene else {}),
         **({"transparent": True} if transparent else {}),
         **({"backdrop": backdrop} if backdrop else {}),
@@ -111,7 +110,7 @@ def _request_parameters(generation_id: str, *, repin: bool,
 
 
 def deliver(generation_id: str, services: DeliverServices, *,
-            repin: bool = True, keep_scene: bool = False,
+            keep_scene: bool = False,
             transparent: bool = False,
             backdrop: str | None = delivery_style.DELIVER_DEFAULTS["backdrop"],
             stroke_light: str | None | object = RECIPE_DEFAULT,
@@ -154,7 +153,7 @@ def deliver(generation_id: str, services: DeliverServices, *,
     graph = services.deliver_graph(
         source_image, delivery_style.MATTE_MODEL, prefix,
         alpha_image=alpha_image,
-        repin=repin, keep_scene=keep_scene,
+        keep_scene=keep_scene,
         transparent=transparent, backdrop=backdrop, stroke_light=stroke_light,
         outlines=outlines,
         light_scene=light.scene if light is not None else None,
@@ -204,7 +203,7 @@ def deliver(generation_id: str, services: DeliverServices, *,
             "raw_instruction": f"{generation_id} を納品",
             "recipe": context["request"].get("recipe") or "yukari",
             "parameters": _request_parameters(
-                generation_id, repin=repin,
+                generation_id,
                 keep_scene=keep_scene, transparent=transparent,
                 backdrop=backdrop, stroke_light=stroke_light,
                 outlines=outlines, light=light, see_through=see_through),

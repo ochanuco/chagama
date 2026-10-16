@@ -26,7 +26,7 @@ from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 LAYERS = ["dlv-g-layer-figure", "dlv-g-layer-outline", "dlv-g-layer-backdrop"]
 OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]
 GRAPH_KWARGS = dict(
-    repin=True, keep_scene=False,
+    keep_scene=False,
     transparent=False, backdrop="dots", stroke_light="n", outlines=OUTLINES,
     light_scene=None, light_from=None)
 
@@ -51,7 +51,7 @@ def build(**overrides) -> dict:
 
 
 class DeliverGraphTest(unittest.TestCase):
-    def test_a_fresh_cut_mattes_the_unrepinned_source_and_saves_the_alpha(self):
+    def test_a_fresh_cut_mattes_the_source_and_saves_the_alpha(self):
         graph = build()
         [(load_id, _)] = nodes_of(graph, "LoadImage")
         [(birefnet_id, _)] = nodes_of(graph, "BiRefNetRMBG")
@@ -63,11 +63,9 @@ class DeliverGraphTest(unittest.TestCase):
         self.assertIn("dlv-g-alpha", saved_prefixes(graph))
         self.assertNotIn(DEPTH_NODE, classes(graph))
         self.assertFalse(any("-depth" in prefix for prefix in saved_prefixes(graph)))
-        [(repin_id, repin)] = nodes_of(graph, "YukariRepin")
-        self.assertEqual(repin["inputs"]["image"], [load_id, 0])
         [(foreground_id, foreground)] = nodes_of(graph, "YukariForeground")
         self.assertEqual(foreground["inputs"],
-                         {"image": [repin_id, 0], "alpha": [matting_id, 0]})
+                         {"image": [load_id, 0], "alpha": [matting_id, 0]})
         [(_, delivered)] = nodes_of(graph, "YukariDeliver")
         self.assertEqual(delivered["inputs"]["image"], [foreground_id, 0])
         self.assertEqual(delivered["inputs"]["matte"], [matting_id, 0])
@@ -107,13 +105,6 @@ class DeliverGraphTest(unittest.TestCase):
         graph = build(alpha_image="alpha.png", transparent=True, backdrop=None)
         self.assertEqual(saved_prefixes(graph),
                          ["dlv-g-delivered", *LAYERS[:2]])
-
-    def test_repin_runs_on_the_source_only_when_asked(self):
-        graph = build(repin=True)
-        [(load_id, _)] = nodes_of(graph, "LoadImage")
-        [(_, repin)] = nodes_of(graph, "YukariRepin")
-        self.assertEqual(repin["inputs"], {"image": [load_id, 0]})
-        self.assertNotIn("YukariRepin", classes(build(repin=False)))
 
     def test_see_through_scales_the_tail_alpha_not_the_saved_one(self):
         graph = build(see_through=3.0)
