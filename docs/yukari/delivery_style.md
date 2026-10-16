@@ -75,7 +75,8 @@ A `stage` request's `frame` sets the delivery in a square panel:
 - The canvas is painted `paper`, the box filled with the request's
   `backdrop` rendered at the box's size, and the `line` straddles the box's
   sides with the `rim` along both its edges (either null or width 0 for
-  none); together they are the border.
+  none, an omitted color or width the default); together they are the
+  border.
 - A `cut` side ends the figure and outline at the border's inner edge, the
   half-plane running past the box; an `out` side leaves them over it.
 - `strokes` are round pens applied in order: an `erase` multiplies what is

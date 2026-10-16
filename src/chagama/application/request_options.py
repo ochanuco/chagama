@@ -252,11 +252,12 @@ def _frame_strokes(value: object, *, key: str) -> list[dict]:
     return parsed
 
 
-def _frame_band(value: object, *, key: str) -> dict | None:
+def _frame_band(value: object, default: Mapping, *, key: str) -> dict | None:
     if value is None:
         return None
-    if not isinstance(value, Mapping) or set(value) != {"color", "width"}:
+    if not isinstance(value, Mapping) or not set(value) <= {"color", "width"}:
         raise ValueError(f"{key} must be null or {{\"color\", \"width\"}}, got {value!r}")
+    value = {**default, **value}
     width = _number(value["width"], key=f"{key}.width")
     if not (0 <= width <= OUTLINE_WIDTH_MAX_PCT):
         raise ValueError(f"{key}.width must be within 0..{OUTLINE_WIDTH_MAX_PCT:g}, got {width!r}")
@@ -285,8 +286,8 @@ def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
     canvas = value.get("canvas")
     return {"box": _frame_rect(value["box"], key=f"{key}.box"),
             "sides": {side: sides.get(side, FRAME_SIDE_DEFAULTS[side]) for side in FRAME_SIDES},
-            "line": _frame_band(value.get("line", FRAME_LINE), key=f"{key}.line"),
-            "rim": _frame_band(value.get("rim", FRAME_RIM), key=f"{key}.rim"),
+            "line": _frame_band(value.get("line", FRAME_LINE), FRAME_LINE, key=f"{key}.line"),
+            "rim": _frame_band(value.get("rim", FRAME_RIM), FRAME_RIM, key=f"{key}.rim"),
             "paper": _hex_colour(value.get("paper", FRAME_PAPER), key=f"{key}.paper"),
             "canvas": None if canvas is None else _frame_rect(canvas, key=f"{key}.canvas"),
             "strokes": _frame_strokes(value.get("strokes", []), key=f"{key}.strokes")}
