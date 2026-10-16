@@ -124,7 +124,6 @@ def build_deliver_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notif
         management=chimera,
         comfyui=comfyui,
         graph_from_png=graph_from_png_or_none,
-        image_size=image_size,
         git_metadata=repository_metadata,
         notifier=notifier,
         output_root=data_dir(repository) / "deliver",

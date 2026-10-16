@@ -296,23 +296,11 @@ REPIN_SAT_ONLY_V_MAX = 210.0
 # (knee, ratio); accents keep ACCENT_KEEP of their excess as elsewhere.
 REPIN_SKIN_CAP = (75.0, 0.3)
 REPIN_SKIN_CAP_V = 190.0
-# The window `repin_skin_png` / `skin_mask` read skin from.
+# The window `skin_mask` reads skin from.
 REPIN_SKIN_WINDOW = "skin"
 
-# Skin region must be read off the render the redraw was made from: the
-# 2048 redraw re-decides skin and lands it in the purple window instead.
-# The pin only ever raises saturation -- lowering it washed the lips out
-# with the cheek.
 SKIN_SOURCE_S_MIN = 20.0
-# Lips are warm and sit inside the skin window; without this ceiling the
-# hue pin turns them orange.
-SKIN_SOURCE_S_MAX = 60.0
 SKIN_SOURCE_V_MIN = 110.0
-SKIN_PIN_BLEND = 1.0
-# Below this share, the base drew the hair's lavender over the face, not
-# skin. The mask fragments left are speckle; pinning them draws cream
-# blotches on a lavender cheek instead of leaving the face alone.
-SKIN_PIN_MIN_SHARE = 0.08
 # One coherent field, not the warm grain along every line.
 SKIN_PIN_MIN_AREA = 4096
 
@@ -448,86 +436,6 @@ MATTING_TILE_OVERLAP_PX = 64
 TRANSLUCENT_MIN_KEY_SHARE = 0.08
 TRANSLUCENT_MIN_AREA = 256
 TRANSLUCENT_MIN_SOLVE_ALPHA = 0.25
-
-# Lineart-preserving recolour (infrastructure/imaging/recolor.py). Where
-# repin only nudges the render's own saturation, recolor asserts a
-# material's colour outright and can therefore fix value too -- a
-# washed-out black that repin leaves alone by design.
-
-# A line pixel is darker than its own neighbourhood, not merely dark, so a
-# flat dark fill is never mistaken for linework; and darkness is measured
-# on the brightest channel, so a magenta stroke doesn't qualify however
-# dark it reads.
-RECOLOR_LINE_MAX = 140
-RECOLOR_LINE_RELIEF = 40
-RECOLOR_LINE_WINDOW = 7
-
-# Per-material HSV targets, PIL's 0-255 scale.
-RECOLOR_TARGETS = {
-    "hair":   (188, 15, 234),
-    "hoodie": (221, 23, 64),
-    "dress":  (185, 34, 209),
-    "skin":   (16, 27, 249),
-    "white":  (0, 0, 255),
-}
-
-# How much of a region's own value survives the repaint, against the target
-# V, so the render's own shading still reads under the asserted colour.
-RECOLOR_KEEP_V = {
-    "hoodie": 0.8, "hair": 0.6, "dress": 0.6,
-    "skin": 0.5, "white": 0.5, "tights": 0.45,
-}
-
-# The same for hue and saturation, and it's not optional: pinning a region
-# to one hue and one saturation flattens the drawing -- this render's
-# shading lives in hue/saturation, not value (purple strokes through the
-# hair, the blush on the cheek). The target moves the material; the
-# deviation around it stays the render's.
-RECOLOR_KEEP_HS = 0.7
-
-# Bounded, or magenta strokes drawn over hands/face -- not line, so they
-# ride along inside the skin -- keep enough saturation/hue to read as hot
-# pink or teal instead of skin. Anything outside these bounds is pulled
-# onto its material's colour.
-RECOLOR_S_CEILING = 50
-RECOLOR_H_SPREAD = 20
-
-# Legwear has no single target: painted from this gradient, interpolated
-# per pixel row against height share so the purple comes up the leg the
-# same way regardless of the labelled region's height -- neutral black
-# through the knee, purple only near the foot.
-RECOLOR_LEG_STOPS = (
-    (0.72, (219, 23, 64)),
-    (0.82, (0, 6, 32)),
-    (0.90, (212, 69, 57)),
-    (1.00, (229, 117, 129)),
-)
-# Below this height (as a share of the figure's own bounding box, not the
-# canvas) a dark fill is legwear; above it, the same darkness is the hoodie.
-RECOLOR_LEG_CY = 0.72
-# Value alone can't find legs on a washed-out render, so a fill this large
-# sitting below RECOLOR_LEG_CY is legwear whatever its value -- the area
-# separates leg masses from hands/stray hair that fall as low but smaller.
-RECOLOR_LEG_MIN_AREA = 0.05
-
-# classify's remaining thresholds. A fill this saturated is an accent --
-# the iris, a hair pin -- and keeps its own colour rather than a target.
-# Outside this hue window a fill reads as skin regardless of saturation.
-# Below RECOLOR_WHITE_S at high value it is a frill; below RECOLOR_HAIR_S
-# it is hair; otherwise it is the dress. Below RECOLOR_DARK_V a fill is a
-# dark garment, split into hoodie or tights by RECOLOR_LEG_CY above.
-RECOLOR_ACCENT_S = 150
-# Saturation alone keeps the wrong things: thin magenta strokes drawn as
-# interior detail (finger creases, mouth, collarbone) are saturated enough
-# to be held back as accents, shipping hot pink fingers. A real accent is
-# thick as well as saturated -- the iris and hair pins survive this many
-# erosions where a thin stroke does not, taking its surroundings' colour
-# instead.
-RECOLOR_ACCENT_ERODE = 3
-RECOLOR_SKIN_HUE = (48, 240)
-RECOLOR_WHITE_S = 8
-RECOLOR_HAIR_S = 45
-RECOLOR_DARK_V = 120
 
 # What the canvas redraw runs at.
 REDRAW_SIZE = 2560

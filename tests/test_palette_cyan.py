@@ -111,7 +111,7 @@ class CyanWindowTest(unittest.TestCase):
         center = center_hsv(rgb)
         self.assertAlmostEqual(center[..., 1].mean(), 60, delta=2)
 
-    def test_palette_window_skin_is_the_entry_repin_skin_png_uses(self):
+    def test_palette_window_skin_is_the_entry_skin_mask_uses(self):
         window = palette_window("skin")
         self.assertEqual(window["hue"], (0.0, 48.0))
         self.assertEqual(window["hue_target"], 17.8)

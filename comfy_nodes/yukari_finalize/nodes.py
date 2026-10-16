@@ -18,7 +18,6 @@ from chagama.infrastructure.imaging import (
     matting,
     palette,
     photo_stage,
-    recolor,
     relight,
     viewfinder,
 )
@@ -26,25 +25,6 @@ from chagama.infrastructure.imaging import light as lighting
 from chagama.infrastructure.imaging import stage as staging
 
 from . import bridge, vitmatte
-
-
-class YukariRepinSkin:
-    CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE", "STRING")
-    RETURN_NAMES = ("image", "report")
-    FUNCTION = "run"
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {
-            "image": ("IMAGE",),
-            "source": ("IMAGE",),
-        }}
-
-    def run(self, image, source):
-        data, report = palette.repin_skin_png(
-            bridge.image_to_png(source), bridge.image_to_png(image))
-        return (bridge.png_to_image(data), "\n".join(report))
 
 
 class YukariRepin:
@@ -55,32 +35,10 @@ class YukariRepin:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {
-            "image": ("IMAGE",),
-            "keep_legwear": ("BOOLEAN", {"default": False}),
-            "keep_legwear_cut": ("FLOAT", {"default": 0.62, "min": 0.0,
-                                            "max": 1.0, "step": 0.01}),
-        }}
-
-    def run(self, image, keep_legwear, keep_legwear_cut):
-        data, report = palette.repin_png(
-            bridge.image_to_png(image),
-            keep_legwear=keep_legwear_cut if keep_legwear else None)
-        return (bridge.png_to_image(data), "\n".join(report))
-
-
-class YukariRecolor:
-    CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE", "STRING")
-    RETURN_NAMES = ("image", "report")
-    FUNCTION = "run"
-
-    @classmethod
-    def INPUT_TYPES(cls):
         return {"required": {"image": ("IMAGE",)}}
 
     def run(self, image):
-        data, report = recolor.recolor_png(bridge.image_to_png(image))
+        data, report = palette.repin_png(bridge.image_to_png(image))
         return (bridge.png_to_image(data), "\n".join(report))
 
 
@@ -487,9 +445,7 @@ class YukariPhotoDepthOfField:
 
 
 NODE_CLASS_MAPPINGS = {
-    "YukariRepinSkin": YukariRepinSkin,
     "YukariRepin": YukariRepin,
-    "YukariRecolor": YukariRecolor,
     "YukariMatting": YukariMatting,
     "YukariForeground": YukariForeground,
     "YukariSeeThrough": YukariSeeThrough,
@@ -505,9 +461,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "YukariRepinSkin": "Yukari Repin Skin",
     "YukariRepin": "Yukari Repin",
-    "YukariRecolor": "Yukari Recolor",
     "YukariMatting": "Yukari Matting",
     "YukariForeground": "Yukari Foreground",
     "YukariSeeThrough": "Yukari See Through",

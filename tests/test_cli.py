@@ -84,28 +84,23 @@ class CliTest(unittest.TestCase):
         args, kwargs = run_deliver.call_args
         self.assertEqual(args[0], "gen-1")
         self.assertEqual(kwargs, {
-            "repin": True, "skin": False, "recolor": False, "keep_legwear": None,
-            "keep_scene": False, "transparent": False, "backdrop": "dots",
-            "stroke_light": RECIPE_DEFAULT, "deliver_size": None,
+            "repin": True, "keep_scene": False, "transparent": False,
+            "backdrop": "dots", "stroke_light": RECIPE_DEFAULT,
             "outlines": [{"color": "#ffffff", "width": 0.8},
                          {"color": "#885b80", "width": 1.04}],
-            "light": None, "context": None})
+            "light": None})
 
     @patch.object(cli, "deliver")
     @patch.object(cli, "ChimeraClient")
     def test_deliver_flags_dispatch_without_network(
             self, chimera_class, run_deliver):
-        cli.main(["deliver", "gen-1", "--no-repin", "--skin", "--transparent",
-                  "--deliver-size", "1536", "--light", "moon,se",
-                  "--outline", "#ffffff,0.8", "--outline", "#885b80,2",
-                  "--keep-legwear"])
+        cli.main(["deliver", "gen-1", "--no-repin", "--transparent",
+                  "--light", "moon,se",
+                  "--outline", "#ffffff,0.8", "--outline", "#885b80,2"])
         kwargs = run_deliver.call_args.kwargs
         self.assertIs(kwargs["repin"], False)
-        self.assertIs(kwargs["skin"], True)
         self.assertIs(kwargs["transparent"], True)
         self.assertIsNone(kwargs["backdrop"])
-        self.assertEqual(kwargs["deliver_size"], 1536)
-        self.assertEqual(kwargs["keep_legwear"], 0.62)
         self.assertEqual(kwargs["outlines"], [{"color": "#ffffff", "width": 0.8},
                                               {"color": "#885b80", "width": 2.0}])
         self.assertEqual(kwargs["light"], Light("moon", "se"))

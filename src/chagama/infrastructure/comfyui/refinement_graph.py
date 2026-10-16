@@ -92,29 +92,14 @@ def _depth_nodes(graph: dict, allocate: Callable[[], str], image_ref: list
     return [depth_id, 0]
 
 
-def _scaled(graph: dict, allocate: Callable[[], str], image_ref: list,
-            canvas: tuple[int, int], deliver_size: int | None) -> list:
-    width, height = canvas
-    longest = max(width, height)
-    if deliver_size is None or deliver_size >= longest:
-        return image_ref
-    node_id = allocate()
-    graph[node_id] = {"class_type": "ImageScale", "inputs": {
-        "image": image_ref, "upscale_method": "lanczos",
-        "width": round(width * deliver_size / longest),
-        "height": round(height * deliver_size / longest), "crop": "disabled"}}
-    return [node_id, 0]
-
-
 def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
                   matte_ref: list, prefix: str, *,
                   keep_scene: bool, transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
-                  deliver_size: int | None, canvas: tuple[int, int],
                   light_scene: str | None, light_from: str | None,
                   silhouette_ref: list | None = None) -> list:
-    """Appends the composite and downscale stages onto `graph` (mutated),
-    saving the delivered picture and its layers at the delivered size.
+    """Appends the composite stage onto `graph` (mutated), saving the
+    delivered picture and its layers.
     `silhouette_ref` is the mask the bands follow when it is not the matte.
     Returns the delivered ref."""
     deliver_id = allocate()
@@ -126,7 +111,7 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
         **({"light_scene": light_scene, "light_from": light_from}
            if light_scene else {}),
         **({"silhouette": silhouette_ref} if silhouette_ref is not None else {})}}
-    delivered_ref = _scaled(graph, allocate, [deliver_id, 0], canvas, deliver_size)
+    delivered_ref = [deliver_id, 0]
     save_delivered = allocate()
     graph[save_delivered] = {"class_type": "SaveImage", "inputs": {
         "images": delivered_ref, "filename_prefix": prefix + DELIVERED_SUFFIX}}
@@ -136,8 +121,7 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
     for suffix, output in layers:
         save = allocate()
         graph[save] = {"class_type": "SaveImage", "inputs": {
-            "images": _scaled(graph, allocate, [deliver_id, output], canvas,
-                              deliver_size),
+            "images": [deliver_id, output],
             "filename_prefix": prefix + suffix}}
     return delivered_ref
 

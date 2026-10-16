@@ -53,9 +53,8 @@ from .picture_source import stroke_light_conflict
 from .redraw import HIRES_DENOISE
 
 _KNOWN_DELIVER_OPTIONS = frozenset({
-    "repin", "recolor", "skin", "keep_legwear", "keep_scene", "transparent",
-    "backdrop", "stroke_light", "outlines", "deliver_size", "light",
-    "see_through",
+    "repin", "keep_scene", "transparent", "backdrop", "stroke_light",
+    "outlines", "light", "see_through",
 })
 # The see-through gain's range; 1 is the cut as solved.
 _SEE_THROUGH_RANGE = (1.0, 5.0)
@@ -95,7 +94,6 @@ _RECIPE_DIALS = {
 # functions. Public: interfaces/cli.py reads them too, to resolve the same
 # keys' words from its own parsed args.
 REDRAW_DIAL_KEYS = ("denoise",)
-DELIVER_DIAL_KEYS = ("keep_legwear",)
 
 
 def dials_scope(recipe: str, scope: str) -> Mapping[str, Mapping[str, float]]:
@@ -416,8 +414,7 @@ def redraw_arguments(options: Mapping,
     }
 
 
-def deliver_arguments(options: Mapping,
-                      dials: Mapping[str, Mapping[str, float]] | None = None) -> dict:
+def deliver_arguments(options: Mapping) -> dict:
     """Validate a deliver request's `options` and map it to deliver() kwargs.
 
     Absent keys take DELIVER_DEFAULTS; unknown keys or a wrong type raise
@@ -429,30 +426,11 @@ def deliver_arguments(options: Mapping,
     unknown = sorted(set(options) - _KNOWN_DELIVER_OPTIONS)
     if unknown:
         raise ValueError(f"deliver が受け付けない option です: {', '.join(unknown)}")
-    dials = dials or {}
-
     def boolean(key: str, default: bool = False) -> bool:
         value = options.get(key, default)
         if not isinstance(value, bool):
             raise ValueError(f"{key} must be a boolean, got {type(value).__name__}")
         return value
-
-    keep_legwear = resolve_dial("keep_legwear", options.get("keep_legwear"), dials)
-    if keep_legwear is True:
-        keep_legwear = 0.62
-    elif keep_legwear is not None and not (
-            isinstance(keep_legwear, (int, float)) and not isinstance(keep_legwear, bool)):
-        raise ValueError(
-            "keep_legwear must be null, true or a number, got "
-            f"{type(keep_legwear).__name__}")
-
-    deliver_size = options.get("deliver_size")
-    if deliver_size is not None and not (
-            isinstance(deliver_size, int) and not isinstance(deliver_size, bool)):
-        raise ValueError(
-            f"deliver_size must be null or an integer, got {type(deliver_size).__name__}")
-    if deliver_size is not None and deliver_size < 1:
-        raise ValueError(f"deliver_size must be at least 1, got {deliver_size!r}")
 
     transparent = options.get("transparent")
     if transparent is not None and not isinstance(transparent, bool):
@@ -502,18 +480,13 @@ def deliver_arguments(options: Mapping,
     if not low <= see_through <= high:
         raise ValueError(f"see_through must be between {low:g} and {high:g}, got {see_through!r}")
 
-    recolor = boolean("recolor")
     return {
-        "repin": boolean("repin", DELIVER_DEFAULTS["repin"]) and not recolor,
-        "skin": boolean("skin"),
-        "recolor": recolor,
-        "keep_legwear": float(keep_legwear) if keep_legwear is not None else None,
+        "repin": boolean("repin", DELIVER_DEFAULTS["repin"]),
         "keep_scene": keep_scene,
         "transparent": transparent,
         "backdrop": backdrop,
         "stroke_light": stroke_light,
         "outlines": outlines,
-        "deliver_size": deliver_size,
         "light": light,
         **({"see_through": float(see_through)} if see_through != 1.0 else {}),
     }
