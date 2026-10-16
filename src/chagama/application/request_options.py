@@ -221,6 +221,30 @@ def _frame_rect(value: object, *, key: str) -> list[float]:
     return [x0, y0, x1, y1]
 
 
+def _frame_canvas(value: object, *, key: str) -> list[float | None] | None:
+    if value is None:
+        return None
+    if not isinstance(value, list) or len(value) != 4:
+        raise ValueError(f"{key} must be [x0, y0, x1, y1] (each a share or null), got {value!r}")
+    rect = [None if v is None else _frame_share(v, key=f"{key}[{i}]")
+            for i, v in enumerate(value)]
+    for low, high in ((rect[0], rect[2]), (rect[1], rect[3])):
+        if low is not None and high is not None and not low < high:
+            raise ValueError(f"{key} must have x0 < x1 and y0 < y1, got {value!r}")
+    return None if all(v is None for v in rect) else rect
+
+
+def _frame_expand(value: object, *, key: str) -> bool | dict[str, bool]:
+    if isinstance(value, bool):
+        return value
+    if (not isinstance(value, Mapping) or not set(value) <= set(FRAME_SIDES)
+            or not all(isinstance(v, bool) for v in value.values())):
+        raise ValueError(
+            f"{key} must be true, false or an object of {list(FRAME_SIDES)} booleans, "
+            f"got {value!r}")
+    return {side: value.get(side, FRAME_EXPAND) for side in FRAME_SIDES}
+
+
 def _frame_strokes(value: object, *, key: str) -> list[dict]:
     if not isinstance(value, list):
         raise ValueError(f"{key} must be an array, got {type(value).__name__}")
@@ -285,17 +309,13 @@ def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
         if choice not in FRAME_SIDE_CHOICES:
             raise ValueError(f"{key}.sides.{side} must be one of "
                              f"{list(FRAME_SIDE_CHOICES)}, got {choice!r}")
-    canvas = value.get("canvas")
-    expand = value.get("expand", FRAME_EXPAND)
-    if not isinstance(expand, bool):
-        raise ValueError(f"{key}.expand must be true or false, got {expand!r}")
     return {"box": _frame_rect(value["box"], key=f"{key}.box"),
             "sides": {side: sides.get(side, FRAME_SIDE_DEFAULTS[side]) for side in FRAME_SIDES},
             "line": _frame_band(value.get("line", FRAME_LINE), FRAME_LINE, key=f"{key}.line"),
             "rim": _frame_band(value.get("rim", FRAME_RIM), FRAME_RIM, key=f"{key}.rim"),
             "paper": _hex_colour(value.get("paper", FRAME_PAPER), key=f"{key}.paper"),
-            "canvas": None if canvas is None else _frame_rect(canvas, key=f"{key}.canvas"),
-            "expand": expand,
+            "canvas": _frame_canvas(value.get("canvas"), key=f"{key}.canvas"),
+            "expand": _frame_expand(value.get("expand", FRAME_EXPAND), key=f"{key}.expand"),
             "strokes": _frame_strokes(value.get("strokes", []), key=f"{key}.strokes")}
 
 

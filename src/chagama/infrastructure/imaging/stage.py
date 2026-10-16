@@ -237,13 +237,15 @@ def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
 def frame_canvas(frame: Mapping, figure_alpha: np.ndarray,
                  outline_alpha: np.ndarray) -> tuple[int, int, int, int]:
     """The framed canvas as (left, top, right, bottom) px of the delivery
-    canvas: the frame's own `canvas`, else the box out to its border's outer
-    edge together with the visible figure and outline, `FRAME_MARGIN_PCT`
-    around, rounded outward and kept within `FRAME_COORD_RANGE`, or within
-    the delivery's canvas when the frame does not `expand`."""
+    canvas. Each side is the frame's own `canvas` value for it, or when that
+    is None the box out to its border's outer edge together with the visible
+    figure and outline, `FRAME_MARGIN_PCT` around, rounded outward and kept
+    within `FRAME_COORD_RANGE`, or within the delivery's canvas on a side the
+    frame does not `expand`."""
     height, width = figure_alpha.shape
-    if frame.get("canvas") is not None:
-        return tuple(int(round(v)) for v in _share_px(frame["canvas"], width, height))
+    given = frame.get("canvas") or [None] * 4
+    if all(v is not None for v in given):
+        return tuple(int(round(v)) for v in _share_px(given, width, height))
     longest = max(height, width)
     half = _border_half(frame, longest)
     x0, y0, x1, y1 = _share_px(frame["box"], width, height)
@@ -253,11 +255,24 @@ def frame_canvas(frame: Mapping, figure_alpha: np.ndarray,
         x0, y0 = min(x0, cols.min()), min(y0, rows.min())
         x1, y1 = max(x1, cols.max() + 1), max(y1, rows.max() + 1)
     margin = longest * delivery_style.FRAME_MARGIN_PCT / 100
-    low, high = delivery_style.FRAME_COORD_RANGE if frame.get("expand", True) else (0.0, 1.0)
-    return (max(int(np.floor(x0 - margin)), int(np.ceil(low * width))),
-            max(int(np.floor(y0 - margin)), int(np.ceil(low * height))),
-            min(int(np.ceil(x1 + margin)), int(np.floor(high * width))),
-            min(int(np.ceil(y1 + margin)), int(np.floor(high * height))))
+    expand = expanded_sides(frame.get("expand", delivery_style.FRAME_EXPAND))
+    low, high = delivery_style.FRAME_COORD_RANGE
+    auto = (max(int(np.floor(x0 - margin)), int(np.ceil(low * width)) if expand["left"] else 0),
+            max(int(np.floor(y0 - margin)), int(np.ceil(low * height)) if expand["top"] else 0),
+            min(int(np.ceil(x1 + margin)), int(np.floor(high * width)) if expand["right"] else width),
+            min(int(np.ceil(y1 + margin)),
+                int(np.floor(high * height)) if expand["bottom"] else height))
+    scale = (width, height, width, height)
+    return tuple(side if value is None else int(round(value * size))
+                 for side, value, size in zip(auto, given, scale))
+
+
+def expanded_sides(expand) -> dict[str, bool]:
+    """A frame's `expand` (one boolean, or one per side) as one per side."""
+    if isinstance(expand, Mapping):
+        return {side: expand.get(side, delivery_style.FRAME_EXPAND)
+                for side in delivery_style.FRAME_SIDES}
+    return dict.fromkeys(delivery_style.FRAME_SIDES, bool(expand))
 
 
 def frame_canvas_share(figure_png: bytes, outline_png: bytes,
