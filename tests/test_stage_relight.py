@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import io
 import unittest
 
 import numpy as np
+from PIL import Image
 
 from chagama.infrastructure.imaging import photo_stage, relight, stage
 
@@ -248,6 +250,38 @@ class RelightTest(unittest.TestCase):
         backdrop = np.full((80, 60, 3), 200.0)
         figure, _, _ = self.lit(backdrop, "w")
         self.assertGreater(figure[40, 17].mean(), figure[40, 43].mean())
+
+    def test_without_a_backdrop_only_the_shading_applies_and_the_picture_stays_clear(self):
+        figure, outline, backdrop, picture = relight.relight(
+            self.figure, self.figure_alpha, self.outline, self.outline_alpha, None,
+            direction="w", strength=1.0)
+        self.assertIsNone(backdrop)
+        self.assertEqual(picture.shape, (80, 60, 4))
+        self.assertGreater(figure[40, 17].mean(), figure[40, 43].mean())
+        np.testing.assert_allclose(outline, self.outline)
+        self.assertEqual(picture[0, 0, 3], 0)
+        self.assertEqual(picture[40, 30, 3], 255)
+
+    def test_without_a_backdrop_the_exposure_is_not_adjusted(self):
+        figure, _, _, _ = relight.relight(
+            self.figure, self.figure_alpha, self.outline, self.outline_alpha, None,
+            direction=None, strength=1.0, scene="sunset")
+        self.assertGreater(figure[40, 30][0] / figure[40, 30][2],
+                           self.figure[40, 30][0] / self.figure[40, 30][2])
+        np.testing.assert_allclose(figure[0, 0], self.figure[0, 0])
+
+    def test_the_png_form_gives_an_rgba_picture_and_no_backdrop_layer(self):
+        def png(array):
+            output = io.BytesIO()
+            Image.fromarray(array.astype(np.uint8), "RGBA").save(output, "PNG")
+            return output.getvalue()
+
+        figure, outline = layers()
+        picture, figure_png, outline_png, backdrop_png = relight.relight_pngs(
+            png(figure), png(outline), None, direction="nw", strength=0.8)
+        self.assertIsNone(backdrop_png)
+        self.assertEqual(Image.open(io.BytesIO(picture)).mode, "RGBA")
+        self.assertEqual(Image.open(io.BytesIO(figure_png)).mode, "RGBA")
 
 
 if __name__ == "__main__":

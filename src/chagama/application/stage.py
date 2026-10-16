@@ -26,14 +26,22 @@ from .ingest import (
     record_job,
     upload_generation,
 )
-from .picture_source import delivery_parameters
+from .picture_source import (
+    delivery_parameters,
+    has_backdrop_layer,
+    is_cut_redraw,
+    layer_bytes,
+    layer_roles_present,
+)
 
-STAGE_SOURCE = ("背景を付けられるのは納品の絵（deliver または saturation の出力）だけです。"
-                "先に deliver してください")
-SATURATION_SOURCE = ("彩度を調整できるのは納品の絵（deliver の出力）だけです。"
-                     "先に deliver してください")
-LIGHTING_SOURCE = ("光を当てられるのは背景を付けた絵（stage の出力、または背景ありの納品）"
-                   "だけです。先に stage してください")
+STAGE_SOURCE = ("背景を付けられるのは納品の絵（deliver または saturation の出力）か"
+                "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
+SATURATION_SOURCE = ("彩度を調整できるのは納品の絵（deliver の出力）か"
+                     "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
+LIGHTING_SOURCE = ("光を当てられるのは stage の出力、deliver / saturation の出力、"
+                   "切り抜いた描き直し（redraw の cut）だけです。先に stage してください")
+LIGHTING_NOTHING = ("背景の無い絵に当てられるのは direction か scene の光だけです。"
+                    "どちらかを指定してください")
 LIGHTING_TWICE = "この絵にはもう光が当たっています。stage の出力からかけ直してください"
 NO_LAYERS = "この絵には層が無いので、作り直してください"
 FIGURE_ROLES = ("layer-figure", "layer-outline")
@@ -58,8 +66,9 @@ def _parameters(context: dict) -> dict:
     return context["request"].get("parameters") or {}
 
 
-def _require_layers(services: StageServices, generation_id: str, roles) -> None:
-    present = {asset["role"] for asset in services.management.list_assets(generation_id)}
+def _require_layers(services: StageServices, generation_id: str, context: dict,
+                    roles) -> None:
+    present = layer_roles_present(services.management, generation_id, context)
     if not set(roles) <= present:
         raise SystemExit(NO_LAYERS)
 
@@ -176,9 +185,9 @@ def stage(generation_id: str, services: StageServices, *,
     if context is None:
         context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
     parameters = _parameters(context)
-    if parameters.get("kind") not in ("deliver", "saturation"):
+    if parameters.get("kind") not in ("deliver", "saturation") and not is_cut_redraw(parameters):
         raise SystemExit(STAGE_SOURCE)
-    _require_layers(services, generation_id, FIGURE_ROLES)
+    _require_layers(services, generation_id, context, FIGURE_ROLES)
     parameters = delivery_parameters(management, context)
     if photo_id is not None:
         light = None
@@ -190,12 +199,12 @@ def stage(generation_id: str, services: StageServices, *,
 
     prefix = f"set-{generation_id}"
     token = uuid.uuid4().hex[:8]
-    layer_bytes = {role: management.fetch_asset(generation_id, role) for role in FIGURE_ROLES}
+    layers = layer_bytes(management, generation_id, context, FIGURE_ROLES)
     if frame is not None and (frame.get("canvas") is None or None in frame["canvas"]):
         frame = {**frame, "canvas": frame_canvas_share(
-            layer_bytes["layer-figure"], layer_bytes["layer-outline"], frame)}
+            layers["layer-figure"], layers["layer-outline"], frame)}
     uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
-                for role, data in layer_bytes.items()}
+                for role, data in layers.items()}
     if photo_id is not None:
         photo_image = services.comfyui.upload_image(
             f"{prefix}-photo-{token}.png", management.fetch_generation_image(photo_id))
@@ -244,7 +253,9 @@ def lighting(generation_id: str, services: StageServices, *,
              context: dict | None = None) -> dict:
     """Light the staged picture `generation_id`'s figure and outline by its
     backdrop, in the light `scene` when one is given (which also tints a
-    pattern backdrop, never a photo)."""
+    pattern backdrop, never a photo). A transparent picture has no backdrop
+    to read, so only `direction` or `scene` shades it, and it stays
+    transparent."""
     state_path, state = _load_state(services, "lighting", key_prefix)
     if state.get("status") == "completed" and state.get("result"):
         return state["result"]
@@ -255,27 +266,28 @@ def lighting(generation_id: str, services: StageServices, *,
     kind = parameters.get("kind")
     if kind == "lighting":
         raise SystemExit(LIGHTING_TWICE)
-    if kind not in ("stage", "deliver", "saturation"):
+    if kind not in ("stage", "deliver", "saturation") and not is_cut_redraw(parameters):
         raise SystemExit(LIGHTING_SOURCE)
-    if kind != "stage" and delivery_parameters(management, context).get("transparent"):
-        raise SystemExit(LIGHTING_SOURCE)
-    _require_layers(services, generation_id, LAYER_ROLES)
+    roles = LAYER_ROLES if has_backdrop_layer(management, context) else FIGURE_ROLES
+    if len(roles) == len(FIGURE_ROLES) and direction is None and scene is None:
+        raise SystemExit(LIGHTING_NOTHING)
+    _require_layers(services, generation_id, context, roles)
 
     tint_backdrop = scene is not None and not (kind == "stage" and parameters.get("photo"))
     prefix = f"light-{generation_id}"
     token = uuid.uuid4().hex[:8]
-    layer_bytes = {role: management.fetch_asset(generation_id, role) for role in LAYER_ROLES}
+    layers = layer_bytes(management, generation_id, context, roles)
     uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
-                for role, data in layer_bytes.items()}
+                for role, data in layers.items()}
     graph = services.lighting_graph(
-        uploaded["layer-figure"], uploaded["layer-outline"], uploaded["layer-backdrop"],
+        uploaded["layer-figure"], uploaded["layer-outline"], uploaded.get("layer-backdrop"),
         prefix, direction=direction, strength=strength, scene=scene,
         tint_backdrop=tint_backdrop)
     prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
                      state_path=state_path)
     outputs = classify_lighting_outputs(services.comfyui.wait_for(prompt_id))
-    fetched = _fetch(services, outputs, ("lit", *LAYER_ROLES), prefix)
-    layers = {role: fetched[role] for role in LAYER_ROLES}
+    fetched = _fetch(services, outputs, ("lit", *roles), prefix)
+    layers = {role: fetched[role] for role in roles}
     result = _record(
         services, generation_id=generation_id, context=context, key_prefix=key_prefix,
         request_id=request_id, prompt_id=prompt_id, graph=graph, picture=fetched["lit"],
@@ -301,18 +313,18 @@ def saturation(generation_id: str, services: StageServices, *, strength: float,
     management = services.management
     if context is None:
         context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
-    if _parameters(context).get("kind") != "deliver":
+    parameters = _parameters(context)
+    if parameters.get("kind") != "deliver" and not is_cut_redraw(parameters):
         raise SystemExit(SATURATION_SOURCE)
-    _require_layers(services, generation_id, FIGURE_ROLES)
-    has_backdrop = "layer-backdrop" in {
-        asset["role"] for asset in management.list_assets(generation_id)}
+    _require_layers(services, generation_id, context, FIGURE_ROLES)
+    has_backdrop = "layer-backdrop" in layer_roles_present(management, generation_id, context)
     roles = LAYER_ROLES if has_backdrop else FIGURE_ROLES
 
     prefix = f"sat-{generation_id}"
     token = uuid.uuid4().hex[:8]
-    uploaded = {role: services.comfyui.upload_image(
-        f"{prefix}-{role}-{token}.png", management.fetch_asset(generation_id, role))
-        for role in roles}
+    uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
+                for role, data in layer_bytes(management, generation_id, context,
+                                              roles).items()}
     graph = services.saturation_graph(
         uploaded["layer-figure"], uploaded["layer-outline"], prefix,
         backdrop_image=uploaded.get("layer-backdrop"), strength=strength)

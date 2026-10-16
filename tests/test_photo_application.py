@@ -3,10 +3,13 @@ answers `wait_for` with the SaveImage prefixes of the graph it was handed."""
 
 from __future__ import annotations
 
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 from chagama.application.cut_assets import current_cut
 from chagama.application.photo import PhotoServices, photo
@@ -14,6 +17,15 @@ from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
           "layer-backdrop": b"backdrop-png"}
+
+
+def _cutout():
+    output = io.BytesIO()
+    Image.new("RGBA", (40, 30), (1, 2, 3, 255)).save(output, "PNG")
+    return output.getvalue()
+
+
+CUTOUT = _cutout()
 
 
 class ManagementFake:
@@ -107,8 +119,25 @@ def stage_node(graph):
 
 class PhotoSourceTest(unittest.TestCase):
     def test_a_picture_that_was_not_delivered_is_refused(self):
-        with self.assertRaisesRegex(SystemExit, "納品の絵だけ"):
+        with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
             run(ManagementFake(request_kind="generate", parameters={}))
+
+    def test_a_cut_redraw_stands_in_a_photo_as_its_cutout_with_no_outline(self):
+        cut = {"kind": "redraw", "method": "canvas", "base_generation": "src", "cut": True}
+        services, _ = run(ManagementFake(
+            request_kind="redraw", parameters=cut,
+            assets={"cutout": CUTOUT, "alpha": b"a", "depth": b"d"}))
+        uploaded = [data for _, data in services.comfyui.uploaded]
+        self.assertIn(CUTOUT, uploaded)
+        self.assertEqual(Image.open(io.BytesIO(uploaded[-1])).getextrema()[3], (0, 0))
+
+    def test_a_redraw_that_was_not_cut_or_has_no_cutout_is_refused(self):
+        plain = {"kind": "redraw", "method": "canvas", "base_generation": "src"}
+        with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
+            run(ManagementFake(request_kind="redraw", parameters=plain))
+        with self.assertRaisesRegex(SystemExit, "層が無い"):
+            run(ManagementFake(request_kind="redraw", parameters={**plain, "cut": True},
+                               assets={"alpha": b"a"}))
 
     def test_a_delivery_without_layers_and_a_dof_output_are_refused(self):
         for management in (ManagementFake(assets={"layer-figure": b"f"}),

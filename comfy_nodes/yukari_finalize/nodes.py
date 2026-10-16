@@ -407,23 +407,28 @@ class YukariRelight:
             "figure_mask": ("MASK",),
             "outline": ("IMAGE",),
             "outline_mask": ("MASK",),
-            "backdrop": ("IMAGE",),
             "direction": ("STRING", {"default": ""}),
             "strength": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
         }, "optional": {
+            "backdrop": ("IMAGE",),
             "scene": ("STRING", {"default": ""}),
             "tint_backdrop": ("BOOLEAN", {"default": False}),
         }}
 
-    def run(self, figure, figure_mask, outline, outline_mask, backdrop, direction,
-            strength, scene="", tint_backdrop=False):
+    def run(self, figure, figure_mask, outline, outline_mask, backdrop=None, direction="",
+            strength=0.7, scene="", tint_backdrop=False):
         picture, figure_png, outline_png, backdrop_png = relight.relight_pngs(
             bridge.loaded_rgba_png(figure, figure_mask),
             bridge.loaded_rgba_png(outline, outline_mask),
-            bridge.image_to_png(backdrop), direction=direction or None,
-            strength=strength, scene=scene or None, tint_backdrop=tint_backdrop)
-        return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
-                bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
+            bridge.image_to_png(backdrop) if backdrop is not None else None,
+            direction=direction or None, strength=strength, scene=scene or None,
+            tint_backdrop=tint_backdrop)
+        # Without a backdrop the fourth output is the picture again, unsaved.
+        return (bridge.png_to_image(picture, "RGB" if backdrop is not None else "RGBA"),
+                bridge.png_to_image(figure_png, "RGBA"),
+                bridge.png_to_image(outline_png, "RGBA"),
+                bridge.png_to_image(backdrop_png if backdrop_png is not None else picture,
+                                    "RGB" if backdrop is not None else "RGBA"))
 
 
 class YukariPhotoDepthOfField:

@@ -3,10 +3,13 @@ answers `wait_for` with the SaveImage prefixes of the graph it was handed."""
 
 from __future__ import annotations
 
+import io
 import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 
 from chagama.application.cut_assets import current_cut
 from chagama.application.dof import DofServices, dof
@@ -16,6 +19,15 @@ from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 ALL = {"figure": True, "outline": True, "backdrop": True}
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
           "layer-backdrop": b"backdrop-png"}
+
+
+def _cutout():
+    output = io.BytesIO()
+    Image.new("RGBA", (40, 30), (1, 2, 3, 255)).save(output, "PNG")
+    return output.getvalue()
+
+
+CUTOUT = _cutout()
 
 
 class ManagementFake:
@@ -120,10 +132,10 @@ class DofSourceTest(unittest.TestCase):
 
     def test_a_picture_that_was_not_delivered_is_refused(self):
         self.refused(ManagementFake(request_kind="generate", parameters={}),
-                     "納品の絵だけ")
+                     "切り抜いた描き直し")
         self.refused(ManagementFake(request_kind="redraw",
                                     parameters={"kind": "redraw", "method": "canvas"}),
-                     "納品の絵だけ")
+                     "切り抜いた描き直し")
 
     def test_a_delivery_without_layers_is_refused(self):
         self.refused(ManagementFake(assets={}), "層が無い")
@@ -139,6 +151,30 @@ class DofSourceTest(unittest.TestCase):
         [(_, blur)] = [(k, n) for k, n in services.comfyui.submitted[0].items()
                        if n["class_type"] == "YukariDepthOfField"]
         self.assertNotIn("backdrop", blur["inputs"])
+
+    def test_a_cut_redraw_is_blurred_by_its_own_depth(self):
+        cut = {"kind": "redraw", "method": "canvas", "base_generation": "src", "cut": True}
+        stored = {"cutout": CUTOUT, "alpha": b"a", "depth": b"depth-png",
+                  "cut": json.dumps(current_cut()).encode()}
+        services, _ = run(ManagementFake(request_kind="redraw", parameters=cut,
+                                         assets=stored))
+        graph = services.comfyui.submitted[0]
+        self.assertNotIn(DEPTH_NODE, classes(graph))
+        self.assertIn(b"depth-png", [data for _, data in services.comfyui.uploaded])
+        blur = next(n for n in graph.values() if n["class_type"] == "YukariDepthOfField")
+        self.assertNotIn("backdrop", blur["inputs"])
+
+    def test_a_stale_depth_of_a_cut_redraw_is_recomputed_and_attached_to_it(self):
+        cut = {"kind": "redraw", "method": "canvas", "base_generation": "src", "cut": True}
+        stale = {"depth": {"ckpt": "old"}}
+        management = ManagementFake(request_kind="redraw", parameters=cut, assets={
+            "cutout": CUTOUT, "alpha": b"a", "depth": b"old-depth",
+            "cut": json.dumps(stale).encode()})
+        services, _ = run(management)
+        self.assertIn(DEPTH_NODE, classes(services.comfyui.submitted[0]))
+        self.assertIn(b"image:dlv", [data for _, data in services.comfyui.uploaded])
+        self.assertEqual([call[1] for call in management.asset_uploads()],
+                         ["/api/v1/generations/dlv/assets"] * 2)
 
     def test_dof_outputs_count_as_delivered(self):
         self.assertTrue(is_delivered({"kind": "dof"}))

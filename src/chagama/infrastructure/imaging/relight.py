@@ -8,7 +8,8 @@ and its outline bands are pulled toward that exposure and colour, by
 lit side tinted by the colour of the backdrop's brightest light. A light
 scene (sunset, moon) shades and tints the figure as that scene's light redraw
 underpaint does instead, and tints a pattern backdrop to the scene as a
-delivery in it; a photo backdrop is left as it is."""
+delivery in it; a photo backdrop is left as it is. Without a backdrop only
+the direction or scene shading applies, and the picture stays transparent."""
 
 from __future__ import annotations
 
@@ -21,6 +22,7 @@ from scipy import ndimage
 from ...domain.yukari import delivery_style
 from .delivery import scene_backdrop
 from .light import _light_figure
+from .saturation import recompose
 from .stage import composite
 
 LUMA = np.array([0.2126, 0.7152, 0.0722])
@@ -85,32 +87,40 @@ def adjustment(ambient_rgb: np.ndarray, strength: float) -> np.ndarray:
 
 
 def relight(figure: np.ndarray, figure_alpha: np.ndarray, outline: np.ndarray,
-            outline_alpha: np.ndarray, backdrop: np.ndarray, *,
+            outline_alpha: np.ndarray, backdrop: np.ndarray | None, *,
             direction: str | None, strength: float, scene: str | None = None,
             tint_backdrop: bool = False
             ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Straight 0..255 colours and 0..1 alphas in, at one canvas. Returns
     the relit figure and outline colours, the backdrop (tinted to `scene`
-    when `tint_backdrop`) and the recomposited picture."""
+    when `tint_backdrop`; None when there is none) and the recomposited
+    picture (straight RGBA over no backdrop)."""
     card = (figure_alpha > 0.5) | (outline_alpha > 0.5)
     inside = figure_alpha > 0.5
     figure_colour = figure.astype(float)
-    backdrop = backdrop.astype(float)
+    if backdrop is not None:
+        backdrop = backdrop.astype(float)
     if scene is not None:
         direction = direction or delivery_style.LIGHT_FROM_DEFAULT
-        if tint_backdrop:
+        if tint_backdrop and backdrop is not None:
             backdrop = scene_backdrop(backdrop, direction, scene)
         if inside.any():
             figure_colour = np.where(inside[..., None], _light_figure(
                 figure_colour, figure_alpha, np.zeros(figure_alpha.shape), direction,
                 delivery_style.LIGHT_SCENES[scene], form=False), figure_colour)
     elif direction is not None and inside.any() and strength > 0:
-        scene = {"color": tuple(highlight(backdrop)), "tint": LIT_TINT * strength,
+        lit_colour = highlight(backdrop) if backdrop is not None else np.full(3, 255.0)
+        scene = {"color": tuple(lit_colour), "tint": LIT_TINT * strength,
                  "shadow": tuple(1.0 - SHADOW_DEPTH * strength * np.ones(3)),
                  "skin_keep": SKIN_KEEP}
         figure_colour = np.where(inside[..., None], _light_figure(
             figure_colour, figure_alpha, np.zeros(figure_alpha.shape), direction, scene,
             form=False), figure_colour)
+    if backdrop is None:
+        lit_figure, lit_outline = figure_colour, outline.astype(float)
+        picture = recompose(np.dstack([lit_figure, figure_alpha * 255.0]),
+                            np.dstack([lit_outline, outline_alpha * 255.0]), None)
+        return lit_figure, lit_outline, None, picture
     gain = adjustment(ambient(backdrop, card), strength)
     lit_figure = _srgb(_linear(figure_colour) * gain)
     lit_outline = _srgb(_linear(outline) * gain)
@@ -118,11 +128,13 @@ def relight(figure: np.ndarray, figure_alpha: np.ndarray, outline: np.ndarray,
                                                         lit_outline, outline_alpha)
 
 
-def relight_pngs(figure_png: bytes, outline_png: bytes, backdrop_png: bytes, *,
+def relight_pngs(figure_png: bytes, outline_png: bytes, backdrop_png: bytes | None, *,
                  direction: str | None, strength: float, scene: str | None = None,
-                 tint_backdrop: bool = False) -> tuple[bytes, bytes, bytes, bytes]:
-    """`relight` over a staged delivery's layer PNGs: the picture (RGB), the
-    relit figure and outline layers (RGBA) and the backdrop layer (RGB)."""
+                 tint_backdrop: bool = False
+                 ) -> tuple[bytes, bytes, bytes, bytes | None]:
+    """`relight` over a staged delivery's layer PNGs: the picture (RGB; RGBA
+    without a backdrop), the relit figure and outline layers (RGBA) and the
+    backdrop layer (RGB; None without one)."""
     def decode(data: bytes, mode: str) -> np.ndarray:
         return np.asarray(Image.open(io.BytesIO(data)).convert(mode), dtype=np.float32)
 
@@ -133,11 +145,13 @@ def relight_pngs(figure_png: bytes, outline_png: bytes, backdrop_png: bytes, *,
         return output.getvalue()
 
     figure, outline = decode(figure_png, "RGBA"), decode(outline_png, "RGBA")
-    backdrop = decode(backdrop_png, "RGB")
+    backdrop = decode(backdrop_png, "RGB") if backdrop_png is not None else None
     figure_alpha, outline_alpha = figure[..., 3] / 255.0, outline[..., 3] / 255.0
     lit_figure, lit_outline, lit_backdrop, picture = relight(
         figure[..., :3], figure_alpha, outline[..., :3], outline_alpha,
-        backdrop.astype(float), direction=direction, strength=strength, scene=scene,
-        tint_backdrop=tint_backdrop)
-    return (png(picture, "RGB"), png(np.dstack([lit_figure, figure[..., 3]]), "RGBA"),
-            png(np.dstack([lit_outline, outline[..., 3]]), "RGBA"), png(lit_backdrop, "RGB"))
+        backdrop.astype(float) if backdrop is not None else None, direction=direction,
+        strength=strength, scene=scene, tint_backdrop=tint_backdrop)
+    return (png(picture, "RGB" if lit_backdrop is not None else "RGBA"),
+            png(np.dstack([lit_figure, figure[..., 3]]), "RGBA"),
+            png(np.dstack([lit_outline, outline[..., 3]]), "RGBA"),
+            png(lit_backdrop, "RGB") if lit_backdrop is not None else None)

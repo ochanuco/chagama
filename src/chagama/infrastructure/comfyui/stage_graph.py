@@ -70,26 +70,30 @@ def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
     return graph
 
 
-def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str,
+def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
                    prefix: str, *, direction: str | None, strength: float,
                    scene: str | None = None, tint_backdrop: bool = False) -> dict:
     """Light the uploaded layer images by their uploaded backdrop, in the
     light `scene` when one is given (tinting the backdrop when
     `tint_backdrop`). The picture is saved under `prefix` + LIT_SUFFIX and
-    the three layers beside it."""
+    the layers beside it (no backdrop layer without a backdrop)."""
     graph, allocate, load = _builder()
     figure_id, outline_id = load(figure_image), load(outline_image)
-    backdrop_id = load(backdrop_image)
+    backdrop_id = load(backdrop_image) if backdrop_image is not None else None
     light_id = allocate()
-    graph[light_id] = {"class_type": "YukariRelight", "inputs": {
+    inputs = {
         "figure": [figure_id, 0], "figure_mask": [figure_id, 1],
         "outline": [outline_id, 0], "outline_mask": [outline_id, 1],
-        "backdrop": [backdrop_id, 0], "direction": direction or "",
-        "strength": strength, "scene": scene or "", "tint_backdrop": tint_backdrop}}
+        "direction": direction or "",
+        "strength": strength, "scene": scene or "", "tint_backdrop": tint_backdrop}
+    if backdrop_id is not None:
+        inputs["backdrop"] = [backdrop_id, 0]
+    graph[light_id] = {"class_type": "YukariRelight", "inputs": inputs}
     _save(graph, allocate, [light_id, 0], prefix + LIT_SUFFIX)
     _save(graph, allocate, [light_id, 1], prefix + LAYER_FIGURE_SUFFIX)
     _save(graph, allocate, [light_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
-    _save(graph, allocate, [light_id, 3], prefix + LAYER_BACKDROP_SUFFIX)
+    if backdrop_id is not None:
+        _save(graph, allocate, [light_id, 3], prefix + LAYER_BACKDROP_SUFFIX)
     return graph
 
 
