@@ -32,6 +32,13 @@ still reads the pre-rename names until the box is migrated);
 equals the ref of the release it runs (see
 [queueing.md](queueing.md#worker)).
 
+`register-prune.ps1` registers the daily task `chagama-prune` (05:00, or on
+wake if the box slept through it). It runs `prune-outputs.ps1`, which deletes
+files older than 14 days from ComfyUI's `output` and `input` and from every
+directory under data except `models` and `worker`, then removes the emptied
+directories. The last run's counts are in
+`data\worker\prune.log`.
+
 Two things that only show up over `ssh comfyui-worker`:
 
 - Reparse points do not resolve in that session. The WinGet `uv.exe` link
