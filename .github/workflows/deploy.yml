@@ -43,6 +43,7 @@ jobs:
       notices: |
         manifests/worker-models.toml=デプロイの後に fetch worker models を実行する
         scripts/worker/register-comfyui.ps1=GPU 機で register-comfyui.ps1 を手で実行し直す
+        scripts/worker/register-prune.ps1=GPU 機で register-prune.ps1 を手で実行し直す
 
   approve:
     needs: plan

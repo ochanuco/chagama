@@ -55,3 +55,5 @@ $json = @{ comfyui_portable_root = $PortableRoot } | ConvertTo-Json
 
 & (Join-Path $PSScriptRoot "register-comfyui.ps1")
 "registered: task comfyui"
+& (Join-Path $PSScriptRoot "register-prune.ps1")
+"registered: task chagama-prune"
