@@ -11,9 +11,10 @@ the depth of field can work on them after."""
 from __future__ import annotations
 
 import io
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from typing import NamedTuple
 
+import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
@@ -217,29 +218,171 @@ def _slashes(shape: tuple[int, int], line_width: float) -> np.ndarray:
     return cover
 
 
-def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
-    """The 0..1 share of each pixel of a delivery canvas `shape` that the
-    `frame` keeps: nothing past a cut side's border inner edge, nothing
-    under a behind side's border, then each stroke in order, an erase taking
-    its coverage away and a restore giving it back."""
-    height, width = shape
+def _noise(count: int, waves, rng) -> np.ndarray:
+    t = np.linspace(0, 1, count)
+    return sum(amp * np.sin(2 * np.pi * cycles * t + rng.uniform(0, 2 * np.pi))
+               for cycles, amp in waves)
+
+
+def _normals(points: np.ndarray) -> np.ndarray:
+    tangent = np.gradient(points, axis=0)
+    tangent /= np.maximum(np.hypot(*tangent.T), 1e-6)[:, None]
+    return np.stack([tangent[:, 1], -tangent[:, 0]], axis=1)
+
+
+def _side_path(start: np.ndarray, end: np.ndarray, unit: float, rng) -> np.ndarray:
+    """A hand-drawn line from `start` to `end` (px): a slight tilt, a slow
+    wobble and an overshoot past each end. The outward normal is
+    (dy, -dx) of the direction."""
+    brush = delivery_style.FRAME_BRUSH
+    direction = (end - start) / max(np.hypot(*(end - start)), 1e-6)
+    normal = np.array([direction[1], -direction[0]])
+    tilt, low_high = brush["tilt"] * unit, brush["overshoot"]
+    first = start - direction * rng.uniform(*low_high) * unit + normal * rng.uniform(-tilt, tilt)
+    last = end + direction * rng.uniform(*low_high) * unit + normal * rng.uniform(-tilt, tilt)
+    count = max(int(np.hypot(*(last - first))), 16)
+    t = np.linspace(0, 1, count)
+    points = first + (last - first) * t[:, None]
+    amp = brush["wobble"] * unit
+    bow = np.sin(np.pi * t) * rng.uniform(-1, 1) * amp
+    wobble = _noise(count, [(rng.uniform(1.2, 2.2), 0.6), (rng.uniform(4, 7), 0.3)], rng) * amp
+    return points + normal * (bow + wobble)[:, None]
+
+
+def _dry_brush(out: np.ndarray, points: np.ndarray, width: float, streaks: float,
+               rng) -> None:
+    """Take the max of `out` (0..1) and the dry-brush coverage along `points`
+    (px, x right / y down): overlapping round dabs whose size and sideways
+    offset jitter, then thin tapered streaks the brush skipped. Only the
+    stroke's bounding box is rasterized."""
+    brush = delivery_style.FRAME_BRUSH
+    scale, rough = brush["supersample"], brush["rough"]
+    canvas_height, canvas_width = out.shape
+    margin = width + 2
+    left = max(int(np.floor(points[:, 0].min() - margin)), 0)
+    top = max(int(np.floor(points[:, 1].min() - margin)), 0)
+    right = min(int(np.ceil(points[:, 0].max() + margin)), canvas_width)
+    bottom = min(int(np.ceil(points[:, 1].max() + margin)), canvas_height)
+    if right <= left or bottom <= top:
+        return
+    count = len(points)
+    normals = _normals(points)
+    local = points - (left, top)
+
+    def fixed(xy: np.ndarray) -> np.ndarray:
+        return np.round((xy * scale - 0.5) * 16)
+
+    dabs = np.arange(0, count, max(1.0, brush["spacing"] * width)).astype(int)
+    jitter = []
+    for _ in range(2):
+        noise = ndimage.gaussian_filter1d(rng.normal(size=len(dabs)), 1.0)
+        jitter.append(noise / (noise.std() + 1e-6))
+    canvas = np.zeros(((bottom - top) * scale, (right - left) * scale), np.uint8)
+    for k, i in enumerate(dabs):
+        radius = width / 2 * (1 + rough * jitter[0][k])
+        centre = fixed(local[i] + normals[i] * 0.5 * rough * width * jitter[1][k])
+        cv2.circle(canvas, (int(centre[0]), int(centre[1])),
+                   max(1, int(radius * scale * 16)), 255, -1, cv2.LINE_AA, 4)
+    for _ in range(int(count / width * streaks)):
+        i0 = int(rng.integers(0, count))
+        i1 = min(count, int(i0 + rng.uniform(*brush["streak_length"]) * width))
+        if i1 - i0 < 4:
+            continue
+        offset = (rng.choice([-1, 1]) * rng.uniform(*brush["streak_offset"]) * width / 2
+                  + np.linspace(0, 1, i1 - i0)
+                  * rng.uniform(-brush["streak_drift"], brush["streak_drift"]) * width)
+        centre_line = local[i0:i1] + normals[i0:i1] * offset[:, None]
+        half_thick = (rng.uniform(*brush["streak_thickness"]) * width
+                      * np.sin(np.pi * np.linspace(0.05, 0.95, i1 - i0)))
+        side = normals[i0:i1] * half_thick[:, None]
+        polygon = np.vstack([centre_line + side, (centre_line - side)[::-1]])
+        cv2.fillPoly(canvas, [fixed(polygon).astype(np.int32)], 0, cv2.LINE_AA, 4)
+    cover = cv2.resize(canvas, (right - left, bottom - top),
+                       interpolation=cv2.INTER_AREA) / 255.0
+    out[top:bottom, left:right] = np.maximum(out[top:bottom, left:right], cover)
+
+
+def _brush_bands(frame: Mapping, longest: int) -> dict[str, tuple[float, float]]:
+    """The border's brushes, widest first, as (width px, streaks per width):
+    the rim as wide as the whole border, the line within it."""
+    brush = delivery_style.FRAME_BRUSH
+    bands = {}
+    if _width_px(frame.get("rim"), longest) > 0:
+        bands["rim"] = (2 * _border_half(frame, longest), brush["streaks"])
+    if _width_px(frame.get("line"), longest) > 0:
+        bands["line"] = (_width_px(frame.get("line"), longest), brush["line_streaks"])
+    return bands
+
+
+def _drawn_border(frame: Mapping, delivery: tuple[int, int], offset: tuple[int, int],
+                  size: tuple[int, int], bands: Iterable[str]
+                  ) -> dict[str, tuple[np.ndarray, dict[str, np.ndarray]]]:
+    """Each side's drawn centre path and the coverage of its `bands` brushes,
+    on a canvas `size` whose top-left is `offset` px into the `delivery`
+    canvas. A side and band draw from their own seeded generator, so the
+    pixels depend on the frame and the delivery's size alone."""
+    height, width = delivery
     longest = max(height, width)
     x0, y0, x1, y1 = _share_px(frame["box"], width, height)
-    half = _border_half(frame, longest)
+    corners = {"top": ((x0, y0), (x1, y0)), "right": ((x1, y0), (x1, y1)),
+               "bottom": ((x1, y1), (x0, y1)), "left": ((x0, y1), (x0, y0))}
+    widths = _brush_bands(frame, longest)
+    seed = delivery_style.FRAME_BRUSH["seed"]
+    drawn = {}
+    for index, side in enumerate(delivery_style.FRAME_SIDES):
+        start, end = (np.array(corner, float) for corner in corners[side])
+        path = _side_path(start, end, longest / 100, np.random.default_rng([seed, index, 0]))
+        path = path - offset
+        covers = {}
+        for band in bands:
+            if band in widths:
+                covers[band] = np.zeros(size, np.float32)
+                _dry_brush(covers[band], path, widths[band][0], widths[band][1],
+                           np.random.default_rng([seed, index, 1 if band == "rim" else 2]))
+        drawn[side] = (path, covers)
+    return drawn
+
+
+def _outer_half_plane(shape: tuple[int, int], path: np.ndarray, side: str) -> np.ndarray:
+    """The 0..1 coverage of the half-plane past a side's drawn `path`, which
+    is run on along its direction far enough to leave no gap."""
+    far = 4 * max(shape)
+    direction = (path[-1] - path[0]) / max(np.hypot(*(path[-1] - path[0])), 1e-6)
+    line = np.vstack([path[0] - direction * far, path, path[-1] + direction * far])
+    outward = np.array({"top": (0, -1), "right": (1, 0), "bottom": (0, 1), "left": (-1, 0)}[side])
+    polygon = np.vstack([line, line[::-1] + outward * far])
+    mask = np.zeros(shape, np.uint8)
+    cv2.fillPoly(mask, [np.round((polygon - 0.5) * 16).astype(np.int32)], 255, cv2.LINE_AA, 4)
+    return mask / 255.0
+
+
+def frame_keep(shape: tuple[int, int], frame: Mapping) -> np.ndarray:
+    """The 0..1 share of each pixel of a delivery canvas `shape` that the
+    `frame` keeps: nothing past a cut side's drawn border centre and nothing
+    under the brush, nothing under a behind side's brush, then each stroke in
+    order, an erase taking its coverage away and a restore giving it back.
+    A frame without a border cuts at its box's straight edge."""
+    height, width = shape
+    longest = max(height, width)
     sides = frame["sides"]
-    kept = _rect(shape,
-                 x0 + half if sides["left"] == "cut" else None,
-                 y0 + half if sides["top"] == "cut" else None,
-                 x1 - half if sides["right"] == "cut" else None,
-                 y1 - half if sides["bottom"] == "cut" else None)
-    strips = {"top": (x0 - half, y0 - half, x1 + half, y0 + half),
-              "right": (x1 - half, y0 - half, x1 + half, y1 + half),
-              "bottom": (x0 - half, y1 - half, x1 + half, y1 + half),
-              "left": (x0 - half, y0 - half, x0 + half, y1 + half)}
-    for side, strip in strips.items():
-        if sides[side] == "behind":
-            kept &= ~_rect(shape, *strip)
-    keep = kept.astype(np.float32)
+    bands = _brush_bands(frame, longest)
+    if bands:
+        border = "rim" if "rim" in bands else "line"
+        drawn = _drawn_border(frame, shape, (0, 0), shape, [border])
+        keep = np.ones(shape, np.float32)
+        for side, (path, covers) in drawn.items():
+            if sides[side] == "out":
+                continue
+            if sides[side] == "cut":
+                keep *= 1 - _outer_half_plane(shape, path, side)
+            keep *= 1 - covers[border]
+    else:
+        x0, y0, x1, y1 = _share_px(frame["box"], width, height)
+        keep = _rect(shape,
+                     x0 if sides["left"] == "cut" else None,
+                     y0 if sides["top"] == "cut" else None,
+                     x1 if sides["right"] == "cut" else None,
+                     y1 if sides["bottom"] == "cut" else None).astype(np.float32)
     for stroke in frame.get("strokes") or ():
         points = np.asarray(stroke["points"], float) * (width, height)
         cover = _stroke_cover(shape, points, longest * stroke["width"] / 100)
@@ -307,9 +450,9 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
              scene: str | None = None, light_from: str | None = None) -> Staged:
     """`figure` and `outline` (straight HxWx4 0..255) in the `frame`: on
     the framed canvas painted `paper`, the box filled with the `backdrop`
-    pattern rendered at the box's size, its line straddling the box's sides
-    (solid, or `slash`: pairs of "/" on the paper colour) with the rim along
-    both its edges, and the figure and outline kept by
+    pattern rendered at the box's size, a hand-drawn dry-brush border over its
+    edge: the line (solid, or `slash`: pairs of "/" on the paper colour) with
+    the rim along both its sides, and the figure and outline kept by
     `frame_keep` over all of it; the light `scene` and drop shadow as
     `on_pattern` sets them."""
     height, width = figure.shape[:2]
@@ -334,18 +477,18 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
         _paste(backdrop_rgb, backdrops.render(backdrop, panel_y1 - panel_y0,
                                               panel_x1 - panel_x0), panel_x0, panel_y0)
     longest = max(height, width)
-    for band, half in ((frame.get("rim"), _border_half(frame, longest)),
-                       (frame.get("line"), _width_px(frame.get("line"), longest) / 2)):
-        if band and half > 0:
-            ring = (_rect(size, x0 - half, y0 - half, x1 + half, y1 + half)
-                    & ~_rect(size, x0 + half, y0 + half, x1 - half, y1 - half))
-            colour = np.array(parse_color(band["color"]), float)
-            if band.get("pattern") == "slash":
-                cover = _slashes(size, 2 * half)[ring][:, None]
-                paper = np.array(parse_color(frame["paper"]), float)
-                backdrop_rgb[ring] = paper + cover * (colour - paper)
-            else:
-                backdrop_rgb[ring] = colour
+    widths = _brush_bands(frame, longest)
+    drawn = _drawn_border(frame, (height, width), (left, top), size, widths)
+    paper = np.array(parse_color(frame["paper"]), float)
+    for name in widths:
+        cover = np.zeros(size, np.float32)
+        for _, covers in drawn.values():
+            cover = np.maximum(cover, covers[name])
+        band = frame[name]
+        colour = np.array(parse_color(band["color"]), float)
+        if band.get("pattern") == "slash":
+            colour = paper + _slashes(size, widths[name][0])[..., None] * (colour - paper)
+        backdrop_rgb = backdrop_rgb + cover[..., None] * (colour - backdrop_rgb)
     (figure_colour, figure_alpha), (outline_colour, outline_alpha) = layers
     return _on_backdrop(figure_colour, figure_alpha, outline_colour, outline_alpha,
                         backdrop_rgb, shadow_from, outlines, scene, light_from)
