@@ -59,63 +59,102 @@ def framed(**frame):
             "canvas": None, "strokes": [], **frame}
 
 
+def solid(height, width):
+    figure = np.zeros((height, width, 4), np.float32)
+    figure[...] = (200, 60, 120, 255)
+    return figure, np.zeros_like(figure)
+
+
+def big_frame(**frame):
+    return framed(**{"line": {"color": "#102030", "width": 3.0},
+                     "canvas": [0.0, 0.0, 1.0, 1.0], **frame})
+
+
 class FrameTest(unittest.TestCase):
     def setUp(self):
         self.figure, self.outline = layers()
         self.outline[..., 3] = 0
 
-    def test_a_cut_side_clips_at_the_line_and_an_out_side_lets_the_figure_over(self):
-        # 80x60 delivery: the line is 4 px wide, the box's left edge at x 15.
-        staged = stage.in_frame(self.figure, self.outline,
-                                framed(canvas=[0.0, 0.0, 1.0, 1.0]), "#ffffff")
-        self.assertEqual(staged.picture.shape, (80, 60, 3))
+    def test_a_cut_side_ends_the_figure_at_the_border_and_an_out_side_lets_it_over(self):
+        # 400x300 delivery, line 12 px wide: the box's left edge at x 75, top at y 100.
+        figure, outline = solid(400, 300)
+        staged = stage.in_frame(figure, outline, big_frame(), "#ffffff")
+        self.assertEqual(staged.picture.shape, (400, 300, 3))
         alpha = staged.figure_alpha
-        self.assertEqual(alpha[40, 16], 0.0)
-        self.assertEqual(alpha[40, 17], 1.0)
-        np.testing.assert_allclose(staged.picture[40, 14], (16, 32, 48))
+        self.assertEqual(alpha[150:350, :68].max(), 0.0)
+        self.assertEqual(alpha[150:350, 95:280].min(), 1.0)
+        np.testing.assert_allclose(np.median(staged.backdrop[150:350, 75], axis=0),
+                                   (16, 32, 48), atol=6)
         # The top side is out: the figure stays above the box and over its line.
-        self.assertEqual(alpha[12, 30], 1.0)
-        np.testing.assert_allclose(staged.picture[20, 30], (200, 60, 120))
-        np.testing.assert_allclose(staged.backdrop[20, 30], (16, 32, 48))
+        self.assertEqual(alpha[50:100, 100:280].min(), 1.0)
+        np.testing.assert_allclose(staged.picture[100, 150], (200, 60, 120))
+        np.testing.assert_allclose(np.median(staged.backdrop[100, 100:280], axis=0),
+                                   (16, 32, 48), atol=6)
 
-    def test_the_rim_edges_both_sides_of_the_line_and_moves_the_cut_inward(self):
-        # The line 4 px wide on the box's left edge at x 15, a 2 px rim either side.
+    def test_the_rim_edges_both_sides_of_the_line_and_keeps_the_cut_off_it(self):
+        figure, outline = solid(400, 300)
         staged = stage.in_frame(
-            self.figure, self.outline,
-            framed(rim={"color": "#405060", "width": 2.5}, canvas=[0.0, 0.0, 1.0, 1.0]),
-            "#ffffff")
-        np.testing.assert_allclose(staged.backdrop[40, 12], (64, 80, 96))
-        np.testing.assert_allclose(staged.backdrop[40, 14], (16, 32, 48))
-        np.testing.assert_allclose(staged.backdrop[40, 18], (64, 80, 96))
-        np.testing.assert_allclose(staged.backdrop[40, 10], (255, 255, 255))
-        self.assertEqual(staged.figure_alpha[40, 18], 0.0)
-        self.assertEqual(staged.figure_alpha[40, 19], 1.0)
+            figure, outline, big_frame(rim={"color": "#405060", "width": 1.0}), "#ffffff")
+        rows = slice(150, 350)
+        for x, colour in ((60, (255, 255, 255)), (67, (64, 80, 96)), (75, (16, 32, 48)),
+                          (83, (64, 80, 96))):
+            np.testing.assert_allclose(np.median(staged.backdrop[rows, x], axis=0), colour,
+                                       atol=6, err_msg=f"x {x}")
+        self.assertEqual(staged.figure_alpha[rows, :64].max(), 0.0)
+        self.assertEqual(staged.figure_alpha[rows, 100:280].min(), 1.0)
 
     def test_a_behind_side_keeps_the_figure_both_sides_with_the_border_over_it(self):
+        figure, outline = solid(400, 300)
         sides = {"top": "out", "right": "cut", "bottom": "cut", "left": "behind"}
         staged = stage.in_frame(
-            self.figure, self.outline,
-            framed(box=[0.3, 0.25, 1.0, 1.0], sides=sides, canvas=[0.0, 0.0, 1.0, 1.0]),
-            "#ffffff")
-        # Box left edge at x 18: the strip is x 16..20, the figure stays either side.
+            figure, outline, big_frame(box=[0.3, 0.25, 1.0, 1.0], sides=sides), "#ffffff")
+        # Box left edge at x 90.
         alpha = staged.figure_alpha
-        self.assertEqual(alpha[40, 15], 1.0)
-        self.assertEqual(alpha[40, 17], 0.0)
-        self.assertEqual(alpha[40, 20], 1.0)
-        np.testing.assert_allclose(staged.picture[40, 17], (16, 32, 48))
+        self.assertEqual(alpha[150:350, :70].min(), 1.0)
+        self.assertEqual(alpha[150:350, 110:280].min(), 1.0)
+        self.assertLess(alpha[150:350, 90].mean(), 0.1)
+        np.testing.assert_allclose(np.median(staged.picture[150:350, 90], axis=0),
+                                   (16, 32, 48), atol=6)
         # Above the box the left side does not reach: the figure stays.
-        self.assertEqual(alpha[12, 17], 1.0)
+        self.assertEqual(alpha[50:90, 80:100].min(), 1.0)
 
     def test_a_slash_line_lays_slashes_of_its_colour_on_the_paper(self):
         figure, outline = layers(400, 300)
         line = {"color": "#102030", "width": 5.0, "pattern": "slash"}
         staged = stage.in_frame(figure, outline,
                                 framed(line=line, canvas=[0.0, 0.0, 1.0, 1.0]), "#ffffff")
-        # 400x300: the left side's line runs x 65..85.
-        band = staged.backdrop[200:240, 66:84]
+        # 400x300: the left side's line runs about x 65..85.
+        band = staged.backdrop[200:240, 68:82]
         self.assertLess(band.min(), 30)
         self.assertGreater(band.max(), 250)
         np.testing.assert_allclose(staged.backdrop[300, 150], (255, 255, 255))
+
+    def test_the_same_frame_draws_the_same_pixels(self):
+        figure, outline = solid(400, 300)
+        frame = big_frame(rim={"color": "#405060", "width": 1.0})
+        first = stage.in_frame(figure, outline, frame, "#ffffff")
+        second = stage.in_frame(figure, outline, frame, "#ffffff")
+        np.testing.assert_array_equal(first.picture, second.picture)
+
+    def test_the_border_is_drawn_by_hand_not_a_straight_band(self):
+        figure, outline = solid(400, 300)
+        staged = stage.in_frame(figure, outline, big_frame(), "#ffffff")
+        covered = (255 - staged.backdrop[150:350, 40:76, 0]) / (255 - 16) >= 0.5
+        edge = covered.argmax(axis=1)
+        self.assertTrue(covered.any(axis=1).all())
+        self.assertGreater(len(np.unique(edge)), 2)
+
+    def test_the_cut_follows_the_border_on_a_shifted_canvas(self):
+        figure, outline = solid(400, 300)
+        rim = (64, 80, 96)
+        staged = stage.in_frame(
+            figure, outline,
+            big_frame(rim={"color": "#405060", "width": 1.0}, canvas=[0.1, 0.1, 1.0, 1.0]),
+            "#ffffff")
+        # The canvas starts at delivery (30, 40); look below the out top side.
+        painted = (staged.backdrop[90:] == rim).all(axis=2)
+        self.assertGreater(painted.sum(), 500)
+        self.assertLessEqual(staged.figure_alpha[90:][painted].max(), 0.02)
 
     def test_the_backdrop_fills_the_box_and_paper_the_rest(self):
         staged = stage.in_frame(self.figure, self.outline,

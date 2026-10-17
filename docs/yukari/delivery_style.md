@@ -73,22 +73,25 @@ A `stage` request's `frame` sets the delivery in a square panel:
 - `box` and `canvas` are `[x0, y0, x1, y1]` shares of the delivery's canvas
   (x of its width, y of its height, each within `FRAME_COORD_RANGE`);
   widths are percent of its longest side.
-- The canvas is painted `paper`, the box filled with the request's
-  `backdrop` rendered at the box's size, and the `line` straddles the box's
-  sides (its `pattern` `solid`, or `slash`: `FRAME_SLASH` pairs of "/" in
-  the line colour on the paper colour, the same direction on every side)
-  with the `rim` along both its edges (either null or width 0 for
-  none, an omitted color or width the default); together they are the
-  border.
-- A `cut` side ends the figure and outline at the border's inner edge, the
-  half-plane running past the box; an `out` side leaves them over the
+- The canvas is painted `paper` and the box filled with the request's
+  `backdrop` rendered at the box's size. The `line` and the `rim` along both
+  its edges (either null or width 0 for none, an omitted color or width the
+  default) are the border: a hand-drawn dry-brush line on each side, slightly
+  wobbly, overshooting the corners, of overlapping dabs with a few thin
+  streaks where the brush skipped (`FRAME_BRUSH`; the same frame and
+  delivery size always draw the same pixels). The line's `pattern` is `solid`,
+  or `slash`: `FRAME_SLASH` pairs of "/" in the line colour on the paper colour,
+  the same direction on every side.
+- A `cut` side ends the figure and outline along its drawn border: nothing
+  past the border's centre and nothing under its brush, so the streaks let
+  the figure show in the inner half; an `out` side leaves them over the
   border; a `behind` side keeps them on both sides of it and takes them out
-  under its strip (the side's border out to the corners), so the border
-  lies over the figure.
+  under its brush, so the border lies over the figure. A frame with no
+  border cuts at the box's straight edge.
 - `strokes` are round pens applied in order: an `erase` multiplies what is
   kept by one minus its anti-aliased coverage, a `restore` adds its
   coverage back, never past the figure's own alpha.
-- Pixels count by their centres, so cuts, line and box are hard-edged.
+- Pixels count by their centres; the box and the backdrop paste are hard-edged.
 - Each `canvas` entry may be null (or `canvas` itself omitted); that side
   is the box out to the border's outer edge with the visible figure and
   outline, `FRAME_MARGIN_PCT` around, rounded outward, and kept within the

@@ -499,7 +499,7 @@ SATURATION_STRENGTH = {"min": 0.0, "max": 1.0, "default": 1.0}
 
 # A framed stage sets the delivery in a square panel: the backdrop
 # fills the panel, the paper colour the canvas around it, and each side of the
-# panel cuts the figure at the inner edge of its border (the line and the rim
+# panel cuts the figure along its hand-drawn border (the line and the rim
 # along both its edges), lets it out over the border or passes it behind it.
 # Boxes are shares of the delivery's canvas (x of its width, y of its height),
 # widths percent of its longest side.
@@ -513,6 +513,18 @@ FRAME_LINE_PATTERNS = ("solid", "slash")
 # offset of its second slash.
 FRAME_SLASH = {"period": 2.2, "thickness": 0.14, "offset": 0.34}
 FRAME_RIM = {"color": "#2e2236", "width": 0.25}
+# The border is drawn with a dry brush. Path: `wobble` (bow and wave) and
+# `tilt` (end offset) as percent of the delivery's longest side, `overshoot`
+# the (low, high) range of how far a side runs past its corner, same unit.
+# Brush, as shares of the brush's width: dab `spacing` along the line, `rough`
+# the dab radius and sideways jitter, `streaks` per width of line the brush
+# skipped (`line_streaks` for the inner line) with their `streak_length`,
+# `streak_offset` (from the centre, of the half width), `streak_thickness`
+# (half thickness) ranges and `streak_drift`. `seed` fixes the drawing.
+FRAME_BRUSH = {"seed": 5, "wobble": 0.05, "tilt": 0.06, "overshoot": (0.15, 0.5),
+               "spacing": 0.16, "rough": 0.035, "streaks": 0.08, "line_streaks": 0.04,
+               "streak_length": (0.4, 1.6), "streak_offset": (0.4, 0.88),
+               "streak_thickness": (0.025, 0.06), "streak_drift": 0.06, "supersample": 2}
 FRAME_PAPER = "#ffffff"
 FRAME_COORD_RANGE = (-1.0, 2.0)
 FRAME_MARGIN_PCT = 4.0
