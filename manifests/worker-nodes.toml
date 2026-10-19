@@ -4,7 +4,7 @@
 # each node under its custom_nodes/; ComfyUI is then restarted.
 
 [comfyui]
-tag = "v0.40.0"
+tag = "v0.42.1"
 
 [[node]]
 name = "ComfyUI-layerdiffuse"
@@ -15,7 +15,7 @@ install_requirements = true
 [[node]]
 name = "ComfyUI-Inpaint-CropAndStitch"
 repo = "https://github.com/lquesada/ComfyUI-Inpaint-CropAndStitch.git"
-commit = "606e2b4fd83fc44e1f0b403e1f076501db8c3749"
+commit = "348a8bbaad1a9000523e42dd3eaf6ab34a8fe62f"
 install_requirements = true
 
 [[node]]
@@ -27,7 +27,7 @@ install_requirements = true
 [[node]]
 name = "comfyui_controlnet_aux"
 repo = "https://github.com/Fannovel16/comfyui_controlnet_aux.git"
-commit = "e8b689a513c3e6b63edc44066560ca5919c0576e"
+commit = "a587a4c1594524c1d2de5cd1a86cd868ff448e1c"
 install_requirements = true
 
 [[node]]
@@ -39,6 +39,6 @@ install_requirements = true
 [[node]]
 name = "ComfyUI-RMBG"
 repo = "https://github.com/1038lab/ComfyUI-RMBG.git"
-commit = "58f1947a11567a9f8b707223185570850e773856"
+commit = "229529e0ea63fb7085848225d74f91f6dc164956"
 install_requirements = false
 pip = ["timm"]
