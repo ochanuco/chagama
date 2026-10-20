@@ -68,7 +68,6 @@
       matchFileNames: ['manifests/worker-models.toml'],
       matchDatasources: ['git-refs'],
       groupName: 'Hugging Face models',
-      schedule: ['before 9am on the first day of the month'],
       automerge: false,
     },
     {

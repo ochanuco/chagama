@@ -74,7 +74,7 @@ keeps the box awake while it runs, and renames a file into place only when
 its SHA256 matches the one the source publishes (and `sha256` in the
 manifest, when pinned); a small file Hugging Face keeps outside LFS, such as
 a json config, is checked by its git blob SHA1 instead. Each Hugging Face
-entry's `revision` is a commit SHA, which Renovate bumps in one monthly
+entry's `revision` is a commit SHA, which Renovate bumps in one weekly
 `Hugging Face models` PR. A `<dest>.sha256` sidecar records the content, so a
 fixed `dest` is overwritten when the pinned upstream file changes, even at the
 same size. `HF_TOKEN`, read from `hf-token` in the config directory, is needed
