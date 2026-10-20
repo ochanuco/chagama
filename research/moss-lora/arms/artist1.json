@@ -1,0 +1,52 @@
+{
+ "seeds": [
+  1001,
+  2002
+ ],
+ "width": 1024,
+ "height": 1280,
+ "steps": 6,
+ "arms": [
+  {
+   "name": "tag_none_f6",
+   "prompt": "yuzuki yukari, vocaloid, 1girl, solo, short hair with long sidelocks, light purple hair, hair tubes, black hair clip with pink gems, half-closed eyes, purple eyes, black hoodie, open hoodie, pink hood lining, light purple frilled dress, upper body, finger to chin, smug smile, looking at viewer, green background, simple background",
+   "summary": "MOSS 絵師タグ試験: タグ列・絵師なし、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "tag_oshiki_f6",
+   "prompt": "yuzuki yukari, vocaloid, @oshiki hitoshi, 1girl, solo, short hair with long sidelocks, light purple hair, hair tubes, black hair clip with pink gems, half-closed eyes, purple eyes, black hoodie, open hoodie, pink hood lining, light purple frilled dress, upper body, finger to chin, smug smile, looking at viewer, green background, simple background",
+   "summary": "MOSS 絵師タグ試験: タグ列 + @oshiki hitoshi、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "tag_oshiki_style_f6",
+   "prompt": "chgmstyle, yuzuki yukari, vocaloid, @oshiki hitoshi, 1girl, solo, short hair with long sidelocks, light purple hair, hair tubes, black hair clip with pink gems, half-closed eyes, purple eyes, black hoodie, open hoodie, pink hood lining, light purple frilled dress, upper body, finger to chin, smug smile, looking at viewer, green background, simple background",
+   "summary": "MOSS 絵師タグ試験: タグ列 + @oshiki hitoshi + 絵柄 LoRA v2、4-step LoRA 6 steps CFG1",
+   "style": "moss_style_v2.safetensors"
+  },
+  {
+   "name": "tag_none_s25",
+   "prompt": "yuzuki yukari, vocaloid, 1girl, solo, short hair with long sidelocks, light purple hair, hair tubes, black hair clip with pink gems, half-closed eyes, purple eyes, black hoodie, open hoodie, pink hood lining, light purple frilled dress, upper body, finger to chin, smug smile, looking at viewer, green background, simple background",
+   "summary": "MOSS 絵師タグ試験: タグ列・絵師なし、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "tag_oshiki_s25",
+   "prompt": "yuzuki yukari, vocaloid, @oshiki hitoshi, 1girl, solo, short hair with long sidelocks, light purple hair, hair tubes, black hair clip with pink gems, half-closed eyes, purple eyes, black hoodie, open hoodie, pink hood lining, light purple frilled dress, upper body, finger to chin, smug smile, looking at viewer, green background, simple background",
+   "summary": "MOSS 絵師タグ試験: タグ列 + @oshiki hitoshi、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "tag_oshiki_style_s25",
+   "prompt": "chgmstyle, yuzuki yukari, vocaloid, @oshiki hitoshi, 1girl, solo, short hair with long sidelocks, light purple hair, hair tubes, black hair clip with pink gems, half-closed eyes, purple eyes, black hoodie, open hoodie, pink hood lining, light purple frilled dress, upper body, finger to chin, smug smile, looking at viewer, green background, simple background",
+   "summary": "MOSS 絵師タグ試験: タグ列 + @oshiki hitoshi + 絵柄 LoRA v2、素の SFT 25 steps CFG3 shift5",
+   "style": "moss_style_v2.safetensors",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  }
+ ]
+}

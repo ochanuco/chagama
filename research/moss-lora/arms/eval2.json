@@ -1,0 +1,191 @@
+{
+ "seeds": [
+  1001,
+  2002
+ ],
+ "width": 896,
+ "height": 1440,
+ "steps": 6,
+ "arms": [
+  {
+   "name": "bust_v1_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v1、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_v2s1000_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2_000001000.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v2s1000、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_v2s1500_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2_000001500.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v2s1500、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_v2s2000_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v2s2000、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_v1_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v1、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "bust_v2s1000_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2_000001000.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v2s1000、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "bust_v2s1500_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2_000001500.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v2s1500、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "bust_v2s2000_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: bust / v2s2000、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "sit_v1_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v1、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "sit_v2s1000_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2_000001000.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v2s1000、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "sit_v2s1500_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2_000001500.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v2s1500、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "sit_v2s2000_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v2s2000、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "sit_v1_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v1、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "sit_v2s1000_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2_000001000.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v2s1000、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "sit_v2s1500_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2_000001500.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v2s1500、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "sit_v2s2000_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: sit / v2s2000、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "new_v1_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v1、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "new_v2s1000_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v2_000001000.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v2s1000、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "new_v2s1500_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v2_000001500.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v2s1500、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "new_v2s2000_f6",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v2s2000、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "new_v1_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v1、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "new_v2s1000_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v2_000001000.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v2s1000、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "new_v2s1500_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v2_000001500.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v2s1500、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  },
+  {
+   "name": "new_v2s2000_s25",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, white sneakers. Full body, jumping in the air with both arms raised and a wide open-mouthed smile, hair flowing. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v1/v2 評価: new / v2s2000、素の SFT 25 steps CFG3 shift5",
+   "lora": 0,
+   "steps": 25,
+   "cfg": 3.0
+  }
+ ]
+}

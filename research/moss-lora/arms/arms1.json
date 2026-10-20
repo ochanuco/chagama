@@ -1,0 +1,30 @@
+{
+ "ref": "ref_zmznyj.jpg",
+ "seeds": [
+  1001,
+  2002
+ ],
+ "width": 896,
+ "height": 1440,
+ "steps": 6,
+ "arms": [
+  {
+   "name": "a_text",
+   "prompt": "Yuzuki Yukari, an anime girl with short lavender hair and long sidelocks tied with silver ring hair tubes, a black hair clip with pink gems, half-lidded tired purple eyes with dark circles, wearing a black hoodie with pink lining over a light purple frilled halter dress, sheer black tights. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain white background.",
+   "summary": "テキストのみ（参照画像なし）の対照"
+  },
+  {
+   "name": "b_ref_char",
+   "ref": true,
+   "prompt": "This is a reference illustration of a character. Draw the same character in exactly the same art style, with the same line work, colouring and shading. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain white background.",
+   "summary": "zmznyj を Qwen3.5 に画像入力、キャラ説明なしで「同じキャラ・同じ絵柄」"
+  },
+  {
+   "name": "c_ref_full",
+   "ref": true,
+   "prompt": "This is a reference illustration. Draw a new illustration in exactly the same art style (same line work, colouring and shading) of Yuzuki Yukari, an anime girl with short lavender hair and long sidelocks tied with silver ring hair tubes, a black hair clip with pink gems, half-lidded tired purple eyes with dark circles, wearing a black hoodie with pink lining over a light purple frilled halter dress, sheer black tights. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain white background.",
+   "summary": "zmznyj を画像入力 + キャラ説明文 + 「同じ絵柄」"
+  }
+ ],
+ "ref_id": "zmznyj"
+}

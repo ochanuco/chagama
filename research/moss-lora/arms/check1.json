@@ -1,0 +1,101 @@
+{
+ "seeds": [
+  1001,
+  2002
+ ],
+ "width": 896,
+ "height": 1440,
+ "steps": 6,
+ "arms": [
+  {
+   "name": "bust_moss",
+   "prompt": "chgmstyle. Yuzuki Yukari, an adult woman with light purple hair cut short with very long sidelocks tied in silver ring hair tubes, a black hair clip with pink gems, dark greyish purple eyes, droopy half-closed jitome eyes, light purple nail polish. She wears an open eggplant purple hooded cardigan with a rabbit hood and pink lining, sleeves past her wrists, over a purple frilled dress. Head-and-shoulders portrait from the front, expressionless and unamused, mouth closed, looking at the viewer. Plain green background.",
+   "width": 896,
+   "height": 1440,
+   "style": "moss_style_v2.safetensors",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45,
+   "hires_style_strength": 1.0,
+   "summary": "MOSS 絵柄チェック bust: 絵柄 LoRA v2 1.6（hires 1.0）、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45"
+  },
+  {
+   "name": "coffee_moss",
+   "prompt": "chgmstyle. Yuzuki Yukari, an adult woman with light purple hair cut short with very long sidelocks tied in silver ring hair tubes, a black hair clip with pink gems, dark greyish purple eyes, droopy half-closed jitome eyes, light purple nail polish. She wears an open eggplant purple hooded cardigan with a rabbit hood and pink lining, sleeves past her wrists, over a purple frilled dress, with sheer dark purple pantyhose that let her skin show through. Cowboy shot from the thighs up, standing and drinking iced coffee through a straw from a clear plastic cup held in one hand, straw in her mouth, unamused, looking at the viewer. Plain green background.",
+   "width": 896,
+   "height": 1440,
+   "style": "moss_style_v2.safetensors",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45,
+   "hires_style_strength": 1.0,
+   "summary": "MOSS 絵柄チェック coffee: 絵柄 LoRA v2 1.6（hires 1.0）、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45"
+  },
+  {
+   "name": "gao_moss",
+   "prompt": "chgmstyle. Yuzuki Yukari, an adult woman with light purple hair cut short with very long sidelocks tied in silver ring hair tubes, a black hair clip with pink gems, dark greyish purple eyes, droopy half-closed jitome eyes, light purple nail polish. She wears an open eggplant purple hooded cardigan with a rabbit hood and pink lining, sleeves past her wrists, over a purple frilled dress. Upper body seen from behind, she looks back over her shoulder at the viewer with a confident face, both hands raised in a claw pose, mouth open showing a fang, playfully going 'gao'. Plain green background.",
+   "width": 1024,
+   "height": 1280,
+   "style": "moss_style_v2.safetensors",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    1600
+   ],
+   "hires_denoise": 0.45,
+   "hires_style_strength": 1.0,
+   "summary": "MOSS 絵柄チェック gao: 絵柄 LoRA v2 1.6（hires 1.0）、4-step LoRA 6 steps CFG1 + hires 1280x1600 d0.45"
+  },
+  {
+   "name": "step_moss",
+   "prompt": "chgmstyle. Yuzuki Yukari, an adult woman with light purple hair cut short with very long sidelocks tied in silver ring hair tubes, a black hair clip with pink gems, dark greyish purple eyes, droopy half-closed jitome eyes, light purple nail polish. She wears an open eggplant purple hooded cardigan with a rabbit hood and pink lining, sleeves past her wrists, over a purple frilled dress, with sheer dark purple pantyhose that let her skin show through and white sneakers. Full body from the side, taking a big playful step with one straight leg forward, arms spread wide for balance, unamused, looking at the viewer. Plain green background.",
+   "width": 896,
+   "height": 1440,
+   "style": "moss_style_v2.safetensors",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45,
+   "hires_style_strength": 1.0,
+   "summary": "MOSS 絵柄チェック step: 絵柄 LoRA v2 1.6（hires 1.0）、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45"
+  },
+  {
+   "name": "dance_moss",
+   "prompt": "chgmstyle. Yuzuki Yukari, an adult woman with light purple hair cut short with very long sidelocks tied in silver ring hair tubes, a black hair clip with pink gems, dark greyish purple eyes, droopy half-closed jitome eyes, light purple nail polish. She wears an open eggplant purple hooded cardigan with a rabbit hood and pink lining, sleeves past her wrists, over a purple frilled dress, with sheer dark purple pantyhose that let her skin show through and white sneakers. Full body from the front, standing in a little dance, knock-kneed, one arm raised with a loose fist, a small v-shaped open mouth, half-closed eyes, looking at the viewer. Plain green background.",
+   "width": 896,
+   "height": 1440,
+   "style": "moss_style_v2.safetensors",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45,
+   "hires_style_strength": 1.0,
+   "summary": "MOSS 絵柄チェック dance: 絵柄 LoRA v2 1.6（hires 1.0）、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45"
+  },
+  {
+   "name": "anyo_moss",
+   "prompt": "chgmstyle. Yuzuki Yukari, an adult woman with light purple hair cut short with very long sidelocks tied in silver ring hair tubes, a black hair clip with pink gems, dark greyish purple eyes, droopy half-closed jitome eyes, light purple nail polish. She wears an open eggplant purple hooded cardigan with a rabbit hood and pink lining, sleeves past her wrists, over a purple frilled dress, with sheer dark purple pantyhose that let her skin show through, no shoes. Full body seen from below with strong foreshortening, she sits with her legs crossed and pokes the toes of one foot out toward the viewer, chin up, looking down at the viewer with cold, condescending, disdainful eyes, mouth closed. No chair or furniture. Plain green background.",
+   "width": 896,
+   "height": 1440,
+   "style": "moss_style_v2.safetensors",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45,
+   "hires_style_strength": 1.0,
+   "summary": "MOSS 絵柄チェック anyo: 絵柄 LoRA v2 1.6（hires 1.0）、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45"
+  }
+ ]
+}

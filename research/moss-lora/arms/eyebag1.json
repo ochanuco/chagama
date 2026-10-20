@@ -1,0 +1,59 @@
+{
+ "seeds": [
+  1001,
+  2002
+ ],
+ "width": 896,
+ "height": 1440,
+ "steps": 6,
+ "arms": [
+  {
+   "name": "bust_w16",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v2 強さ 1.6: bust、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45
+  },
+  {
+   "name": "bust_w16_noeyebag",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes with clean bright skin under the eyes and no dark circles, an open black hoodie with pink lining over a light purple frilled dress. Close-up upper body, looking at the viewer with a faint smug smile, one finger touching her chin. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v2 強さ 1.6: bust、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45、クマ消し語（clean bright skin under the eyes, no dark circles）",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45
+  },
+  {
+   "name": "sit_w16",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v2 強さ 1.6: sit、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45
+  },
+  {
+   "name": "sit_w16_noeyebag",
+   "prompt": "chgmstyle. Yuzuki Yukari, short lavender hair with long sidelocks in silver ring hair tubes and a black hair clip with pink gems, half-closed eyes with clean bright skin under the eyes and no dark circles, an open black hoodie with pink lining over a light purple frilled dress, sheer black tights, no shoes. Full body, sitting on the floor hugging her knees, looking at the viewer with a sleepy expression. Plain green background.",
+   "style": "moss_style_v2.safetensors",
+   "summary": "MOSS 絵柄 LoRA v2 強さ 1.6: sit、4-step LoRA 6 steps CFG1 + hires 1280x2048 d0.45、クマ消し語（clean bright skin under the eyes, no dark circles）",
+   "style_strength": 1.6,
+   "hires": [
+    1280,
+    2048
+   ],
+   "hires_denoise": 0.45
+  }
+ ]
+}

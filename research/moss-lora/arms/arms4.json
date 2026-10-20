@@ -1,0 +1,39 @@
+{
+ "ref": "ref_zmznyj.jpg",
+ "ref_id": "zmznyj",
+ "seeds": [
+  1001,
+  2002
+ ],
+ "width": 1024,
+ "height": 1280,
+ "steps": 6,
+ "arms": [
+  {
+   "name": "bust_b_none",
+   "ref": true,
+   "prompt": "chgmstyle. This is a reference illustration of a character. Draw the same character in exactly the same art style, with the same line work, colouring and shading. Close-up upper body portrait from the chest up, one finger touching her chin, expressionless, looking at the viewer. Plain green background.",
+   "summary": "zmznyj 画像入力・bust 指示・キャラ説明なし、絵柄 LoRA なし（対照）、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_b_style",
+   "ref": true,
+   "prompt": "chgmstyle. This is a reference illustration of a character. Draw the same character in exactly the same art style, with the same line work, colouring and shading. Close-up upper body portrait from the chest up, one finger touching her chin, expressionless, looking at the viewer. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "zmznyj 画像入力・bust 指示・キャラ説明なし、絵柄 LoRA v1 2500 steps、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_c_none",
+   "ref": true,
+   "prompt": "chgmstyle. This is a reference illustration. Draw a new illustration in exactly the same art style (same line work, colouring and shading) of Yuzuki Yukari, an anime girl with short lavender hair and long sidelocks tied with silver ring hair tubes, a black hair clip with pink gems, half-lidded tired purple eyes, wearing a black hoodie with pink lining over a light purple frilled dress. Close-up upper body portrait from the chest up, one finger touching her chin, expressionless, looking at the viewer. Plain green background.",
+   "summary": "zmznyj 画像入力・bust 指示・キャラ説明あり、絵柄 LoRA なし（対照）、4-step LoRA 6 steps CFG1"
+  },
+  {
+   "name": "bust_c_style",
+   "ref": true,
+   "prompt": "chgmstyle. This is a reference illustration. Draw a new illustration in exactly the same art style (same line work, colouring and shading) of Yuzuki Yukari, an anime girl with short lavender hair and long sidelocks tied with silver ring hair tubes, a black hair clip with pink gems, half-lidded tired purple eyes, wearing a black hoodie with pink lining over a light purple frilled dress. Close-up upper body portrait from the chest up, one finger touching her chin, expressionless, looking at the viewer. Plain green background.",
+   "style": "moss_style_v1.safetensors",
+   "summary": "zmznyj 画像入力・bust 指示・キャラ説明あり、絵柄 LoRA v1 2500 steps、4-step LoRA 6 steps CFG1"
+  }
+ ]
+}
