@@ -58,7 +58,7 @@ foreach ($line in $entries) {
         & $Python -m pip install --quiet -r (Join-Path $dir "requirements.txt") 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
     }
-    if ($moved -and $pip) {
+    if ($pip) {
         & $Python -m pip install --quiet ($pip -split " ") 2>&1 | Out-Host
         if ($LASTEXITCODE) { exit $LASTEXITCODE }
     }
