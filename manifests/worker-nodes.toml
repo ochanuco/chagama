@@ -41,4 +41,4 @@ name = "ComfyUI-RMBG"
 repo = "https://github.com/1038lab/ComfyUI-RMBG.git"
 commit = "229529e0ea63fb7085848225d74f91f6dc164956"
 install_requirements = false
-pip = ["timm"]
+pip = ["timm", "hydra-core", "omegaconf", "iopath", "segment-anything", "triton-windows<3.9", "decord", "pycocotools"]
