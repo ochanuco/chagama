@@ -4,9 +4,10 @@
 
 .DESCRIPTION
     The recipe in scripts/yukari_recipe.py draws stage 1 on
-    silvermoonmixAnimaEvolved_v2329BTurbo, a Civitai file, and redraws
-    (opt-in) through the hassaku-il-v22 diffusers folder. The other Civitai
-    files are optional: two legacy IL LoRAs and a reserve stage-1 model.
+    silvermoon-turbo.safetensors, which manifests/worker-models.toml fetches,
+    and redraws (opt-in) through the hassaku-il-v22 diffusers folder. The
+    Civitai files here are optional: two legacy IL LoRAs and a reserve
+    stage-1 model.
 
     Every SHA256 below was taken from the mac's own copy and matched against
     the Hugging Face mirror, so what lands here is bit-for-bit the model the
@@ -109,15 +110,6 @@ $LoraFiles = @(
         Sha256     = 'aca019d4aa9196c8ac363a693a90f201ef68fff2708d0c0a3f4968390464b98c'
         CivitaiUrl = 'https://civitai.com/api/download/models/3078189'
         Title      = 'Fn-Moment Anima-Turbo v2.0'
-    }
-    @{
-        Name       = 'silvermoonmixAnimaEvolved_v2329BTurbo.safetensors'
-        Dir        = 'diffusion_models'
-        VersionId  = 3335132
-        Size       = 5843204174
-        Sha256     = '84abc9577777a9d6335256d0f4745b85f7a734ea054c9e6ee093f7ca9ab289f0'
-        CivitaiUrl = 'https://civitai.com/api/download/models/3335132?fileId=3221561'
-        Title      = 'SilvermoonMix-Anima-Evolved v2.3_2.9B_Turbo'
     }
 )
 
@@ -263,12 +255,9 @@ elseif (-not $CivitaiToken) {
         Write-Host "    https://civitai.com/models?modelVersionId=$($lora.VersionId)"
         Write-Host "    sha256 $($lora.Sha256)"
     }
-    Write-Host ""
-    Write-Host "silvermoonmixAnimaEvolved_v2329BTurbo is the Yukari recipe's"
-    Write-Host "stage-1 model; the rest of this list is optional."
 }
 else {
-    Write-Step "LoRAs, Fn-Moment and SilvermoonMix (~10.3 GB) from Civitai"
+    Write-Step "LoRAs and Fn-Moment (~4.9 GB) from Civitai"
 
     foreach ($lora in $LoraFiles) {
         $dir = if ($lora.Dir) { Join-Path $modelsDir $lora.Dir } else { $lorasDir }

@@ -983,7 +983,7 @@ class GuidedStepsTest(unittest.TestCase):
         spec = render_spec("coffee", 42, "p")
         self.assertEqual(spec.model_path, ps.MODEL)
         self.assertEqual(spec.model_path,
-                         "silvermoonmixAnimaEvolved_v2329BTurbo.safetensors")
+                         "silvermoon-turbo.safetensors")
         self.assertEqual(spec.guided_steps, 4)
 
     def test_default_spec_builds_a_two_stage_graph(self):

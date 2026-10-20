@@ -1,7 +1,7 @@
 # Models
 
 No models are included in this repository. They live on the GPU box. The
-Hugging Face files listed in `manifests/worker-models.toml` are fetched there
+Hugging Face and Civitai files listed in `manifests/worker-models.toml` are fetched there
 by the `fetch worker models` workflow; everything else is fetched by hand
 ([remote.md](remote.md) covers both).
 
@@ -80,7 +80,7 @@ Whole-folder copies of a Civitai model converted to diffusers by John6666.
 | `checkpoints/miaomiaoPixel_vPred11.safetensors` | 6.46 GB | MiaoMiao Pixel / V-Pred_1.1 | [1180112/2316419](https://civitai.com/models/1180112?modelVersionId=2316419) |
 | `checkpoints/novaAnimeXL_ilV170.safetensors` | 6.46 GB | Nova Anime XL / IL V17.0 | [376130/2741698](https://civitai.com/models/376130?modelVersionId=2741698) |
 | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | 3.90 GB | Fn-Moment Anima-Turbo / v2.0 | [2733842/3078189](https://civitai.com/models/2733842?modelVersionId=3078189) |
-| `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` | 5.44 GB | SilvermoonMix-Anima-Evolved [2.9B/2B] / v2.3_2.9B_Turbo | [2639339/3335132](https://civitai.com/models/2639339?modelVersionId=3335132) |
+| `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` | 5.44 GB | SilvermoonMix-Anima-Evolved [2.9B/2B] / v2.3_2.9B_Turbo | [2639339/3335132](https://civitai.com/models/2639339?modelVersionId=3335132); also fetched by the manifest as `diffusion_models/silvermoon-turbo.safetensors` |
 | `loras/add-micro-details-ill-v6.safetensors` | 218 MB | Add Micro Details - Concept (Illustrious \| Pony \| NoobAI) / v6.0_Illustrious | [1377820/2832991](https://civitai.com/models/1377820?modelVersionId=2832991) |
 | `loras/anima-handdrawn-feel-chosen.safetensors` | 175 MB | 手绘质感增强/Hand-drawn feel, trigger `Hand-drawn feel` / v2.0 anima | [2529114/3267407](https://civitai.com/models/2529114?modelVersionId=3267407) |
 | `loras/anima-sketch-style-chosen.safetensors` | 175 MB | 草稿线条风格/sketch style, trigger `sketch style` / v2.0 anima | [2061990/3218039](https://civitai.com/models/2061990?modelVersionId=3218039) |

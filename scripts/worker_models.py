@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Put the Hugging Face models in manifests/worker-models.toml on the GPU box.
+"""Put the Hugging Face and Civitai models in manifests/worker-models.toml on the GPU box.
 
     python scripts/worker_models.py --comfy-root <ComfyUI dir> [--dry-run]
 
 Every file is checked upstream before anything is downloaded, so a wrong path
 fails the run without a partial fetch. A download resumes from its `.part`,
 is hashed whole and lands under its final name only when the hash matches.
+A Civitai download needs CIVITAI_TOKEN; Hugging Face reads HF_TOKEN when set.
 Stdlib only: it runs in the checkout's venv on the box.
 """
 
@@ -26,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 HF = "https://huggingface.co"
+CIVITAI = "https://civitai.com"
 CHUNK = 8 * 1024 * 1024
 # Head room left on the disk after every pending download has landed.
 FREE_MARGIN = 2 * 1024**3
@@ -36,10 +38,21 @@ Opener = Callable[[urllib.request.Request], object]
 @dataclass(frozen=True)
 class Model:
     dest: str
-    repo: str
-    file: str
-    revision: str
+    repo: str | None = None
+    file: str | None = None
+    revision: str = "main"
     sha256: str | None = None
+    civitai_model: int | None = None
+    civitai_version: int | None = None
+
+    @property
+    def is_civitai(self) -> bool:
+        return self.civitai_version is not None
+
+    def source(self, commit: str) -> str:
+        if self.is_civitai:
+            return f"civitai {self.civitai_model}/{self.civitai_version}"
+        return f"{self.repo} @ {commit}"
 
 
 @dataclass(frozen=True)
@@ -53,13 +66,34 @@ class FetchError(RuntimeError):
     pass
 
 
+HF_KEYS = {"repo", "file", "revision"}
+CIVITAI_KEYS = {"civitai_model", "civitai_version"}
+
+
+def _entry_model(entry: dict) -> Model:
+    dest = entry.get("dest")
+    if not isinstance(dest, str):
+        raise FetchError("a model entry has no dest")
+    hf, civitai = HF_KEYS & entry.keys(), CIVITAI_KEYS & entry.keys()
+    if hf and civitai:
+        raise FetchError(f"{dest}: Hugging Face and Civitai keys are mixed")
+    sha256 = entry.get("sha256") or None
+    if civitai:
+        if civitai != CIVITAI_KEYS:
+            raise FetchError(f"{dest}: needs civitai_model and civitai_version")
+        return Model(dest=dest, sha256=sha256, civitai_model=int(entry["civitai_model"]),
+                     civitai_version=int(entry["civitai_version"]))
+    if not {"repo", "file"} <= hf:
+        raise FetchError(f"{dest}: needs repo and file, or civitai_model and civitai_version")
+    return Model(dest=dest, repo=entry["repo"], file=entry["file"],
+                 revision=entry.get("revision", "main"), sha256=sha256)
+
+
 def load_manifest(path: Path) -> list[Model]:
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     models = []
     for entry in data.get("model", []):
-        model = Model(dest=entry["dest"], repo=entry["repo"], file=entry["file"],
-                      revision=entry.get("revision", "main"),
-                      sha256=(entry.get("sha256") or None))
+        model = _entry_model(entry)
         dest = PurePosixPath(model.dest)
         if dest.is_absolute() or ".." in dest.parts or len(dest.parts) < 2:
             raise FetchError(f"dest must be <folder>/<file> under models/: {model.dest}")
@@ -90,6 +124,31 @@ def resolve_commit(repo: str, revision: str, opener: Opener) -> str:
     return _json(opener, _request(f"{HF}/api/models/{repo}/revision/{quoted}"))["sha"]
 
 
+def _civitai_request(url: str, *, headers: dict[str, str] | None = None
+                     ) -> urllib.request.Request:
+    return urllib.request.Request(
+        url, headers={"User-Agent": "chagama-worker-models", **(headers or {})})
+
+
+def _resolve_civitai(model: Model, opener: Opener) -> Upstream:
+    info = _json(opener, _civitai_request(
+        f"{CIVITAI}/api/v1/model-versions/{model.civitai_version}"))
+    if info.get("modelId") != model.civitai_model:
+        raise FetchError(f"{model.dest}: civitai version {model.civitai_version} belongs to "
+                         f"model {info.get('modelId')}, not {model.civitai_model}")
+    primary = next((f for f in info.get("files", []) if f.get("primary")), None)
+    sha256 = ((primary or {}).get("hashes") or {}).get("SHA256")
+    if not primary or not sha256:
+        raise FetchError(f"{model.dest}: civitai version {model.civitai_version} "
+                         "has no primary file with a SHA256")
+    sha256 = sha256.lower()
+    if model.sha256 and model.sha256.lower() != sha256:
+        raise FetchError(f"{model.dest}: pinned sha256 {model.sha256[:12]} but civitai "
+                         f"version {model.civitai_version} publishes {sha256[:12]}")
+    return Upstream(commit=str(model.civitai_version),
+                    size=round(primary["sizeKB"] * 1024), sha256=sha256)
+
+
 def resolve(models: list[Model], opener: Opener) -> dict[str, Upstream]:
     """Upstream size and SHA256 of every model, keyed by dest; raises listing
     every file Hugging Face does not have."""
@@ -97,6 +156,9 @@ def resolve(models: list[Model], opener: Opener) -> dict[str, Upstream]:
     found: dict[str, Upstream] = {}
     missing = []
     for model in models:
+        if model.is_civitai:
+            found[model.dest] = _resolve_civitai(model, opener)
+            continue
         key = (model.repo, model.revision)
         if key not in commits:
             commits[key] = resolve_commit(model.repo, model.revision, opener)
@@ -138,9 +200,16 @@ def download(model: Model, upstream: Upstream, target: Path, opener: Opener) -> 
         part.unlink()
         have = 0
     if have < upstream.size:
-        file = urllib.parse.quote(model.file)
-        request = _request(f"{HF}/{model.repo}/resolve/{upstream.commit}/{file}",
-                           headers={"Range": f"bytes={have}-"} if have else None)
+        ranged = {"Range": f"bytes={have}-"} if have else None
+        if model.is_civitai:
+            token = urllib.parse.quote(os.environ["CIVITAI_TOKEN"], safe="")
+            request = _civitai_request(
+                f"{CIVITAI}/api/download/models/{model.civitai_version}?token={token}",
+                headers=ranged)
+        else:
+            file = urllib.parse.quote(model.file)
+            request = _request(f"{HF}/{model.repo}/resolve/{upstream.commit}/{file}",
+                               headers=ranged)
         with opener(request) as response:
             status = getattr(response, "status", 200)
             mode = "ab" if have and status == 206 else "wb"
@@ -152,18 +221,35 @@ def download(model: Model, upstream: Upstream, target: Path, opener: Opener) -> 
         part.unlink()
         raise FetchError(f"{model.dest}: sha256 {got[:12]} != {upstream.sha256[:12]}; "
                          "the partial file was removed")
+    sidecar = _sidecar(target)
+    sidecar.unlink(missing_ok=True)
     os.replace(part, target)
+    sidecar.write_text(got + "\n", encoding="ascii")
+
+
+def _sidecar(target: Path) -> Path:
+    return target.with_name(target.name + ".sha256")
+
+
+def _is_current(target: Path, upstream: Upstream) -> bool:
+    """The file at `target` is the upstream content: the published size, and a
+    `<target>.sha256` sidecar holding the upstream digest (written here after
+    hashing the file once when it is missing)."""
+    if not (target.exists() and target.stat().st_size == upstream.size):
+        return False
+    sidecar = _sidecar(target)
+    if sidecar.exists():
+        return sidecar.read_text(encoding="ascii").strip() == upstream.sha256
+    if _hash(target) != upstream.sha256:
+        return False
+    sidecar.write_text(upstream.sha256 + "\n", encoding="ascii")
+    return True
 
 
 def pending(models: list[Model], found: dict[str, Upstream],
             models_dir: Path) -> list[Model]:
-    """Models not yet at their dest at the published size."""
-    out = []
-    for model in models:
-        target = models_dir / model.dest
-        if not (target.exists() and target.stat().st_size == found[model.dest].size):
-            out.append(model)
-    return out
+    """Models whose dest does not hold the published content."""
+    return [m for m in models if not _is_current(models_dir / m.dest, found[m.dest])]
 
 
 def _keep_awake() -> contextlib.AbstractContextManager:
@@ -177,9 +263,12 @@ def sync(models: list[Model], models_dir: Path, *, opener: Opener,
          dry_run: bool = False, disk_free: Callable[[Path], int] | None = None,
          echo: Callable[[str], None] = print) -> bool:
     found = resolve(models, opener)
-    for repo, commit in sorted({(m.repo, found[m.dest].commit) for m in models}):
-        echo(f"{repo} @ {commit}")
+    for line in sorted({m.source(found[m.dest].commit) for m in models}):
+        echo(line)
     todo = pending(models, found, models_dir)
+    if not dry_run and not os.environ.get("CIVITAI_TOKEN") \
+            and any(m.is_civitai for m in todo):
+        raise FetchError("CIVITAI_TOKEN is not set; a Civitai download needs it")
     for model in models:
         if model not in todo:
             echo(f"{model.dest} ok")
