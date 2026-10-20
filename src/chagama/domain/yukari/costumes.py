@@ -13,7 +13,7 @@ COSTUMES = {
                  "open cardigan, "
                  "(rabbit hood:1.3), long sleeves, drawstring, "
                  "(purple dress:1.25), frills, (sleeves past wrists:1.15), "
-                 "hood down, "),
+                 "hood down, (criss-cross halter:1.2), halterneck, "),
     "suspender": ("(muted orange t-shirt:1.2), (plain t-shirt:1.15), "
                   "(suspender skirt:1.4), (navy blue skirt:1.3), "
                   "(knee-length skirt:1.8), (pleated skirt:1.1), "),

@@ -56,7 +56,9 @@ def _current_defaults(fixture):
     out["positive"] = _with_nails(
         fixture["positive"]
         .replace("masterpiece, best quality, score_7, ", "")
-        .replace("hitoshi:0.85)", "hitoshi:1.3)"))
+        .replace("hitoshi:0.85)", "hitoshi:1.3)")
+        .replace("seven heads tall, ", "seven heads tall, (collarbone:1.2), ")
+        .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "))
     out["negative"] = fixture["negative"].replace(
         "(aged down:1.2)", "(aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
         "(english text:1.2), signature, watermark", 1)
@@ -76,7 +78,8 @@ COFFEE_POSITIVE = (
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
     "thighs:1.3), (long legs:1.35), (narrow waist:1.25), adult proportions, "
-    "long torso, seven heads tall, (drinking:1.3), (iced coffee:1.4), "
+    "long torso, seven heads tall, "
+    "(collarbone:1.2), (drinking:1.3), (iced coffee:1.4), "
     "(plastic cup:1.45), (clear cup:1.2), (drinking straw:1.4), (holding "
     "cup:1.35), (straw in mouth:1.25), (standing:1.2), (looking at "
     "viewer:1.1), (oversized sweatshirt:1.35), (white sweatshirt:1.2), "
@@ -123,7 +126,7 @@ AMAE_POSITIVE = (
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
     "thighs:1.3), (long legs:1.35), (narrow waist:1.25), adult proportions, "
-    "long torso, seven heads tall, (standing:1.2), "
+    "long torso, seven heads tall, (collarbone:1.2), (standing:1.2), "
     "(v-shaped eyebrows:1.25), (smirk:1.3), (smug:1.2), closed mouth, "
     "(pleading:1.15), (head tilt:1.2), (leaning forward:1.3), "
     "(looking at viewer:1.3), (own hands clasped:1.25), (hands up:1.1), "
@@ -150,6 +153,7 @@ STAND_POSITIVE = (
     "shot:1.3), (thighs:1.1), (mature female:1.3), (adult:1.2), (wide "
     "hips:1.2), (thick thighs:1.2), (soft thighs:1.3), (long legs:1.35), "
     "(narrow waist:1.25), adult proportions, long torso, seven heads tall, "
+    "(collarbone:1.2), "
     "(standing:1.5), (own hands together:1.3), (hands up:1.2), (arched "
     "back:1.15), "
     "(v-shaped eyebrows:1.25), (smirk:1.3), (smug:1.2), closed mouth, "
@@ -198,11 +202,12 @@ BUST_POSITIVE = (
     "(unamused:1.35), (expressionless:1.2), "
     "(from front:1.3), (portrait:1.5), (head and shoulders:1.4), "
     "(upper body:1.35), (face focus:1.3), (mature female:1.3), (adult:1.2), "
-    "adult proportions, (closed mouth:1.2), "
+    "adult proportions, (collarbone:1.2), (closed mouth:1.2), "
     "(looking at viewer:1.2), (eggplant purple hooded cardigan:1.5), "
     "(dark violet hoodie:1.25), open cardigan, (rabbit hood:1.3), long sleeves, "
     "drawstring, (purple dress:1.25), frills, (sleeves past wrists:1.15), "
-    "hood down, simple background, (green background:1.3), "
+    "hood down, (criss-cross halter:1.2), halterneck, "
+    "simple background, (green background:1.3), "
     "(large eyes:1.2), (round face:1.3), (tareme:1.2), (thick eyelashes:1.3), "
     "(long eyelashes:1.15), "
     "(flat color:1.3), (sketch:1.3), (traditional media:1.2)"
@@ -245,7 +250,8 @@ GAO_POSITIVE = (
     "nails:1.4), (eggplant purple hooded cardigan:1.5), (dark violet "
     "hoodie:1.25), open cardigan, (rabbit hood:1.3), long sleeves, "
     "drawstring, (purple dress:1.25), frills, (sleeves past wrists:1.15), "
-    "hood down, simple background, (green background:1.3), (large "
+    "hood down, (criss-cross halter:1.2), halterneck, "
+    "simple background, (green background:1.3), (large "
     "eyes:1.15), (mature face:1.2), (tareme:1.2), "
     "(thick eyelashes:1.3), (long eyelashes:1.15), (flat color:1.3), "
     "(sketch:1.3), (traditional media:1.2)"
@@ -287,6 +293,7 @@ REDRAW_STAND_POSITIVE = (
     "shot:1.3), (thighs:1.1), (mature female:1.3), (adult:1.2), (wide "
     "hips:1.2), (thick thighs:1.2), (soft thighs:1.3), (long legs:1.35), "
     "(narrow waist:1.25), adult proportions, long torso, seven heads tall, "
+    "(collarbone:1.2), "
     "(standing:1.5), (own hands together:1.3), (hands up:1.2), (arched "
     "back:1.15), "
     "(v-shaped eyebrows:1.25), (smirk:1.3), (smug:1.2), closed mouth, "

@@ -111,7 +111,8 @@ POSES = {
         negative=("(sitting:1.3), (wavy mouth:1.4), (:3:1.3), (pout:1.3), "
                   "(pursed lips:1.3), (puckered lips:1.2), (smile:1.2), "),
         legwear=False,
-        body="(mature female:1.3), (adult:1.2), adult proportions, "),
+        body=("(mature female:1.3), (adult:1.2), adult proportions, "
+              "(collarbone:1.2), ")),
     "gao": Pose(
         action="(claw pose:1.45), (hands up:1.25), ",
         mood="",
