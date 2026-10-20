@@ -42,11 +42,11 @@ are the point of the repository; the scripts are how they were produced.
 
 ## What it runs on
 
-Python 3.12 and [uv](https://github.com/astral-sh/uv). Nothing here imports
+Python 3.13 and [uv](https://github.com/astral-sh/uv). Nothing here imports
 torch. The same environment runs the tests, as CI does:
 
 ```bash
-uv venv --python 3.12 .venv
+uv venv --python 3.13 .venv
 uv pip install --python .venv/bin/python -e . pillow numpy opencv-python scipy pytest websockets
 PYTHONPATH=scripts .venv/bin/pytest -q
 ```

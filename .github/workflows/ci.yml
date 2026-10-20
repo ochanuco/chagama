@@ -19,4 +19,5 @@ jobs:
   ci:
     uses: ochanuco/.github/.github/workflows/uv.yml@f41400013689c51685e10ba1523bfbb576f687dd # v1.0.0
     with:
+      python-version: "3.13"
       run: bash scripts/check.sh
