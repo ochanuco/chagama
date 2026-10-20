@@ -75,7 +75,7 @@ PROPORTION_BAN = (", (fat:1.35), (chubby:1.35), (short legs:1.35), (muscular:1.3
 TEXT_BAN = (", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
             "(english text:1.2), signature, watermark")
 
-MODEL = "silvermoonmixAnimaEvolved_v2329BTurbo.safetensors"
+MODEL = "silvermoon-turbo.safetensors"
 WIDTH, HEIGHT = 1024, 1640
 STEPS = 10
 CFG = 2.0

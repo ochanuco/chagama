@@ -1,8 +1,9 @@
-# Model files the GPU worker needs that come from Hugging Face, pinned by repo
-# and revision. scripts/worker_models.py puts each at models/<dest> under the
-# ComfyUI root, checks it against the SHA256 Hugging Face publishes for the
-# file (and against `sha256` here when it is given), and leaves files already
-# there at the published size alone. The "fetch worker models" workflow runs it
+# Model files the GPU worker needs that come from Hugging Face (pinned by repo
+# and revision) or Civitai (pinned by model version id). scripts/worker_models.py
+# puts each at models/<dest> under the ComfyUI root, checks it against the
+# SHA256 the source publishes for the file (and against `sha256` here when it
+# is given), and leaves a file already there with that content alone
+# (`<dest>.sha256` records it). The "fetch worker models" workflow runs it
 # on the box. Files not listed here are fetched by hand (docs/remote.md).
 
 # Pixal3D image-to-3D in ComfyUI core: the native template loads both the
@@ -55,3 +56,11 @@ dest = "background_removal/birefnet.safetensors"
 repo = "Comfy-Org/BiRefNet"
 file = "background_removal/birefnet.safetensors"
 revision = "main"
+
+# SilvermoonMix Anima Turbo from Civitai, pinned by version id; the file is the
+# version's primary Model file. dest is a fixed name so recipes do not change
+# when the version is bumped.
+[[model]]
+dest = "diffusion_models/silvermoon-turbo.safetensors"
+civitai_model = 2639339
+civitai_version = 3335132 # v2.3_2.9B_Turbo

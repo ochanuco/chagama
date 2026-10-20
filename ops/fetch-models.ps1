@@ -9,6 +9,8 @@ if (-not $EmbeddedPython -or -not (Test-Path $EmbeddedPython)) {
 }
 $hf = Join-Path $Config "hf-token"
 if (Test-Path $hf) { $env:HF_TOKEN = (Get-Content -Raw $hf).Trim() }
+$civitai = Join-Path $Config "civitai-token"
+if (Test-Path $civitai) { $env:CIVITAI_TOKEN = (Get-Content -Raw $civitai).Trim() }
 $env:PYTHONUTF8 = "1"
 $arguments = @(
     (Join-Path $release "scripts\worker_models.py"),

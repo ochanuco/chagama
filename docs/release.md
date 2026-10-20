@@ -52,8 +52,9 @@ only when its plan finds a reason to (below).
   changes `manifests/worker-models.toml`. It runs the `fetch-models` op of
   `gpu-box-app` (`ops/fetch-models.ps1` of the running release;
   `fetch-models-dry-run` with `-DryRun`), which downloads the listed Hugging
-  Face models into the box's ComfyUI `models/` (`scripts/worker_models.py`)
-  with `HF_TOKEN` read from `C:\ProgramData\chagama\hf-token`. It restarts
+  Face and Civitai models into the box's ComfyUI `models/`
+  (`scripts/worker_models.py`) with `HF_TOKEN` and `CIVITAI_TOKEN` read from
+  `C:\ProgramData\chagama\hf-token` and `civitai-token`. It restarts
   nothing.
 - `restart worker comfyui` is a manual `workflow_dispatch` that runs the
   `restart` action of `gpu-box-app`: the running release's `stop.ps1`, the
@@ -149,7 +150,7 @@ heartbeat stale.
 | --- | --- |
 | Releases, and `current` pointing at the running one | `C:\apps\chagama\releases\<version>\`, `C:\apps\chagama\current` |
 | Data: render outputs, `models/wd-tagger`, worker logs, `drain`, `status.json` | `C:\apps\chagama\data` (`CHAGAMA_DATA`) |
-| Config and secrets: `chimera-token`, `discord-webhook`, `hf-token`, `worker.json` (`comfyui_portable_root`) | `C:\ProgramData\chagama` (`CHAGAMA_CONFIG`) |
+| Config and secrets: `chimera-token`, `discord-webhook`, `hf-token`, `civitai-token`, `worker.json` (`comfyui_portable_root`) | `C:\ProgramData\chagama` (`CHAGAMA_CONFIG`) |
 
 Outside the box the defaults are `<repo>/.local/_nogit` for data and
 `<repo>/.local` for config (`src/chagama/infrastructure/locations.py`).

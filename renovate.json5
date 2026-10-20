@@ -2,6 +2,14 @@
   $schema: 'https://docs.renovatebot.com/renovate-schema.json',
   // 共通設定と自動マージは ochanuco/.github の preset（README を参照）
   extends: ['github>ochanuco/.github', 'github>ochanuco/.github:automerge'],
+  customDatasources: {
+    civitai: {
+      defaultRegistryUrlTemplate: 'https://civitai.com/api/v1/models/{{packageName}}',
+      transformTemplates: [
+        '{"homepage": "https://civitai.com/models/" & $string(id), "releases": modelVersions[status = "Published"].{"version": $string(id) & " # " & name, "releaseTimestamp": publishedAt}}',
+      ],
+    },
+  },
   customManagers: [
     {
       customType: 'jsonata',
@@ -21,6 +29,16 @@
       ],
       datasourceTemplate: 'git-refs',
     },
+    {
+      // civitai_version は "<version id> # <版の名前>" をまとめて 1 つの版として書き換える
+      customType: 'regex',
+      managerFilePatterns: ['/^manifests/worker-models\\.toml$/'],
+      matchStrings: [
+        'dest = "(?<depName>[^"]+)"\\s+civitai_model = (?<packageName>\\d+)\\s+civitai_version = (?<currentValue>\\d+ # [^\\n]+)',
+      ],
+      datasourceTemplate: 'custom.civitai',
+      versioningTemplate: 'regex:^(?<major>\\d+) ',
+    },
   ],
   packageRules: [
     {
@@ -28,6 +46,17 @@
       matchFileNames: ['manifests/worker-nodes.toml'],
       groupName: 'ComfyUI',
       automerge: false,
+    },
+    {
+      // version id は版の番号ではないので major の差に上限をかけない。PR は 1 モデルずつ
+      matchDatasources: ['custom.civitai'],
+      maxMajorIncrement: 0,
+      groupName: null,
+      automerge: false,
+    },
+    {
+      matchDepNames: ['diffusion_models/silvermoon-turbo.safetensors'],
+      allowedVersions: '/ # .*2\\.9B.*Turbo/',
     },
   ],
 }

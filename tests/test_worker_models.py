@@ -3,8 +3,10 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 import worker_models
@@ -53,6 +55,40 @@ class FakeHub:
         return _Response(body)
 
 
+class FakeCivitai:
+    """Civitai's model-versions and download endpoints over one file body."""
+
+    def __init__(self, body: bytes, *, model_id: int = 7, version: int = 70):
+        self.body = body
+        self.model_id = model_id
+        self.version = version
+        self.downloads: list[tuple[str, str | None]] = []
+
+    def __call__(self, request):
+        url = request.full_url
+        if f"/api/v1/model-versions/{self.version}" in url:
+            return _Response(json.dumps({
+                "modelId": self.model_id, "name": "v1",
+                "files": [
+                    {"primary": False, "type": "VAE", "sizeKB": 1.0,
+                     "hashes": {"SHA256": "AB" * 32}},
+                    {"primary": True, "type": "Model",
+                     "sizeKB": len(self.body) / 1024,
+                     "hashes": {"SHA256": hashlib.sha256(self.body).hexdigest().upper()}},
+                ]}).encode())
+        assert f"/api/download/models/{self.version}?token=" in url
+        rng = request.get_header("Range")
+        self.downloads.append((url, rng))
+        if rng:
+            return _Response(self.body[int(rng.removeprefix("bytes=").rstrip("-")):],
+                             status=206)
+        return _Response(self.body)
+
+
+def _civitai(name: str = "m.safetensors", **kw) -> Model:
+    return Model(dest=f"diffusion_models/{name}", civitai_model=7, civitai_version=70, **kw)
+
+
 def _model(name: str, **kw) -> Model:
     return Model(dest=f"vae/{name}", repo="org/repo", file=f"vae/{name}",
                  revision="main", **kw)
@@ -76,7 +112,8 @@ class WorkerModelsTest(unittest.TestCase):
         models = worker_models.load_manifest(REPO_ROOT / "manifests" / "worker-models.toml")
         self.assertTrue(models)
         for model in models:
-            self.assertEqual(model.dest.split("/")[-1], model.file.split("/")[-1])
+            if not model.is_civitai:
+                self.assertEqual(model.dest.split("/")[-1], model.file.split("/")[-1])
 
     def test_dest_must_stay_under_models(self):
         manifest = Path(self.tmp.name) / "models.toml"
@@ -150,6 +187,111 @@ class WorkerModelsTest(unittest.TestCase):
             worker_models.sync([_model("a.bin")], self.models_dir, opener=hub,
                                disk_free=lambda _: 0, echo=self.lines.append)
         self.assertEqual(hub.downloads, [])
+
+    def manifest(self, body: str) -> Path:
+        path = Path(self.tmp.name) / "models.toml"
+        path.write_text(body)
+        return path
+
+    def test_a_civitai_entry_loads(self):
+        path = self.manifest('[[model]]\ndest = "diffusion_models/m.safetensors"\n'
+                             "civitai_model = 7\ncivitai_version = 70 # v1\n")
+        self.assertEqual(worker_models.load_manifest(path), [_civitai()])
+
+    def test_mixed_or_missing_keys_are_rejected(self):
+        head = '[[model]]\ndest = "vae/a.bin"\n'
+        for body in ('repo = "o/r"\nfile = "x"\ncivitai_model = 7\ncivitai_version = 70\n',
+                     'repo = "o/r"\ncivitai_version = 70\n',
+                     "civitai_model = 7\n",
+                     "civitai_version = 70\n",
+                     'repo = "o/r"\n',
+                     ""):
+            with self.subTest(body=body), self.assertRaises(FetchError):
+                worker_models.load_manifest(self.manifest(head + body))
+
+    def test_fetches_and_verifies_a_civitai_file(self):
+        body = b"silver" * 2000
+        hub = FakeCivitai(body)
+        with mock.patch.dict(os.environ, {"CIVITAI_TOKEN": "sekret"}):
+            self.assertTrue(self.sync([_civitai()], hub))
+        target = self.models_dir / "diffusion_models/m.safetensors"
+        self.assertEqual(target.read_bytes(), body)
+        self.assertEqual(Path(str(target) + ".sha256").read_text().strip(),
+                         hashlib.sha256(body).hexdigest())
+        self.assertIn("civitai 7/70", self.lines)
+        self.assertFalse(any("sekret" in line for line in self.lines))
+
+    def test_a_civitai_download_resumes(self):
+        body = bytes(range(256)) * 100
+        part = self.models_dir / "diffusion_models/m.safetensors.part"
+        part.parent.mkdir(parents=True)
+        part.write_bytes(body[:1000])
+        hub = FakeCivitai(body)
+        with mock.patch.dict(os.environ, {"CIVITAI_TOKEN": "t"}):
+            self.sync([_civitai()], hub)
+        self.assertEqual([r for _, r in hub.downloads], ["bytes=1000-"])
+        self.assertEqual((self.models_dir / "diffusion_models/m.safetensors").read_bytes(), body)
+
+    def test_a_missing_token_fails_before_any_download(self):
+        hub = FakeCivitai(b"abc")
+        with mock.patch.dict(os.environ, clear=True), \
+                self.assertRaisesRegex(FetchError, "CIVITAI_TOKEN"):
+            self.sync([_civitai()], hub)
+        self.assertEqual(hub.downloads, [])
+
+    def test_a_dry_run_needs_no_token(self):
+        hub = FakeCivitai(b"abc")
+        with mock.patch.dict(os.environ, clear=True):
+            self.assertFalse(self.sync([_civitai()], hub, dry_run=True))
+        self.assertEqual(hub.downloads, [])
+        self.assertIn("diffusion_models/m.safetensors would fetch 0.00 GB", self.lines)
+
+    def test_a_model_id_mismatch_is_rejected(self):
+        hub = FakeCivitai(b"abc", model_id=8)
+        with self.assertRaisesRegex(FetchError, "belongs to model 8"):
+            self.sync([_civitai()], hub)
+
+    def test_a_pinned_hash_must_match_civitai(self):
+        with self.assertRaisesRegex(FetchError, "pinned"):
+            self.sync([_civitai(sha256="0" * 64)], FakeCivitai(b"abc"))
+
+    def test_same_size_new_content_overwrites_a_fixed_dest(self):
+        old, new = b"a" * 5000, b"b" * 5000
+        with mock.patch.dict(os.environ, {"CIVITAI_TOKEN": "t"}):
+            self.sync([_civitai()], FakeCivitai(old))
+            hub = FakeCivitai(new)
+            self.assertTrue(self.sync([_civitai()], hub))
+        target = self.models_dir / "diffusion_models/m.safetensors"
+        self.assertEqual(target.read_bytes(), new)
+        self.assertEqual(len(hub.downloads), 1)
+        self.assertEqual(Path(str(target) + ".sha256").read_text().strip(),
+                         hashlib.sha256(new).hexdigest())
+
+    def test_a_file_without_a_sidecar_is_hashed_and_kept(self):
+        body = b"a" * 5000
+        target = self.models_dir / "diffusion_models/m.safetensors"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(body)
+        hub = FakeCivitai(body)
+        with mock.patch.dict(os.environ, {"CIVITAI_TOKEN": "t"}):
+            self.assertFalse(self.sync([_civitai()], hub))
+        self.assertEqual(hub.downloads, [])
+        self.assertEqual(Path(str(target) + ".sha256").read_text().strip(),
+                         hashlib.sha256(body).hexdigest())
+
+    def test_a_sidecarless_file_with_other_content_is_refetched(self):
+        target = self.models_dir / "diffusion_models/m.safetensors"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b"x" * 5000)
+        hub = FakeCivitai(b"y" * 5000)
+        with mock.patch.dict(os.environ, {"CIVITAI_TOKEN": "t"}):
+            self.assertTrue(self.sync([_civitai()], hub))
+        self.assertEqual(target.read_bytes(), b"y" * 5000)
+
+    def test_a_hugging_face_file_gets_a_sidecar_too(self):
+        hub = FakeHub({"vae/a.bin": b"alpha"})
+        self.sync([_model("a.bin")], hub)
+        self.assertTrue((self.models_dir / "vae/a.bin.sha256").exists())
 
 
 if __name__ == "__main__":

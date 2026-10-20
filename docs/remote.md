@@ -65,14 +65,17 @@ generations.
 
 ## Getting models onto it
 
-A Hugging Face file listed in `manifests/worker-models.toml` gets there by
+A Hugging Face or Civitai file listed in `manifests/worker-models.toml` gets there by
 code: the `fetch worker models` workflow runs `scripts/worker_models.py` on
 the box by hand (`workflow_dispatch`, with `dry_run` to only check). It
 checks every file upstream before downloading any, resumes from `.part`,
 keeps the box awake while it runs, and renames a file into place only when
-its SHA256 matches the one Hugging Face publishes (and `sha256` in the
-manifest, when pinned). `HF_TOKEN`, read from `hf-token` in the config directory, is needed only for a
-gated repo. The rest of this section is for files outside that manifest.
+its SHA256 matches the one the source publishes (and `sha256` in the
+manifest, when pinned). A `<dest>.sha256` sidecar records the content, so a
+fixed `dest` is overwritten when the pinned upstream file changes, even at the
+same size. `HF_TOKEN`, read from `hf-token` in the config directory, is needed
+only for a gated repo; `CIVITAI_TOKEN`, read from `civitai-token` there, is
+needed for every Civitai download. The rest of this section is for files outside that manifest.
 
 They have to be on that machine's disk, and nothing in the ComfyUI HTTP API can
 put them there. `/experiment/models` is read-only, there is no download
