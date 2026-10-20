@@ -1,18 +1,15 @@
 <#
 .SYNOPSIS
-    Put Yukari's models on a Windows ComfyUI box.
+    Put the legacy optional Civitai models on a Windows ComfyUI box.
 
 .DESCRIPTION
-    The recipe in scripts/yukari_recipe.py draws stage 1 on
-    silvermoon-turbo.safetensors, which manifests/worker-models.toml fetches,
-    and redraws (opt-in) through the hassaku-il-v22 diffusers folder. The
-    Civitai files here are optional: two legacy IL LoRAs and a reserve
-    stage-1 model.
+    Fetches the legacy optional Civitai files: two IL LoRAs and a reserve
+    stage-1 model. Everything the recipe needs -- silvermoon-turbo, the Anima
+    text encoder and VAE, the hassaku-il-v22 diffusers folder -- is fetched by
+    manifests/worker-models.toml (scripts/worker_models.py).
 
-    Every SHA256 below was taken from the mac's own copy and matched against
-    the Hugging Face mirror, so what lands here is bit-for-bit the model the
-    settled renders were made with. The script verifies, and refuses to leave
-    a file in place that hashes wrong.
+    Every SHA256 below was taken from the mac's own copy. The script verifies,
+    and refuses to leave a file in place that hashes wrong.
 
     Downloads resume, so a killed transfer can be restarted with the same
     command.
@@ -23,11 +20,11 @@
 
 .PARAMETER CivitaiToken
     API token from https://civitai.com/user/account. Civitai requires one for
-    downloads. Defaults to $env:CIVITAI_TOKEN. Without it the LoRAs are
-    skipped and the manual download instructions are printed instead.
+    downloads. Defaults to $env:CIVITAI_TOKEN. Without it the manual download
+    instructions are printed instead.
 
 .PARAMETER SkipLoras
-    Fetch only the checkpoint. yukari_recipe.py runs fine on this alone.
+    Skip the Civitai files.
 
 .EXAMPLE
     .\fetch-models-windows.ps1 -ComfyRoot C:\ComfyUI_windows_portable\ComfyUI
@@ -52,35 +49,6 @@ $ErrorActionPreference = 'Stop'
 # ---------------------------------------------------------------------------
 # What to fetch
 # ---------------------------------------------------------------------------
-
-$HfRepo = 'John6666/hassaku-xl-illustrious-v22-sdxl'
-
-# Mirror of Civitai model 140272 version 1697082 (Hassaku XL Illustrious v2.2
-# by Ikena), converted to diffusers by John6666. ComfyUI's CheckpointLoader
-# cannot read this layout -- DiffusersLoader can, which is why the recipe uses
-# it. Hashes are only listed for the weights; the small json/txt files are
-# checked by size alone.
-$CheckpointFiles = @(
-    @{ Path = 'model_index.json';                        Size = 721;        Sha256 = $null }
-    @{ Path = 'README.md';                               Size = 595;        Sha256 = $null }
-    @{ Path = 'scheduler/scheduler_config.json';         Size = 537;        Sha256 = $null }
-    @{ Path = 'text_encoder/config.json';                Size = 589;        Sha256 = $null }
-    @{ Path = 'text_encoder/model.safetensors';          Size = 246144152;  Sha256 = 'd66ff60453e5cb75a23df75b0ece48a9c1a5f99a5f4dd3ecfa2d454f02a557da' }
-    @{ Path = 'text_encoder_2/config.json';              Size = 599;        Sha256 = $null }
-    @{ Path = 'text_encoder_2/model.safetensors';        Size = 1389382176; Sha256 = 'fd855a47ec8dbdcbfeb4569cec9b52a2df7c480bf8377e1f9058f4dbaef25f7e' }
-    @{ Path = 'tokenizer/merges.txt';                    Size = 573514;     Sha256 = $null }
-    @{ Path = 'tokenizer/special_tokens_map.json';       Size = 496;        Sha256 = $null }
-    @{ Path = 'tokenizer/tokenizer_config.json';         Size = 765;        Sha256 = $null }
-    @{ Path = 'tokenizer/vocab.json';                    Size = 1109372;    Sha256 = $null }
-    @{ Path = 'tokenizer_2/merges.txt';                  Size = 573514;     Sha256 = $null }
-    @{ Path = 'tokenizer_2/special_tokens_map.json';     Size = 484;        Sha256 = $null }
-    @{ Path = 'tokenizer_2/tokenizer_config.json';       Size = 924;        Sha256 = $null }
-    @{ Path = 'tokenizer_2/vocab.json';                  Size = 1109372;    Sha256 = $null }
-    @{ Path = 'unet/config.json';                        Size = 1844;       Sha256 = $null }
-    @{ Path = 'unet/diffusion_pytorch_model.safetensors'; Size = 5135149760; Sha256 = '2d4c3bc34da8f79f5adf998a44c2192644f31aed3ad3fc1229a8d0b847d662ec' }
-    @{ Path = 'vae/config.json';                         Size = 855;        Sha256 = $null }
-    @{ Path = 'vae/diffusion_pytorch_model.safetensors'; Size = 167335342;  Sha256 = '6353737672c94b96174cb590f711eac6edf2fcce5b6e91aa9d73c5adc589ee48' }
-)
 
 # The filenames on the left are legacy optional model files.
 # Civitai serves them under their own longer names, so they get renamed on the
@@ -199,39 +167,10 @@ if (-not (Test-Path -LiteralPath $mainPy)) {
 }
 
 $modelsDir = Join-Path $ComfyRoot 'models'
-$diffusersDir = Join-Path $modelsDir 'diffusers\hassaku-il-v22'
 $lorasDir = Join-Path $modelsDir 'loras'
 
 Write-Host "ComfyUI root : $ComfyRoot"
-Write-Host "checkpoint   : $diffusersDir"
 Write-Host "loras        : $lorasDir"
-
-# ---------------------------------------------------------------------------
-# The checkpoint
-# ---------------------------------------------------------------------------
-
-Write-Step "hassaku-il-v22 (diffusers, ~6.9 GB) from $HfRepo"
-
-$fetched = 0
-$skipped = 0
-foreach ($file in $CheckpointFiles) {
-    $target = Join-Path $diffusersDir ($file.Path -replace '/', '\')
-    Write-Host "  $($file.Path)"
-
-    if (Test-Existing -Path $target -Size $file.Size -Sha256 $file.Sha256) {
-        Write-Host "    already present" -ForegroundColor DarkGray
-        $skipped++
-        continue
-    }
-
-    $url = "https://huggingface.co/$HfRepo/resolve/main/$($file.Path)"
-    Get-RemoteFile -Url $url -Destination $target
-    Assert-Hash -Path $target -Sha256 $file.Sha256 -Size $file.Size
-    $fetched++
-}
-
-Write-Host ""
-Write-Host "checkpoint done: $fetched fetched, $skipped already in place" -ForegroundColor Green
 
 # ---------------------------------------------------------------------------
 # The LoRAs

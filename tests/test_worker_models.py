@@ -25,8 +25,9 @@ class _Response(io.BytesIO):
 class FakeHub:
     """Hugging Face's revision, paths-info and resolve endpoints over a dict."""
 
-    def __init__(self, files: dict[str, bytes], *, ranges: bool = True):
+    def __init__(self, files: dict[str, bytes], *, ranges: bool = True, lfs_from: int = 0):
         self.files = files
+        self.lfs_from = lfs_from
         self.ranges = ranges
         self.downloads: list[tuple[str, str | None]] = []
 
@@ -40,8 +41,12 @@ class FakeHub:
             if path not in self.files:
                 return _Response(b"[]")
             body = self.files[path]
+            if len(body) < self.lfs_from:
+                oid = hashlib.sha1(b"blob %d\0" % len(body) + body).hexdigest()
+                return _Response(json.dumps([{
+                    "path": path, "size": len(body), "oid": oid}]).encode())
             return _Response(json.dumps([{
-                "path": path, "size": len(body),
+                "path": path, "size": len(body), "oid": "f" * 40,
                 "lfs": {"oid": hashlib.sha256(body).hexdigest(), "size": len(body)},
             }]).encode())
         assert f"/resolve/{COMMIT}/" in url
@@ -287,6 +292,45 @@ class WorkerModelsTest(unittest.TestCase):
         with mock.patch.dict(os.environ, {"CIVITAI_TOKEN": "t"}):
             self.assertTrue(self.sync([_civitai()], hub))
         self.assertEqual(target.read_bytes(), b"y" * 5000)
+
+    def test_a_file_outside_lfs_is_checked_by_its_git_blob_sha1(self):
+        body = b'{"a": 1}\n'
+        hub = FakeHub({"vae/a.json": body}, lfs_from=10**6)
+        self.assertTrue(self.sync([_model("a.json")], hub))
+        target = self.models_dir / "vae/a.json"
+        self.assertEqual(target.read_bytes(), body)
+        blob = hashlib.sha1(b"blob %d\0" % len(body) + body).hexdigest()
+        self.assertEqual(Path(str(target) + ".sha256").read_text().strip(), blob)
+        hub.downloads.clear()
+        self.assertFalse(self.sync([_model("a.json")], hub))
+        self.assertEqual(hub.downloads, [])
+
+    def test_a_file_outside_lfs_with_other_content_is_refetched(self):
+        target = self.models_dir / "vae/a.json"
+        target.parent.mkdir(parents=True)
+        target.write_bytes(b"x" * 10)
+        hub = FakeHub({"vae/a.json": b"y" * 10}, lfs_from=10**6)
+        self.assertTrue(self.sync([_model("a.json")], hub))
+        self.assertEqual(target.read_bytes(), b"y" * 10)
+
+    def test_a_corrupt_download_outside_lfs_is_removed(self):
+        class Tampered(FakeHub):
+            def __call__(self, request):
+                if "/resolve/" in request.full_url:
+                    return _Response(b"z" * 10)
+                return super().__call__(request)
+
+        hub = Tampered({"vae/a.json": b"y" * 10}, lfs_from=10**6)
+        with self.assertRaises(FetchError):
+            self.sync([_model("a.json")], hub)
+        self.assertFalse((self.models_dir / "vae/a.json").exists())
+        self.assertFalse((self.models_dir / "vae/a.json.part").exists())
+
+    def test_the_manifest_pins_every_hugging_face_revision_to_a_commit(self):
+        models = worker_models.load_manifest(REPO_ROOT / "manifests" / "worker-models.toml")
+        for model in models:
+            if not model.is_civitai:
+                self.assertRegex(model.revision, r"^[0-9a-f]{40}$", model.dest)
 
     def test_a_hugging_face_file_gets_a_sidecar_too(self):
         hub = FakeHub({"vae/a.bin": b"alpha"})

@@ -11,8 +11,8 @@ The code names the files; this is where to look.
 
 | Role | File | Named in |
 |---|---|---|
-| Stage 1 | `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` (SilvermoonMix-Anima-Evolved v2.3_2.9B_Turbo) + `qwen_3_06b_base` + `qwen_image_vae` | `domain/yukari/prompt_style.py` `MODEL`, `GUIDED_STEPS` |
-| Opt-in canvas redraw | `diffusers/hassaku-il-v22` | `domain/yukari/delivery_style.py` `REDRAW_MODEL` |
+| Stage 1 | `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` (SilvermoonMix-Anima-Evolved v2.3_2.9B_Turbo) + `qwen_3_06b_base` + `qwen_image_vae` (the manifest fetches all three) | `domain/yukari/prompt_style.py` `MODEL`, `GUIDED_STEPS` |
+| Opt-in canvas redraw (fetched by the manifest) | `diffusers/hassaku-il-v22` | `domain/yukari/delivery_style.py` `REDRAW_MODEL` |
 | Stage 1 reserve, opt-in by `render.model` patch | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | — |
 | Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | Comfy-Org Pixal3D, TRELLIS.2, MoGe and BiRefNet files | `manifests/worker-models.toml` |
 

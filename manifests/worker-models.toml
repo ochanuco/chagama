@@ -1,8 +1,8 @@
 # Model files the GPU worker needs that come from Hugging Face (pinned by repo
-# and revision) or Civitai (pinned by model version id). scripts/worker_models.py
+# and commit) or Civitai (pinned by model version id). scripts/worker_models.py
 # puts each at models/<dest> under the ComfyUI root, checks it against the
-# SHA256 the source publishes for the file (and against `sha256` here when it
-# is given), and leaves a file already there with that content alone
+# SHA256 the source publishes for the file (the git blob SHA1 for a small file
+# Hugging Face keeps outside LFS, and `sha256` here when it is given), and leaves a file already there with that content alone
 # (`<dest>.sha256` records it). The "fetch worker models" workflow runs it
 # on the box. Files not listed here are fetched by hand (docs/remote.md).
 
@@ -13,49 +13,49 @@
 dest = "diffusion_models/pixal3d_multiview_int8_convrot.safetensors"
 repo = "Comfy-Org/Pixal3D"
 file = "diffusion_models/pixal3d_multiview_int8_convrot.safetensors"
-revision = "main"
+revision = "f37641be376725d324c56626007cc477f1249a69"
 
 [[model]]
 dest = "diffusion_models/pixal3d_int8_convrot.safetensors"
 repo = "Comfy-Org/Pixal3D"
 file = "diffusion_models/pixal3d_int8_convrot.safetensors"
-revision = "main"
+revision = "f37641be376725d324c56626007cc477f1249a69"
 
 [[model]]
 dest = "diffusion_models/trellis_2_int8_convrot.safetensors"
 repo = "Comfy-Org/TRELLIS.2"
 file = "diffusion_models/trellis_2_int8_convrot.safetensors"
-revision = "main"
+revision = "430a9d09b2416687018c8fe8edced2ad4858a439"
 
 [[model]]
 dest = "vae/trellis_2_shape_vae_bf16.safetensors"
 repo = "Comfy-Org/Pixal3D"
 file = "vae/trellis_2_shape_vae_bf16.safetensors"
-revision = "main"
+revision = "f37641be376725d324c56626007cc477f1249a69"
 
 [[model]]
 dest = "vae/trellis_2_texture_vae_bf16.safetensors"
 repo = "Comfy-Org/Pixal3D"
 file = "vae/trellis_2_texture_vae_bf16.safetensors"
-revision = "main"
+revision = "f37641be376725d324c56626007cc477f1249a69"
 
 [[model]]
 dest = "clip_vision/dino_v3_L_naf_fp32.safetensors"
 repo = "Comfy-Org/Pixal3D"
 file = "clip_vision/dino_v3_L_naf_fp32.safetensors"
-revision = "main"
+revision = "f37641be376725d324c56626007cc477f1249a69"
 
 [[model]]
 dest = "geometry_estimation/moge_2_vitl_normal_fp16.safetensors"
 repo = "Comfy-Org/MoGe"
 file = "geometry_estimation/moge_2_vitl_normal_fp16.safetensors"
-revision = "main"
+revision = "1484985258ba7ef45c314144fcf0e90924ffbf44"
 
 [[model]]
 dest = "background_removal/birefnet.safetensors"
 repo = "Comfy-Org/BiRefNet"
 file = "background_removal/birefnet.safetensors"
-revision = "main"
+revision = "25511f8787e51912e1480706b4e47b8f467fbf72"
 
 # SilvermoonMix Anima Turbo from Civitai, pinned by version id; the file is the
 # version's primary Model file. dest is a fixed name so recipes do not change
@@ -64,3 +64,133 @@ revision = "main"
 dest = "diffusion_models/silvermoon-turbo.safetensors"
 civitai_model = 2639339
 civitai_version = 3335132 # v2.3_2.9B_Turbo
+
+# Anima's text encoder and VAE, which the yukari graph loads by name.
+[[model]]
+dest = "text_encoders/qwen_3_06b_base.safetensors"
+repo = "circlestone-labs/Anima"
+file = "split_files/text_encoders/qwen_3_06b_base.safetensors"
+revision = "f973fc41ec7545364ac9776c2440285f43ff2a30"
+
+[[model]]
+dest = "vae/qwen_image_vae.safetensors"
+repo = "circlestone-labs/Anima"
+file = "split_files/vae/qwen_image_vae.safetensors"
+revision = "f973fc41ec7545364ac9776c2440285f43ff2a30"
+
+# hassaku-il-v22, the opt-in canvas redraw: John6666's diffusers conversion of Hassaku XL
+# Illustrious v2.2, one entry per file. DiffusersLoader reads the folder; the
+# small json/txt files are plain git blobs checked by their git SHA1.
+[[model]]
+dest = "diffusers/hassaku-il-v22/model_index.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "model_index.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/README.md"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "README.md"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/scheduler/scheduler_config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "scheduler/scheduler_config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/text_encoder/config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "text_encoder/config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/text_encoder/model.safetensors"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "text_encoder/model.safetensors"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/text_encoder_2/config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "text_encoder_2/config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/text_encoder_2/model.safetensors"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "text_encoder_2/model.safetensors"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer/merges.txt"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer/merges.txt"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer/special_tokens_map.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer/special_tokens_map.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer/tokenizer_config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer/tokenizer_config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer/vocab.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer/vocab.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer_2/merges.txt"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer_2/merges.txt"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer_2/special_tokens_map.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer_2/special_tokens_map.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer_2/tokenizer_config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer_2/tokenizer_config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/tokenizer_2/vocab.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "tokenizer_2/vocab.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/unet/config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "unet/config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/unet/diffusion_pytorch_model.safetensors"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "unet/diffusion_pytorch_model.safetensors"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/vae/config.json"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "vae/config.json"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
+
+[[model]]
+dest = "diffusers/hassaku-il-v22/vae/diffusion_pytorch_model.safetensors"
+repo = "John6666/hassaku-xl-illustrious-v22-sdxl"
+file = "vae/diffusion_pytorch_model.safetensors"
+revision = "ecc3e7715ea22e031b90fce7490d7e2a3d4223f5"
