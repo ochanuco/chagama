@@ -52,6 +52,12 @@
   ],
   packageRules: [
     {
+      // requires-python は GPU 機と CI の Python に合わせて手で上げる
+      matchManagers: ['pep621'],
+      matchDepNames: ['python'],
+      enabled: false,
+    },
+    {
       // 上げる前に bust の canary を通す
       matchFileNames: ['manifests/worker-nodes.toml'],
       groupName: 'ComfyUI',
