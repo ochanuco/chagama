@@ -8,6 +8,7 @@ import base64
 from datetime import datetime, timezone
 from typing import Protocol
 
+from ..domain.generation.fingerprint import prompt_fingerprint
 from ..domain.generation.patches import (
     LORAS_TARGETS,
     NUMBER_CONSTRAINTS,
@@ -105,7 +106,9 @@ def _yukari_recipe() -> dict:
             "canvas": [spec.width, spec.height],
             "positive": spec.prompts.positive,
             "negative": spec.prompts.negative,
-            "parts": [{"name": part_name, "text": text}
+            "fingerprint": prompt_fingerprint("yukari", name, spec.prompts.positive,
+                                              spec.prompts.negative),
+            "parts":[{"name": part_name, "text": text}
                      for part_name, text in spec.positive_parts],
         })
     return {

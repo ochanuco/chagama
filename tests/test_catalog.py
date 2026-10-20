@@ -21,6 +21,7 @@ from chagama.application.request_options import (
     deliver_arguments,
     redraw_arguments,
 )
+from chagama.domain.generation.fingerprint import prompt_fingerprint
 from chagama.domain.generation.patches import (
     LORAS_TARGETS,
     NUMBER_TARGETS,
@@ -30,6 +31,7 @@ from chagama.domain.generation.patches import (
     parse_patches,
 )
 from chagama.domain.yukari.delivery_style import BACKDROP_LABELS
+from chagama.domain.yukari.recipe import render_spec
 from chagama.infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 
 GIT = {"commit": "abc123", "branch": "dev/catalog-publish", "dirty": False}
@@ -94,6 +96,17 @@ class BuildCatalogTest(unittest.TestCase):
                     for side in canvas:
                         self.assertIsInstance(side, int)
                         self.assertGreater(side, 0)
+
+    def test_pose_fingerprint_matches_what_the_worker_reports(self):
+        catalog = build_catalog(GIT)
+        for recipe in catalog["recipes"]:
+            for pose in recipe["poses"]:
+                with self.subTest(pose=pose["name"]):
+                    spec = render_spec(pose["name"], 0, "fingerprint")
+                    self.assertEqual(
+                        pose["fingerprint"],
+                        prompt_fingerprint(recipe["name"], pose["name"],
+                                           spec.prompts.positive, spec.prompts.negative))
 
     def test_yukari_poses_carry_an_expression(self):
         catalog = build_catalog(GIT)
