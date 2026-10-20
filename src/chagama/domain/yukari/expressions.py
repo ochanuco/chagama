@@ -32,7 +32,8 @@ EXPRESSIONS = {
         mouth="",
         eyes="(sleepy:1.4), (drowsy:1.3), (half-closed eyes:1.4), ",
         eye_quality=EyeQuality.BLANK),
-    "doya": Expression(mouth="(smug:1.35), (doyagao:1.25), "),
+    "doya": Expression(
+        mouth="(v-shaped eyebrows:1.25), (smirk:1.3), (smug:1.2), closed mouth, "),
     "v": Expression(mouth="(:v:1.5), "),
     "smile": Expression(
         mouth="(closed mouth:1.2), (light smile:1.25), ",
