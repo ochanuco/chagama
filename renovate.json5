@@ -30,6 +30,16 @@
       datasourceTemplate: 'git-refs',
     },
     {
+      // 同じ repo と commit の entry は 1 つの依存にまとめる
+      customType: 'jsonata',
+      fileFormat: 'toml',
+      managerFilePatterns: ['/^manifests/worker-models\\.toml$/'],
+      matchStrings: [
+        '$distinct(model[repo].{ "depName": repo, "packageName": "https://huggingface.co/" & repo, "currentValue": "main", "currentDigest": revision })',
+      ],
+      datasourceTemplate: 'git-refs',
+    },
+    {
       // civitai_version は "<version id> # <版の名前>" をまとめて 1 つの版として書き換える
       customType: 'regex',
       managerFilePatterns: ['/^manifests/worker-models\\.toml$/'],
@@ -52,6 +62,13 @@
       matchDatasources: ['custom.civitai'],
       maxMajorIncrement: 0,
       groupName: null,
+      automerge: false,
+    },
+    {
+      matchFileNames: ['manifests/worker-models.toml'],
+      matchDatasources: ['git-refs'],
+      groupName: 'Hugging Face models',
+      schedule: ['before 9am on the first day of the month'],
       automerge: false,
     },
     {

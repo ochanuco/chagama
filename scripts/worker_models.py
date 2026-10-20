@@ -5,7 +5,9 @@
 
 Every file is checked upstream before anything is downloaded, so a wrong path
 fails the run without a partial fetch. A download resumes from its `.part`,
-is hashed whole and lands under its final name only when the hash matches.
+is hashed whole and lands under its final name only when the hash matches
+(the SHA256 Hugging Face publishes for an LFS file, the git blob SHA1 for a
+small file kept outside LFS).
 A Civitai download needs CIVITAI_TOKEN; Hugging Face reads HF_TOKEN when set.
 Stdlib only: it runs in the checkout's venv on the box.
 """
@@ -57,9 +59,12 @@ class Model:
 
 @dataclass(frozen=True)
 class Upstream:
+    """`digest` is the SHA256 of the file, or its git blob SHA1 when Hugging
+    Face keeps the file outside LFS and publishes no SHA256."""
     commit: str
     size: int
-    sha256: str
+    digest: str
+    git_blob: bool = False
 
 
 class FetchError(RuntimeError):
@@ -146,11 +151,11 @@ def _resolve_civitai(model: Model, opener: Opener) -> Upstream:
         raise FetchError(f"{model.dest}: pinned sha256 {model.sha256[:12]} but civitai "
                          f"version {model.civitai_version} publishes {sha256[:12]}")
     return Upstream(commit=str(model.civitai_version),
-                    size=round(primary["sizeKB"] * 1024), sha256=sha256)
+                    size=round(primary["sizeKB"] * 1024), digest=sha256)
 
 
 def resolve(models: list[Model], opener: Opener) -> dict[str, Upstream]:
-    """Upstream size and SHA256 of every model, keyed by dest; raises listing
+    """Upstream size and digest of every model, keyed by dest; raises listing
     every file Hugging Face does not have."""
     commits: dict[tuple[str, str], str] = {}
     found: dict[str, Upstream] = {}
@@ -168,22 +173,30 @@ def resolve(models: list[Model], opener: Opener) -> dict[str, Upstream]:
             f"{HF}/api/models/{model.repo}/paths-info/{commit}", data=body,
             headers={"Content-Type": "application/json"}))
         info = next((i for i in infos if i.get("path") == model.file), None)
-        lfs = (info or {}).get("lfs") or {}
-        if not info or not lfs.get("oid"):
+        if not info:
             missing.append(f"{model.repo}@{commit[:12]} :: {model.file}")
             continue
-        if model.sha256 and model.sha256.lower() != lfs["oid"].lower():
+        lfs = info.get("lfs") or {}
+        if lfs.get("oid"):
+            upstream = Upstream(commit=commit, size=int(lfs.get("size", info.get("size", 0))),
+                                digest=lfs["oid"].lower())
+        else:
+            upstream = Upstream(commit=commit, size=int(info.get("size", 0)),
+                                digest=info["oid"].lower(), git_blob=True)
+        if model.sha256 and model.sha256.lower() != upstream.digest:
             raise FetchError(f"{model.dest}: pinned sha256 {model.sha256[:12]} but "
-                             f"{model.repo}@{commit[:12]} publishes {lfs['oid'][:12]}")
-        found[model.dest] = Upstream(commit=commit, size=int(lfs.get("size", info.get("size", 0))),
-                                     sha256=lfs["oid"].lower())
+                             f"{model.repo}@{commit[:12]} publishes {upstream.digest[:12]}")
+        found[model.dest] = upstream
     if missing:
-        raise FetchError("not on Hugging Face as an LFS file:\n  " + "\n  ".join(missing))
+        raise FetchError("not on Hugging Face:\n  " + "\n  ".join(missing))
     return found
 
 
-def _hash(path: Path) -> str:
-    digest = hashlib.sha256()
+def _hash(path: Path, git_blob: bool = False) -> str:
+    if git_blob:
+        digest = hashlib.sha1(b"blob %d\0" % path.stat().st_size)
+    else:
+        digest = hashlib.sha256()
     with path.open("rb") as handle:
         while block := handle.read(CHUNK):
             digest.update(block)
@@ -216,10 +229,10 @@ def download(model: Model, upstream: Upstream, target: Path, opener: Opener) -> 
             with part.open(mode) as handle:
                 while block := response.read(CHUNK):
                     handle.write(block)
-    got = _hash(part)
-    if got != upstream.sha256:
+    got = _hash(part, upstream.git_blob)
+    if got != upstream.digest:
         part.unlink()
-        raise FetchError(f"{model.dest}: sha256 {got[:12]} != {upstream.sha256[:12]}; "
+        raise FetchError(f"{model.dest}: digest {got[:12]} != {upstream.digest[:12]}; "
                          "the partial file was removed")
     sidecar = _sidecar(target)
     sidecar.unlink(missing_ok=True)
@@ -239,10 +252,10 @@ def _is_current(target: Path, upstream: Upstream) -> bool:
         return False
     sidecar = _sidecar(target)
     if sidecar.exists():
-        return sidecar.read_text(encoding="ascii").strip() == upstream.sha256
-    if _hash(target) != upstream.sha256:
+        return sidecar.read_text(encoding="ascii").strip() == upstream.digest
+    if _hash(target, upstream.git_blob) != upstream.digest:
         return False
-    sidecar.write_text(upstream.sha256 + "\n", encoding="ascii")
+    sidecar.write_text(upstream.digest + "\n", encoding="ascii")
     return True
 
 
@@ -293,7 +306,7 @@ def sync(models: list[Model], models_dir: Path, *, opener: Opener,
         for model in todo:
             upstream = found[model.dest]
             download(model, upstream, models_dir / model.dest, opener)
-            echo(f"{model.dest} fetched {upstream.sha256[:12]}")
+            echo(f"{model.dest} fetched {upstream.digest[:12]}")
     echo("changed: True")
     return True
 

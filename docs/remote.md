@@ -66,12 +66,16 @@ generations.
 ## Getting models onto it
 
 A Hugging Face or Civitai file listed in `manifests/worker-models.toml` gets there by
-code: the `fetch worker models` workflow runs `scripts/worker_models.py` on
+code (silvermoon-turbo, the Anima text encoder and VAE, the hassaku-il-v22 diffusers
+folder and the Pixal3D / TRELLIS.2 files): the `fetch worker models` workflow runs `scripts/worker_models.py` on
 the box by hand (`workflow_dispatch`, with `dry_run` to only check). It
 checks every file upstream before downloading any, resumes from `.part`,
 keeps the box awake while it runs, and renames a file into place only when
 its SHA256 matches the one the source publishes (and `sha256` in the
-manifest, when pinned). A `<dest>.sha256` sidecar records the content, so a
+manifest, when pinned); a small file Hugging Face keeps outside LFS, such as
+a json config, is checked by its git blob SHA1 instead. Each Hugging Face
+entry's `revision` is a commit SHA, which Renovate bumps in one monthly
+`Hugging Face models` PR. A `<dest>.sha256` sidecar records the content, so a
 fixed `dest` is overwritten when the pinned upstream file changes, even at the
 same size. `HF_TOKEN`, read from `hf-token` in the config directory, is needed
 only for a gated repo; `CIVITAI_TOKEN`, read from `civitai-token` there, is
@@ -84,14 +88,16 @@ leaves running a command over there.
 
 [models.md](models.md) is the inventory to work from, with the Hugging Face
 repo or Civitai version each model came from and its SHA256. `scripts/fetch-models-windows.ps1` automates that pull for a
-Windows portable install, but only for hassaku-il-v22 and two LoRAs, so anything
-else still needs a command by hand.
+Windows portable install, but only for the legacy optional Civitai files (two
+LoRAs and a reserve stage-1 model), so anything else still needs a command by
+hand.
 
-For a checkpoint mirrored to Hugging Face in diffusers layout:
+For a checkpoint mirrored to Hugging Face in diffusers layout that the
+manifest does not list:
 
 ```powershell
 # on the Windows machine, from the portable install root
-.\python_embeded\python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('John6666/hassaku-xl-illustrious-v22-sdxl', local_dir=r'.\ComfyUI\models\diffusers\hassaku-il-v22')"
+.\python_embeded\python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('John6666/<repo>', local_dir=r'.\ComfyUI\models\diffusers\<folder>')"
 ```
 
 The `hf` CLI is a trap on a portable install. It imports `venv` on startup,
