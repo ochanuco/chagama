@@ -19,7 +19,7 @@ in [`findings/delivery.md`](../findings/delivery.md).
 | `SATURATION_STRENGTH` | the `saturation` request's `strength` and the catalog's top-level `saturation` section |
 
 | `MATTE_*`, `KEY_*`, `ENCLOSED_*`, `FRAME_WINDOW_*`, `DRAWN_OUTLINE_*` | matte, keyed edge, pocket cuts and the drawn outline in `delivery.py` |
-| `REDRAW_*`, `ROUGH_STYLE`, `DELIVER_DEFAULTS` | the opt-in IL `canvas` redraw and the deliver defaults the catalog publishes |
+| `DELIVER_DEFAULTS` | the deliver defaults the catalog publishes |
 | `DOF_*` | the `dof` request's options and the catalog's top-level `dof` section |
 | `PHOTO_*` | the `photo` request's placement and depth options and the catalog's top-level `photo` section |
 | `LENS_*` | the `lens` request's options (strength, centre, shape, sphere radius) and the catalog's top-level `lens` section |

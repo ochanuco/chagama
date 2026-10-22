@@ -53,12 +53,9 @@ from ..domain.yukari.delivery_style import (
     PHOTO_PLACE_DEFAULT,
     PHOTO_PLACE_MAX_Y,
     PHOTO_TILT,
-    LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     OUTLINE_WIDTH_MAX_PCT,
     OUTLINES_MAX,
-    REDRAW_DENOISE,
-    REDRAW_SIZE,
     SATURATION_STRENGTH,
     STROKE_CHOICES,
     STROKE_LIGHTS,
@@ -137,12 +134,8 @@ def _yukari_recipe() -> dict:
         },
         "redraw": {
             "defaults": {
-                "canvas": {"denoise": REDRAW_DENOISE, "size": REDRAW_SIZE,
-                           "route": "pixel"},
                 "hires": {"hires_denoise": HIRES_DENOISE},
             },
-            "light": {"scenes": list(LIGHT_SCENES), "from": sorted(STROKE_LIGHTS),
-                      "default_from": LIGHT_FROM_DEFAULT},
         },
     }
 

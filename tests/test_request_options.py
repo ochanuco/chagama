@@ -17,11 +17,6 @@ from chagama.application.request_options import (
 )
 from chagama.domain.yukari.delivery_style import Light
 
-# Synthetic dial vocabularies for exercising resolve_dial()'s word lookup --
-# not any recipe's own published words.
-_DENOISE_ONLY_DIALS = {"denoise": {"keep": 0.45}}
-
-
 class RedrawArgumentsTest(unittest.TestCase):
     def test_a_method_is_required_and_known(self):
         for options in ({}, {"method": None}, {"method": "deliver"}):
@@ -31,39 +26,11 @@ class RedrawArgumentsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "object"):
             redraw_arguments([])
 
-    def test_canvas_defaults_leave_the_recipe_values_to_the_use_case(self):
-        self.assertEqual(redraw_arguments({"method": "canvas"}), {
-            "method": "canvas", "denoise": None, "size": None,
-            "latent_route": None, "finalizer": None, "upscale": None,
-            "keep_regions": [], "keep_strength": 0.25, "cut": False})
-
-    def test_canvas_options_parse(self):
-        arguments = redraw_arguments({
-            "method": "canvas", "denoise": 0.5, "size": 2048, "route": "latent",
-            "finalizer": "model", "upscale": "lanczos",
-            "keep_regions": [[0, 0, 0.5, 0.5]], "keep_strength": 0.3})
-        self.assertEqual(arguments, {
-            "method": "canvas", "denoise": 0.5, "size": 2048,
-            "latent_route": True, "finalizer": "model", "upscale": "lanczos",
-            "keep_regions": [[0.0, 0.0, 0.5, 0.5]], "keep_strength": 0.3, "cut": False})
-        self.assertIs(redraw_arguments(
-            {"method": "canvas", "route": "pixel"})["latent_route"], False)
-
-    def test_canvas_denoise_resolves_dial_words(self):
-        self.assertEqual(redraw_arguments(
-            {"method": "canvas", "denoise": "keep"}, _DENOISE_ONLY_DIALS)["denoise"],
-            0.45)
-        with self.assertRaisesRegex(ValueError, "unknown denoise word"):
-            redraw_arguments({"method": "canvas", "denoise": "tidy"},
-                             _DENOISE_ONLY_DIALS)
-
-    def test_canvas_option_checks(self):
-        for options in ({"route": "sideways"}, {"upscale": "sharp"},
-                        {"denoise": 0}, {"denoise": 1.5}, {"size": "big"},
-                        {"keep_strength": 1}, {"keep_regions": [[0, 0, 2, 1]]},
-                        {"finalizer": 3}):
-            with self.subTest(options=options), self.assertRaises(ValueError):
-                redraw_arguments({"method": "canvas", **options})
+    def test_retired_methods_are_rejected(self):
+        for method in ("canvas", "light"):
+            with self.subTest(method=method), self.assertRaisesRegex(
+                    ValueError, "method must be one of"):
+                redraw_arguments({"method": method})
 
     def test_hires_takes_its_pixels_and_defaults_the_denoise(self):
         self.assertEqual(redraw_arguments({"method": "hires", "hires": 2048}), {
@@ -78,41 +45,19 @@ class RedrawArgumentsTest(unittest.TestCase):
 
     def test_hires_takes_no_dial_word(self):
         with self.assertRaisesRegex(ValueError, "number"):
-            redraw_arguments({"method": "hires", "hires": 2048, "denoise": "keep"},
-                             _DENOISE_ONLY_DIALS)
+            redraw_arguments({"method": "hires", "hires": 2048, "denoise": "keep"})
 
-    def test_light_takes_a_scene_and_a_direction(self):
-        self.assertEqual(redraw_arguments({"method": "light", "scene": "moon"}), {
-            "method": "light", "light": Light("moon", "nw"), "cut": False})
-        self.assertEqual(
-            redraw_arguments({"method": "light", "scene": "moon",
-                              "from": "se"})["light"], Light("moon", "se"))
-        for options in ({}, {"scene": "noon"}, {"scene": "moon", "from": "up"}):
-            with self.subTest(options=options), self.assertRaises(ValueError):
-                redraw_arguments({"method": "light", **options})
+    def test_hires_takes_cut(self):
+        options = {"method": "hires", "hires": 2048}
+        self.assertIs(redraw_arguments(options)["cut"], False)
+        self.assertIs(redraw_arguments({**options, "cut": True})["cut"], True)
+        with self.assertRaises(ValueError):
+            redraw_arguments({**options, "cut": "yes"})
 
-    def test_every_method_takes_cut(self):
-        for options in ({"method": "canvas"}, {"method": "hires", "hires": 2048},
-                        {"method": "light", "scene": "moon"}):
-            with self.subTest(method=options["method"]):
-                self.assertIs(redraw_arguments(options)["cut"], False)
-                self.assertIs(redraw_arguments({**options, "cut": True})["cut"], True)
-                with self.assertRaises(ValueError):
-                    redraw_arguments({**options, "cut": "yes"})
-
-    def test_unknown_keys_are_rejected_per_method(self):
-        cases = {
-            "canvas": ("hires", "scene", "from", "repin", "light"),
-            "hires": ("size", "route", "scene", "hires_denoise", "light"),
-            "light": ("denoise", "size", "hires", "stroke_light"),
-        }
-        valid = {"canvas": {}, "hires": {"hires": 2048},
-                 "light": {"scene": "moon"}}
-        for method, keys in cases.items():
-            for key in keys:
-                with self.subTest(method=method, key=key), self.assertRaisesRegex(
-                        ValueError, key):
-                    redraw_arguments({"method": method, **valid[method], key: 1})
+    def test_unknown_keys_are_rejected(self):
+        for key in ("size", "route", "scene", "hires_denoise", "light"):
+            with self.subTest(key=key), self.assertRaisesRegex(ValueError, key):
+                redraw_arguments({"method": "hires", "hires": 2048, key: 1})
 
 
 class SaturationArgumentsTest(unittest.TestCase):

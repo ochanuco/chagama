@@ -24,10 +24,7 @@ from .photo import PhotoServices, photo
 from .stage import StageServices, lighting, saturation, stage
 from .redraw import RedrawServices, redraw
 from .request_options import (
-    REDRAW_DIAL_KEYS,
-    _resolved_options,
     deliver_arguments,
-    dials_scope,
     dof_arguments,
     lens_arguments,
     lighting_arguments,
@@ -113,18 +110,17 @@ def _execute_redraw(services: WorkServices, row: Mapping) -> dict:
     generation_id = payload.get("generation_id")
     if not generation_id:
         raise SystemExit("redraw payload.generation_id is required")
-    context, recipe = fetch_source(services.management, generation_id)
-    dials = dials_scope(recipe, "redraw")
+    context, _ = fetch_source(services.management, generation_id)
     options = payload.get("options")
     try:
-        arguments = redraw_arguments(options, dials)
+        arguments = redraw_arguments(options)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     result = services.redraw(generation_id, services.redraw_services,
                              key_prefix=f"request:{row['id']}",
                              request_id=row["id"], context=context,
                              **arguments)
-    result["resolved_options"] = _resolved_options(options, arguments, REDRAW_DIAL_KEYS)
+    result["resolved_options"] = dict(options)
     return result
 
 

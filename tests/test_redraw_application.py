@@ -18,8 +18,6 @@ from chagama.application.cut_assets import current_cut
 from chagama.application.redraw import HIRES_DENOISE, hires_pixels
 from chagama.application.ingest import classify_redraw_outputs
 from chagama.application.redraw import RedrawServices, redraw
-from chagama.domain.yukari import delivery_style
-from chagama.domain.yukari.delivery_style import Light
 from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 from PIL import Image
 
@@ -170,86 +168,6 @@ class RedrawCase(unittest.TestCase):
         self.assertEqual(svc.comfyui.submitted, [])
 
 
-class CanvasTest(RedrawCase):
-    def test_the_graph_is_the_redraw_alone_with_one_save(self):
-        svc, management, result = self.run_redraw(
-            {"src": record(graph=ANIMA_GRAPH)}, method="canvas")
-        graph = svc.comfyui.submitted[0]
-        self.assertEqual(saved_prefixes(graph), ["rdw-src"])
-        self.assertFalse({"YukariDeliver", "BiRefNetRMBG", "YukariMatting",
-                          "RemoveBackground", "MaskToImage"} & set(classes(graph)))
-        [(_, resample)] = [(k, n) for k, n in nodes_of(graph, "KSampler")
-                           if n["inputs"]["denoise"] == delivery_style.REDRAW_DENOISE]
-        self.assertEqual(resample["inputs"]["seed"], 5)
-        [(_, scale)] = nodes_of(graph, "ImageScale")
-        self.assertEqual(max(scale["inputs"]["width"], scale["inputs"]["height"]),
-                         delivery_style.REDRAW_SIZE)
-        self.assertEqual(management.asset_uploads(), [])
-        self.assertEqual(result["generation_ids"], ["redrawn"])
-
-    def test_the_latent_route_upscales_the_latent(self):
-        svc, _, _ = self.run_redraw(
-            {"src": record(graph=ANIMA_GRAPH)}, method="canvas",
-            latent_route=True, denoise=0.5, size=2048)
-        graph = svc.comfyui.submitted[0]
-        self.assertIn("LatentUpscale", classes(graph))
-        self.assertNotIn("ImageScale", classes(graph))
-        self.assertEqual(saved_prefixes(graph), ["rdw-src"])
-
-    def test_the_record_carries_the_resolved_options_and_refines_the_source(self):
-        management = ManagementFake({"src": record(graph=ANIMA_GRAPH)})
-        with tempfile.TemporaryDirectory() as directory:
-            svc = services(directory, management)
-            redraw("src", svc, method="canvas", denoise=0.5, size=2048,
-                   latent_route=True, request_id="req-1",
-                   key_prefix="request:req-1", context=record(graph=ANIMA_GRAPH))
-        resolution = next(call for call in management.calls
-                          if call[1] == "/api/v1/requests/req-1/resolution")[2]
-        self.assertEqual(resolution["parameters"], {
-            "kind": "redraw", "method": "canvas", "base_generation": "src",
-            "size": 2048, "denoise": 0.5, "route": "latent",
-            "finalizer": delivery_style.REDRAW_MODEL})
-        job = next(call for call in management.calls
-                   if call[0] == "POST" and call[1].endswith("/jobs"))
-        self.assertEqual(job[2]["seed"], 5)
-        self.assertEqual(job[2]["source_generation_id"], "src")
-        self.assertEqual(saved_prefixes(management.job_graph()), ["rdw-src"])
-        upload = next(call for call in management.calls
-                      if call[1].endswith("/generations"))
-        self.assertEqual(upload[3][2], "rdw-src_00001_.png")
-
-    def test_keep_regions_stage_a_mask_and_are_recorded(self):
-        svc, management, _ = self.run_redraw(
-            {"src": record(graph=ANIMA_GRAPH)}, method="canvas",
-            keep_regions=[[0.1, 0.1, 0.4, 0.4]], keep_strength=0.3)
-        graph = svc.comfyui.submitted[0]
-        self.assertIn("SetLatentNoiseMask", classes(graph))
-        self.assertTrue(any("keep-mask" in name for name, _ in svc.comfyui.uploaded))
-
-    def test_a_repaired_or_redrawn_source_is_redrawn_from_its_pixels(self):
-        for kind in ("repair", "masked_redraw", "redraw"):
-            with self.subTest(kind=kind):
-                records = {
-                    "src": record(kind, base_generation="mid"),
-                    "mid": record("redraw", base_generation="gen"),
-                    "gen": record(graph=ANIMA_GRAPH),
-                }
-                svc, management, _ = self.run_redraw(records, method="canvas")
-                graph = svc.comfyui.submitted[0]
-                [(load_id, load)] = nodes_of(graph, "LoadImage")
-                self.assertIn("source.png", load["inputs"]["image"])
-                [(_, scale)] = nodes_of(graph, "ImageScale")
-                self.assertEqual(scale["inputs"]["image"], [load_id, 0])
-                [(_, resample)] = [
-                    (k, n) for k, n in nodes_of(graph, "KSampler")
-                    if n["inputs"]["denoise"] == delivery_style.REDRAW_DENOISE]
-                self.assertEqual(resample["inputs"]["seed"], 5)
-                self.assertIn("rdw-src", saved_prefixes(graph))
-
-    def test_only_anima_sources_are_redrawn(self):
-        self.refusal({"src": record(graph=SDXL_GRAPH)}, "Anima", method="canvas")
-
-
 class SourceRulesTest(RedrawCase):
     def test_delivered_sources_are_refused_for_every_method(self):
         cases = [
@@ -259,18 +177,22 @@ class SourceRulesTest(RedrawCase):
             dict(kind="hires-chain"),
             dict(kind="repair", deliver_only=True),
         ]
-        for method, kwargs in (("canvas", {}), ("hires", {"hires": 2048,
-                                                          "denoise": 0.45}),
-                               ("light", {"light": Light("moon", "se")})):
-            for case in cases:
-                with self.subTest(method=method, case=case):
-                    self.refusal({"src": record(graph=ANIMA_GRAPH, **case)},
-                                 "納品済み", method=method, **kwargs)
+        for case in cases:
+            with self.subTest(case=case):
+                self.refusal({"src": record(graph=ANIMA_GRAPH, **case)},
+                             "納品済み", method="hires", hires=2048, denoise=0.45)
+
+    def test_retired_methods_are_refused(self):
+        for method in ("canvas", "light"):
+            with self.subTest(method=method):
+                self.refusal({"src": record(graph=ANIMA_GRAPH)},
+                             "unsupported redraw method", method=method)
 
     def test_a_layerdiffuse_source_is_refused(self):
         graph = {**ANIMA_GRAPH, "20": {"class_type": "LayeredDiffusionApply",
                                        "inputs": {}}}
-        self.refusal({"src": record(graph=graph)}, "LayerDiffuse", method="canvas")
+        self.refusal({"src": record(graph=graph)}, "LayerDiffuse",
+                     method="hires", hires=2048, denoise=0.45)
 
     def test_hires_refuses_repaired_and_redrawn_outputs(self):
         for kind in ("repair", "masked_redraw", "redraw"):
@@ -297,21 +219,12 @@ class SourceRulesTest(RedrawCase):
         self.refusal({"src": record(graph=None)}, "graph が無い",
                      method="hires", hires=2048, denoise=0.45)
 
-    def test_light_accepts_a_repaired_source(self):
-        records = {"src": record("repair", base_generation="gen"),
-                   "gen": record(graph=ANIMA_GRAPH)}
-        svc, _, result = self.run_redraw(
-            records, method="light", light=Light("moon", "se"))
-        self.assertEqual(result["generation_ids"], ["redrawn"])
-        [(_, load)] = [(k, n) for k, n in nodes_of(svc.comfyui.submitted[0], "LoadImage")
-                       if "source" in n["inputs"]["image"]]
-        self.assertIn("rdw-src-source", load["inputs"]["image"])
-
     def test_the_lineage_walk_is_bounded(self):
         records = {"src": record("redraw", base_generation="g0")}
         for index in range(12):
             records[f"g{index}"] = record("redraw", base_generation=f"g{index + 1}")
-        self.refusal(records, "たどれません", method="canvas")
+        self.refusal(records, "たどれません",
+                     method="hires", hires=2048, denoise=0.45)
 
 
 class HiresTest(RedrawCase):
@@ -334,83 +247,6 @@ class HiresTest(RedrawCase):
 
     def test_the_default_denoise_is_the_hires_default(self):
         self.assertEqual(HIRES_DENOISE, 0.45)
-
-
-class LightTest(RedrawCase):
-    LIGHT = Light("moon", "se")
-
-    def test_a_fresh_cut_is_computed_saved_and_attached_to_the_source(self):
-        svc, management, result = self.run_redraw(
-            {"src": record(graph=ANIMA_GRAPH)}, method="light", light=self.LIGHT)
-        graph = svc.comfyui.submitted[0]
-        self.assertIn("BiRefNetRMBG", classes(graph))
-        self.assertIn("YukariMatting", classes(graph))
-        self.assertIn(DEPTH_NODE, classes(graph))
-        self.assertEqual(sorted(saved_prefixes(graph)),
-                         ["rdw-src", "rdw-src-alpha", "rdw-src-depth"])
-        [(matting_id, _)] = nodes_of(graph, "YukariMatting")
-        [(_, lit)] = nodes_of(graph, "YukariLight")
-        self.assertEqual(lit["inputs"]["matte"], [matting_id, 0])
-        roles = [call[3][0]["role"] for call in management.asset_uploads()]
-        self.assertEqual(roles, ["alpha", "depth", "cut"])
-        for call in management.asset_uploads():
-            self.assertEqual(call[1], "/api/v1/generations/src/assets")
-        self.assertEqual(json.loads(management.asset_uploads()[2][3][3]),
-                         current_cut())
-        self.assertEqual(result["generation_ids"], ["redrawn"])
-        generation_uploads = [call for call in management.calls
-                              if call[1].endswith("/generations")]
-        self.assertEqual([call[3][2] for call in generation_uploads],
-                         ["rdw-src_00001_.png"])
-
-    def test_a_reusable_cut_is_loaded_and_nothing_is_computed(self):
-        svc, management, _ = self.run_redraw(
-            {"src": record(graph=ANIMA_GRAPH)}, method="light", light=self.LIGHT,
-            assets={"alpha": b"alpha-png", "depth": b"depth-png",
-                    "cut": cut_asset()})
-        graph = svc.comfyui.submitted[0]
-        self.assertFalse({"BiRefNetRMBG", "YukariMatting", DEPTH_NODE,
-                          "RemoveBackground"} & set(classes(graph)))
-        self.assertEqual(saved_prefixes(graph), ["rdw-src"])
-        loads = {node["inputs"]["image"]: key for key, node in nodes_of(graph, "LoadImage")}
-        [(to_mask_id, to_mask)] = nodes_of(graph, "ImageToMask")
-        self.assertEqual(to_mask["inputs"]["channel"], "red")
-        [(_, lit)] = nodes_of(graph, "YukariLight")
-        self.assertEqual(lit["inputs"]["matte"], [to_mask_id, 0])
-        depth_load = next(key for image, key in loads.items() if "depth-in" in image)
-        self.assertEqual(lit["inputs"]["depth"], [depth_load, 0])
-        self.assertEqual(management.asset_uploads(), [])
-
-    def test_a_stale_alpha_is_recomputed_and_the_depth_reused(self):
-        stale = {**current_cut()["alpha"], "trimap_px": 3}
-        svc, management, _ = self.run_redraw(
-            {"src": record(graph=ANIMA_GRAPH)}, method="light", light=self.LIGHT,
-            assets={"alpha": b"old", "depth": b"depth-png",
-                    "cut": cut_asset(alpha=stale)})
-        graph = svc.comfyui.submitted[0]
-        self.assertIn("YukariMatting", classes(graph))
-        self.assertNotIn(DEPTH_NODE, classes(graph))
-        self.assertEqual([call[3][0]["role"] for call in management.asset_uploads()],
-                         ["alpha", "cut"])
-        self.assertEqual(json.loads(management.asset_uploads()[1][3][3]),
-                         current_cut())
-
-    def test_the_light_is_recorded_and_seed_and_prompt_come_from_the_graph(self):
-        management = ManagementFake({"src": record(graph=ANIMA_GRAPH)})
-        with tempfile.TemporaryDirectory() as directory:
-            svc = services(directory, management)
-            redraw("src", svc, method="light", light=self.LIGHT,
-                   request_id="req-1", key_prefix="request:req-1",
-                   context=record(graph=ANIMA_GRAPH))
-        resolution = next(call for call in management.calls
-                          if call[1] == "/api/v1/requests/req-1/resolution")[2]
-        self.assertEqual(resolution["parameters"], {
-            "kind": "redraw", "method": "light", "base_generation": "src",
-            "scene": "moon", "from": "se"})
-        job = next(call for call in management.calls
-                   if call[0] == "POST" and call[1].endswith("/jobs"))
-        self.assertEqual(job[2]["seed"], 5)
-        self.assertEqual(job[2]["source_generation_id"], "src")
 
 
 def png(mode: str, colour) -> bytes:
@@ -441,7 +277,7 @@ class CutTest(unittest.TestCase):
         return svc, management, result
 
     def test_the_redrawn_picture_is_cut_and_its_cut_attached_to_it(self):
-        svc, management, result = self.run_cut(method="canvas")
+        svc, management, result = self.run_cut(method="hires", hires=2048, denoise=0.5)
         self.assertEqual(len(svc.comfyui.submitted), 2)
         cut = svc.comfyui.submitted[1]
         self.assertTrue({"BiRefNetRMBG", "YukariMatting", DEPTH_NODE,
@@ -467,26 +303,13 @@ class CutTest(unittest.TestCase):
         self.assertTrue(resolution["parameters"]["cut"])
         self.assertEqual(result["generation_ids"], ["redrawn"])
 
-    def test_a_light_redraw_cuts_its_source_and_its_result_apart(self):
-        _, management, _ = self.run_cut(method="light", light=Light("moon", "se"))
-        targets = [(call[1], call[3][0]["role"]) for call in management.asset_uploads()]
-        self.assertEqual(targets, [
-            ("/api/v1/generations/src/assets", "alpha"),
-            ("/api/v1/generations/src/assets", "depth"),
-            ("/api/v1/generations/src/assets", "cut"),
-            ("/api/v1/generations/redrawn/assets", "alpha"),
-            ("/api/v1/generations/redrawn/assets", "depth"),
-            ("/api/v1/generations/redrawn/assets", "cut"),
-            ("/api/v1/generations/redrawn/assets", "cutout")])
-        keys = [call[3][0]["idempotency_key"] for call in management.asset_uploads()]
-        self.assertEqual(len(set(keys)), len(keys))
-
     def test_without_cut_nothing_is_cut(self):
         records = {"src": record(graph=ANIMA_GRAPH)}
         management = ManagementFake(records)
         with tempfile.TemporaryDirectory() as directory:
             svc = services(directory, management)
-            redraw("src", svc, context=records["src"], method="canvas")
+            redraw("src", svc, context=records["src"], method="hires",
+                   hires=2048, denoise=0.5)
         self.assertEqual(len(svc.comfyui.submitted), 1)
         self.assertEqual(management.asset_uploads(), [])
         resolution = next(call[2] for call in management.calls
@@ -514,7 +337,7 @@ class OutputsTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             svc = services(directory, management, comfyui=Silent())
             with self.assertRaisesRegex(SystemExit, "picture"):
-                redraw("src", svc, method="canvas",
+                redraw("src", svc, method="hires", hires=2048, denoise=0.5,
                        context=record(graph=ANIMA_GRAPH))
 
 

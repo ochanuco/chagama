@@ -17,7 +17,6 @@ from chagama.application.catalog import build_catalog, publish_catalog
 from chagama.application.generate import validate_request
 from chagama.application.request_options import (
     _KNOWN_DELIVER_OPTIONS,
-    _KNOWN_REDRAW_OPTIONS,
     deliver_arguments,
     redraw_arguments,
 )
@@ -40,7 +39,6 @@ _DIAL_WORD = re.compile(r"^[a-z][a-z0-9-]*$")
 
 # scope -> the real option/target keys a dial in that scope may name.
 _DIAL_SCOPE_KEYS = {
-    "redraw": _KNOWN_REDRAW_OPTIONS["canvas"],
     "patches": set(NUMBER_TARGETS),
 }
 
@@ -255,7 +253,7 @@ class DialsTest(unittest.TestCase):
         catalog = build_catalog(GIT)
         by_name = {recipe["name"]: recipe for recipe in catalog["recipes"]}
         self.assertEqual(set(by_name["yukari"]["dials"]),
-                         {"redraw", "patches"})
+                         {"patches"})
 
     def test_dial_keys_are_real_option_keys_of_their_scope(self):
         catalog = build_catalog(GIT)
@@ -414,16 +412,10 @@ class PublishCatalogTest(unittest.TestCase):
 
 
 class RedrawSectionTest(unittest.TestCase):
-    def test_the_redraw_section_publishes_light_and_per_method_defaults(self):
+    def test_the_redraw_section_publishes_the_hires_defaults(self):
         redraw = build_catalog(GIT)["recipes"][0]["redraw"]
-        light = redraw["light"]
-        self.assertEqual(light["scenes"], ["sunset", "moon"])
-        self.assertEqual(light["from"],
-                         ["e", "n", "ne", "nw", "s", "se", "sw", "w"])
-        self.assertEqual(light["default_from"], "nw")
-        self.assertEqual(set(redraw["defaults"]), {"canvas", "hires"})
-        self.assertEqual(set(redraw["defaults"]["canvas"]),
-                         {"denoise", "size", "route"})
+        self.assertEqual(set(redraw), {"defaults"})
+        self.assertEqual(set(redraw["defaults"]), {"hires"})
         self.assertEqual(set(redraw["defaults"]["hires"]), {"hires_denoise"})
 
     def test_only_the_current_request_kinds_are_published(self):

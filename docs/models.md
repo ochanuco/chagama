@@ -12,7 +12,6 @@ The code names the files; this is where to look.
 | Role | File | Named in |
 |---|---|---|
 | Stage 1 | `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` (SilvermoonMix-Anima-Evolved v2.3_2.9B_Turbo) + `qwen_3_06b_base` + `qwen_image_vae` (the manifest fetches all three) | `domain/yukari/prompt_style.py` `MODEL`, `GUIDED_STEPS` |
-| Opt-in canvas redraw (fetched by the manifest) | `diffusers/hassaku-il-v22` | `domain/yukari/delivery_style.py` `REDRAW_MODEL` |
 | Stage 1 reserve, opt-in by `render.model` patch | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | — |
 | Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | Comfy-Org Pixal3D, TRELLIS.2, MoGe and BiRefNet files | `manifests/worker-models.toml` |
 
@@ -57,7 +56,6 @@ hashed on the GPU box (2026-10-02) and matches the Civitai API hash.
 | `controlnet/noob-lineart-anime-fp16.safetensors` | 2.33 GB | `Eugeoter/noob-sdxl-controlnet-lineart_anime :: diffusion_pytorch_model.fp16.safetensors` | `44eae6a514a60ae4…` |
 | `controlnet/noob-openpose-fp16.safetensors` | 2.33 GB | `r3gm/controlnet-noobai-openpose-sdxl-fp16 :: diffusion_pytorch_model.fp16.safetensors` | `bf0f438479182848…` |
 | `diffusion_models/anima-preview3-base.safetensors` | 3.89 GB | `circlestone-labs/Anima :: split_files/diffusion_models/anima-preview3-base.safetensors` | `14fffe8ad5116cd7…` |
-| `ipadapter/ip-adapter-plus_sdxl_vit-h.safetensors` | 808 MB | `h94/IP-Adapter :: sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors` | `3f5062b8400c94b7…` |
 | `text_encoders/qwen_3_06b_base.safetensors` | 1.11 GB | `circlestone-labs/Anima :: split_files/text_encoders/qwen_3_06b_base.safetensors` | `cd2a512003e2f9f3…` |
 | `vae/qwen_image_vae.safetensors` | 242 MB | `circlestone-labs/Anima :: split_files/vae/qwen_image_vae.safetensors` | `a70580f0213e6796…` |
 
@@ -69,7 +67,6 @@ Whole-folder copies of a Civitai model converted to diffusers by John6666.
 | folder | size | repo | files verified |
 |---|---|---|---|
 | `diffusers/amanatsu-il-v11` | 6.46 GB | `John6666/amanatsu-illustrious-v11-sdxl` | 4/4 |
-| `diffusers/hassaku-il-v22` | 6.46 GB | `John6666/hassaku-xl-illustrious-v22-sdxl` | 4/4 |
 | `diffusers/moe-vpred-v2` | 6.46 GB | `John6666/moe-is-all-you-need-noobai-illustrious-vpred-v2-sdxl` | 4/4 |
 | `diffusers/sweet-mix-v14` | 6.46 GB | `John6666/sweet-mix-illustriousxl-v14-sdxl` | 4/4 |
 
@@ -85,7 +82,6 @@ Whole-folder copies of a Civitai model converted to diffusers by John6666.
 | `loras/anima-handdrawn-feel-chosen.safetensors` | 175 MB | 手绘质感增强/Hand-drawn feel, trigger `Hand-drawn feel` / v2.0 anima | [2529114/3267407](https://civitai.com/models/2529114?modelVersionId=3267407) |
 | `loras/anima-sketch-style-chosen.safetensors` | 175 MB | 草稿线条风格/sketch style, trigger `sketch style` / v2.0 anima | [2061990/3218039](https://civitai.com/models/2061990?modelVersionId=3218039) |
 | `loras/detail-slider-ill.safetensors` | 8 MB | Detail Slider LoRA \| Illustrious-XL / v1.0 - Initial Release | [1001945/1122976](https://civitai.com/models/1001945?modelVersionId=1122976) |
-| `loras/detailed-perfection-ill.safetensors` | 435 MB | Detailed Perfection style (Hands + Feet + Face + Body + All in one) XL + F1D + SD1.5 + Pony + Illu + zit + zib / Detailed Illu v0.9 | [411088/1506333](https://civitai.com/models/411088?modelVersionId=1506333) |
 | `loras/feet-xl-ill.safetensors` | 435 MB | Feet XL + SD 1.5 + F1D + Pony + Illustrious + zit / Feet Illu v0.1 | [200251/1464471](https://civitai.com/models/200251?modelVersionId=1464471) |
 | `loras/glossy-eyedetail-ill.safetensors` | 218 MB | Eye detail LoRA [Illustrious+FLUX+Z Image Turbo] / Glossy EyeDetail | [1300857/2552350](https://civitai.com/models/1300857?modelVersionId=2552350) |
 | `loras/hands-xl-ill.safetensors` | 435 MB | Hands XL + SD 1.5 + F1D + Pony + Illustrious + zit + ZIB / Hands Illu v1.1 | [200255/2212079](https://civitai.com/models/200255?modelVersionId=2212079) |
@@ -94,7 +90,6 @@ Whole-folder copies of a Civitai model converted to diffusers by John6666.
 | `loras/moe-2000s-b.safetensors` | 37 MB | moe style 2000s / v1.0 | [2031779/2299478](https://civitai.com/models/2031779?modelVersionId=2299478) |
 | `loras/mozudoll.safetensors` | 325 MB | Mozudoll-style — Anime Soft-body Moe Doll Aesthetic / v1.0 | [2461974/2784868](https://civitai.com/models/2461974?modelVersionId=2784868) |
 | `loras/outlined-ill.safetensors` | 177 MB | Outlined / Illustrious | [2741162/3085331](https://civitai.com/models/2741162?modelVersionId=3085331) |
-| `loras/perfect-eyes-ill.safetensors` | 218 MB | Eyes for Illustrious Lora (Perfect anime eyes) / V1 | [1826240/2066663](https://civitai.com/models/1826240?modelVersionId=2066663) |
 | `loras/re4lity.safetensors` | 218 MB | Anime X Reality \| Shiiro's Styles / reality_sync | [1163407/1308731](https://civitai.com/models/1163407?modelVersionId=1308731) |
 | `loras/shiny-legwear-ill.safetensors` | 163 MB | Shiny Legwear / illustr v0.11111 | [1142238/1284558](https://civitai.com/models/1142238?modelVersionId=1284558) |
 | `loras/smooth-booster-v5.safetensors` | 188 MB | Smooth Detailer Booster (NoobAI/Illustrious/Pony) / Smooth Booster v5 | [1145743/2746768](https://civitai.com/models/1145743?modelVersionId=2746768) |
@@ -108,7 +103,7 @@ Whole-folder copies of a Civitai model converted to diffusers by John6666.
 Fetched straight onto the Windows box for the checkpoint and LoRA A/B rounds
 (`docs/archive/render-notes/6-2026-09.md`), then deleted. No local copy and no
 SHA256 recorded; re-fetch from the source if they are ever needed again. The
-checkpoints rated bad against hassaku-il-v22, and the sketch LoRAs served the
+checkpoints rated bad against the retired Illustrious redraw, and the sketch LoRAs served the
 retired `yukari-sketch` recipe.
 
 | file | source |

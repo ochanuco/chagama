@@ -50,6 +50,5 @@ The graph is built by `infrastructure/comfyui/anima_graph.py`.
 - Canvas precedence is `pose.canvas`, then the framing's canvas, then
   `1024x1640`. `hires` scales that canvas to the given long side (multiple
   of 8), and `denoise` needs `hires`.
-- `redraw` takes only an Anima source (a `UNETLoader` in its base graph); the
-  `canvas` method runs on the IL checkpoint with `refinement_prompt`'s rough
-  style. Other sources are delivered as drawn.
+- `redraw` takes only an Anima source (a `UNETLoader` in its base graph).
+  Other sources are delivered as drawn.

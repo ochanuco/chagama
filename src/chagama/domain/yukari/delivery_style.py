@@ -437,14 +437,6 @@ TRANSLUCENT_MIN_KEY_SHARE = 0.08
 TRANSLUCENT_MIN_AREA = 256
 TRANSLUCENT_MIN_SOLVE_ALPHA = 0.25
 
-# What the canvas redraw runs at.
-REDRAW_SIZE = 2560
-REDRAW_DENOISE = 0.4
-REDRAW_MODEL = "hassaku-il-v22"
-REDRAW_SAMPLER = ("dpmpp_2m", "karras")
-REDRAW_STEPS = 30
-REDRAW_CFG = 5.0
-
 DOF_F_NUMBER = {"min": 1.4, "max": 22, "default": 2.8,
                 "stops": [1.4, 1.6, 1.8, 2.0, 2.2, 2.5, 2.8, 3.2, 3.5, 4.0, 4.5,
                           5.0, 5.6, 6.3, 7.1, 8.0, 9.0, 10.0, 11.0, 13.0, 14.0,
@@ -541,7 +533,6 @@ class Light(NamedTuple):
     direction: str
 
 
-LIGHT_DENOISE = 0.40
 LIGHT_FROM_DEFAULT = "nw"
 LIGHT_ELEVATION = 0.15
 LIGHT_REACH = 0.12
@@ -550,14 +541,6 @@ LIGHT_SHADE = 1.0
 LIGHT_RIM = 1.0
 LIGHT_CAST_STRENGTH = 0.45
 LIGHT_BACKDROP_BRIGHTEN = (1.12, 0.3)
-LIGHT_DIRECTION_WORDS = {
-    "n": "light from above", "s": "light from below", "e": "light from right",
-    "w": "light from left", "ne": "light from upper right",
-    "nw": "light from upper left", "se": "light from lower right",
-    "sw": "light from lower left",
-}
-LIGHT_WORDS = ("(rim lighting:1.2), (side lighting:1.2), ({direction}:1.1), "
-               "(dramatic lighting:1.1), (cel shading:1.1), shadow")
 # colour: the light; tint: how far the lit side drifts to it; shadow: figure
 # shadow multiplier; backdrop: (rgb, amount, value); cast: sticker shadow
 # multiplier; skin_keep: how much skin resists shade and tint.
@@ -578,15 +561,3 @@ LIGHT_SCENES = {
 
 DELIVER_DEFAULTS = {"stroke_light": "n", "backdrop": "dots",
                     "outlines": [dict(outline) for outline in OUTLINES]}
-
-# Replaces `STYLE`'s flat/cel-shaded finish with a rough, unfinished line
-# for the redraw's different checkpoint.
-ROUGH_STYLE = ("(sketch:1.45), (rough sketch:1.4), rough lines, sketchy "
-              "lines, pencil sketch, (unfinished:1.2), construction lines, "
-              "(colored pencil (medium):1.2), (soft shading:1.1)")
-
-ROUGH_BAN = ("(clean lineart:1.3), (smooth lines:1.2), (cel shading:1.2), "
-            "(flat color:1.2), ")
-PAINT_BAN = ("(brown legwear:1.5), (brown pantyhose:1.4), "
-            "(detailed shading:1.5), (heavy shading:1.5), (impasto:1.45), "
-            "(painterly:1.45), ")

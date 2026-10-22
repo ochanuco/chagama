@@ -103,7 +103,7 @@ This is personal tooling, published because the measurements in
 [`docs/findings/`](docs/findings/) are worth more written down than
 kept — a record of what was tried, what worked, and the several occasions where
 the first conclusion turned out to be wrong. The recipe is tuned to a specific
-Illustrious-family checkpoint and Yuzuki Yukari. It is installable only to
+Anima-family checkpoint and Yuzuki Yukari. It is installable only to
 provide its local CLI; it is not a supported library or service.
 
 Read it as a notebook rather than as a tool you are meant to adopt.

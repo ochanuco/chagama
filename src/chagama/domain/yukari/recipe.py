@@ -15,7 +15,6 @@ from .costumes import (
     legwear_block,
     legwear_text,
 )
-from .delivery_style import PAINT_BAN, ROUGH_BAN, ROUGH_STYLE
 from .expressions import EXPRESSIONS, EYE_QUALITY
 from .framing import FRAMING
 from .poses import POSES, Pose
@@ -29,14 +28,12 @@ from .prompt_style import (
     COUNT_TAG,
     DETAIL_BAN,
     DIGIT_BAN,
-    DOT_BAN,
     EYE_SHAPE,
     FACE,
     GARMENT_BLACK_BAN,
     GARMENT_GLOSS_TAGS,
     GRADIENT_BAN,
     GUIDED_STEPS,
-    HAND_BAN,
     HEIGHT,
     HIRES_DENOISE,
     HOOD_BAN,
@@ -50,7 +47,6 @@ from .prompt_style import (
     SCHEDULER,
     SCORE_BAN,
     SERIES_TAG,
-    SHADE_BAN,
     SHEER_BAN,
     SHEER_GLOSS_BAN,
     SHEER_TONE_BAN,
@@ -185,17 +181,6 @@ def negative(pose: str, costume: str | None = None,
     if p.negative_tail:
         result += ", " + p.negative_tail
     return result
-
-
-def refinement_prompt(base: PromptPair) -> PromptPair:
-    """Build the anima-specific prompt used by the delivery redraw."""
-    negative = base.negative
-    for ban in (DETAIL_BAN, GRADIENT_BAN, COLORED_LINE_BAN):
-        negative = negative.replace(ban, "")
-    return PromptPair(
-        base.positive.replace(STYLE, ROUGH_STYLE),
-        ROUGH_BAN + PAINT_BAN + HAND_BAN + SHADE_BAN + DOT_BAN + negative,
-    )
 
 
 def render_spec(pose: str, seed: int, prefix: str, hires: int = 0,

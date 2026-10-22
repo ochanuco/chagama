@@ -3,9 +3,9 @@
     Put the legacy optional Civitai models on a Windows ComfyUI box.
 
 .DESCRIPTION
-    Fetches the legacy optional Civitai files: two IL LoRAs and a reserve
-    stage-1 model. Everything the recipe needs -- silvermoon-turbo, the Anima
-    text encoder and VAE, the hassaku-il-v22 diffusers folder -- is fetched by
+    Fetches the legacy optional Civitai file: a reserve stage-1 model.
+    Everything the recipe needs -- silvermoon-turbo, the Anima
+    text encoder and VAE -- is fetched by
     manifests/worker-models.toml (scripts/worker_models.py).
 
     Every SHA256 below was taken from the mac's own copy. The script verifies,
@@ -54,22 +54,6 @@ $ErrorActionPreference = 'Stop'
 # Civitai serves them under their own longer names, so they get renamed on the
 # way in -- keep the left column exactly as it is or the graph will not build.
 $LoraFiles = @(
-    @{
-        Name       = 'perfect-eyes-ill.safetensors'
-        VersionId  = 2066663
-        Size       = 228457660
-        Sha256     = '97c1a083ffe6b4d45c545196eabd01c754936b996ade0c9db6d072f3bd340c55'
-        CivitaiUrl = 'https://civitai.com/api/download/models/2066663'
-        Title      = 'Eyes for Illustrious Lora (Perfect anime eyes) V1'
-    }
-    @{
-        Name       = 'detailed-perfection-ill.safetensors'
-        VersionId  = 1506333
-        Size       = 456485044
-        Sha256     = '6584fdabcf861b492da0472173fa4f37283f3c0c660072e2a12f2eb385e53bab'
-        CivitaiUrl = 'https://civitai.com/api/download/models/1506333'
-        Title      = 'Detailed Perfection style - Detailed Illu v0.9'
-    }
     @{
         Name       = 'fnMomentAnimaTurbo_v20.safetensors'
         Dir        = 'diffusion_models'
@@ -196,7 +180,7 @@ elseif (-not $CivitaiToken) {
     }
 }
 else {
-    Write-Step "LoRAs and Fn-Moment (~4.9 GB) from Civitai"
+    Write-Step "Fn-Moment (~4.2 GB) from Civitai"
 
     foreach ($lora in $LoraFiles) {
         $dir = if ($lora.Dir) { Join-Path $modelsDir $lora.Dir } else { $lorasDir }

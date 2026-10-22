@@ -1,8 +1,7 @@
-"""Scene lighting: the light pass graph, the underpaint and the tinted delivery."""
+"""Scene lighting: the underpaint and the tinted delivery."""
 
 from __future__ import annotations
 
-import copy
 import io
 import unittest
 from unittest import mock
@@ -10,31 +9,9 @@ from unittest import mock
 import numpy as np
 from PIL import Image
 
-from chagama.domain.yukari import delivery_style
-from chagama.infrastructure.comfyui.base_graph import base_roles
 from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
-from chagama.infrastructure.comfyui.light_graph import light_graph, light_words
-from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 from chagama.infrastructure.imaging import light
 from chagama.infrastructure.imaging.delivery import band_alphas, clean_background, sticker
-
-SOURCE = {
-    "1": {"class_type": "UNETLoader", "inputs": {}},
-    "4": {"class_type": "CheckpointLoaderSimple", "inputs": {}},
-    "5": {"class_type": "EmptyLatentImage",
-          "inputs": {"width": 1024, "height": 1640, "batch_size": 1}},
-    "3": {"class_type": "KSampler", "inputs": {
-        "model": ["1", 0], "seed": 5, "steps": 10, "cfg": 2,
-        "sampler_name": "euler", "scheduler": "simple", "denoise": 1.0,
-        "latent_image": ["5", 0], "positive": ["6", 0], "negative": ["7", 0]}},
-    "6": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["4", 1], "text": "p"}},
-    "7": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["4", 1], "text": "n"}},
-    "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
-    "9": {"class_type": "SaveImage",
-          "inputs": {"images": ["8", 0], "filename_prefix": "base"}},
-    "10": {"class_type": "PreviewImage", "inputs": {"images": ["8", 0]}},
-}
-
 
 def find(graph: dict, class_type: str) -> tuple[str, dict]:
     matches = [(key, node) for key, node in graph.items()
@@ -47,57 +24,6 @@ def png(pixels: np.ndarray, mode: str = "RGB") -> bytes:
     output = io.BytesIO()
     Image.fromarray(pixels.astype(np.uint8), mode).save(output, "PNG")
     return output.getvalue()
-
-
-class LightGraphTest(unittest.TestCase):
-    def setUp(self):
-        source = copy.deepcopy(SOURCE)
-        self.graph = light_graph(source, base_roles(source), "up.png", "birefnet",
-                                 "moon", "se", "light-g", size=(1448, 1808))
-        self.source = source
-
-    def test_the_sources_outputs_are_removed_and_the_source_is_untouched(self):
-        saves = [node for node in self.graph.values()
-                 if node["class_type"] in ("SaveImage", "PreviewImage")]
-        self.assertEqual(len(saves), 1)
-        self.assertEqual(saves[0]["inputs"]["filename_prefix"], "light-g")
-        self.assertEqual(self.source, SOURCE)
-
-    def test_the_lit_picture_is_resampled_with_the_source_seed(self):
-        _, light_node = find(self.graph, "YukariLight")
-        encode_id, encode = find(self.graph, "VAEEncode")
-        self.assertEqual(encode["inputs"]["pixels"], [find(self.graph, "YukariLight")[0], 0])
-        resample = next(node for node in self.graph.values()
-                        if node["class_type"] == "KSampler"
-                        and node["inputs"]["latent_image"] == [encode_id, 0])
-        self.assertEqual(resample["inputs"]["denoise"], delivery_style.LIGHT_DENOISE)
-        self.assertEqual(resample["inputs"]["seed"], 5)
-        self.assertEqual(resample["inputs"]["negative"], ["7", 0])
-        self.assertEqual(resample["inputs"]["model"], ["1", 0])
-        self.assertEqual(light_node["inputs"]["direction"], "se")
-        self.assertEqual(light_node["inputs"]["scene"], "moon")
-
-    def test_the_positive_adds_the_scene_and_direction_words(self):
-        resample = next(node for node in self.graph.values()
-                        if node["class_type"] == "KSampler"
-                        and node["inputs"]["denoise"] == delivery_style.LIGHT_DENOISE)
-        text = self.graph[resample["inputs"]["positive"][0]]["inputs"]["text"]
-        self.assertTrue(text.startswith("p, "))
-        self.assertIn("(moonlight:1.15)", text)
-        self.assertIn("(light from lower right:1.1)", text)
-        self.assertEqual(text, "p, " + light_words("moon", "se"))
-
-    def test_the_underpaint_reads_depth_and_matte_of_the_uploaded_picture(self):
-        load_id, load = find(self.graph, "LoadImage")
-        depth_id, depth = find(self.graph, DEPTH_NODE)
-        _, light_node = find(self.graph, "YukariLight")
-        self.assertEqual(load["inputs"]["image"], "up.png")
-        self.assertEqual(depth["inputs"]["image"], [load_id, 0])
-        self.assertEqual(depth["inputs"]["resolution"], 1448)
-        self.assertEqual(light_node["inputs"]["image"], [load_id, 0])
-        self.assertEqual(light_node["inputs"]["depth"], [depth_id, 0])
-        remove_id, _ = find(self.graph, "RemoveBackground")
-        self.assertEqual(light_node["inputs"]["matte"], [remove_id, 0])
 
 
 class DeliverGraphTest(unittest.TestCase):

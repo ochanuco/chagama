@@ -193,78 +193,28 @@ class CliTest(unittest.TestCase):
 
     @patch.object(cli, "redraw")
     @patch.object(cli, "ChimeraClient")
-    def test_redraw_methods_dispatch_without_network(
+    def test_redraw_hires_dispatches_without_network(
             self, chimera_class, run_redraw):
-        cli.main(["redraw", "gen-1", "--method", "canvas", "--denoise", "0.5",
-                  "--size", "2048", "--latent-route", "--upscale", "lanczos",
-                  "--keep-region", "0,0,0.5,0.5"])
+        cli.main(["redraw", "gen-1", "--method", "hires", "--hires", "2048"])
         args, kwargs = run_redraw.call_args
         self.assertEqual(args[0], "gen-1")
-        self.assertEqual(kwargs["method"], "canvas")
-        self.assertEqual(kwargs["denoise"], 0.5)
-        self.assertEqual(kwargs["size"], 2048)
-        self.assertIs(kwargs["latent_route"], True)
-        self.assertEqual(kwargs["keep_regions"], [[0.0, 0.0, 0.5, 0.5]])
-        cli.main(["redraw", "gen-1", "--method", "hires", "--hires", "2048"])
-        kwargs = run_redraw.call_args.kwargs
         self.assertEqual((kwargs["method"], kwargs["hires"], kwargs["denoise"]),
                          ("hires", 2048, 0.45))
-        cli.main(["redraw", "gen-1", "--method", "light", "--light", "moon,se"])
+        cli.main(["redraw", "gen-1", "--method", "hires", "--hires", "2048",
+                  "--denoise", "0.3", "--cut"])
         kwargs = run_redraw.call_args.kwargs
-        self.assertEqual((kwargs["method"], kwargs["light"]),
-                         ("light", Light("moon", "se")))
+        self.assertEqual((kwargs["denoise"], kwargs["cut"]), (0.3, True))
 
     @patch.object(cli, "redraw")
     @patch.object(cli, "ChimeraClient")
-    def test_redraw_refuses_flags_of_another_method(
+    def test_redraw_refuses_a_retired_method_and_a_missing_one(
             self, chimera_class, run_redraw):
-        with self.assertRaises(SystemExit):
-            cli.main(["redraw", "gen-1", "--method", "light", "--light", "moon",
-                      "--size", "2048"])
-        with self.assertRaises(SystemExit):
-            cli.main(["redraw", "gen-1"])
+        for argv in (["redraw", "gen-1", "--method", "canvas"],
+                     ["redraw", "gen-1", "--method", "light"],
+                     ["redraw", "gen-1"]):
+            with self.subTest(argv=argv), self.assertRaises(SystemExit):
+                cli.main(argv)
         run_redraw.assert_not_called()
-
-    @patch.object(cli, "dials_scope")
-    @patch.object(cli, "fetch_source")
-    @patch.object(cli, "redraw")
-    @patch.object(cli, "ChimeraClient")
-    def test_redraw_denoise_word_resolves_through_the_source_recipe(
-            self, chimera_class, run_redraw, fetch_source, dials_scope):
-        context = object()
-        fetch_source.return_value = (context, "yukari")
-        dials_scope.return_value = {"denoise": {"tidy": 0.65}}
-        cli.main(["redraw", "gen-1", "--method", "canvas", "--denoise", "tidy"])
-        fetch_source.assert_called_once_with(chimera_class.return_value, "gen-1")
-        dials_scope.assert_called_once_with("yukari", "redraw")
-        args, kwargs = run_redraw.call_args
-        self.assertEqual(kwargs["denoise"], 0.65)
-        # The context fetch_source already made is passed through so
-        # redraw() does not fetch it again.
-        self.assertIs(kwargs["context"], context)
-
-    @patch.object(cli, "dials_scope")
-    @patch.object(cli, "fetch_source")
-    @patch.object(cli, "redraw")
-    @patch.object(cli, "ChimeraClient")
-    def test_redraw_unknown_word_exits_before_redrawing(
-            self, chimera_class, run_redraw, fetch_source, dials_scope):
-        fetch_source.return_value = ({}, "yukari")
-        dials_scope.return_value = {"denoise": {"keep": 0.4}}
-        with self.assertRaises(SystemExit):
-            cli.main(["redraw", "gen-1", "--method", "canvas", "--denoise", "blurry"])
-        run_redraw.assert_not_called()
-
-    @patch.object(cli, "fetch_source")
-    @patch.object(cli, "redraw")
-    @patch.object(cli, "ChimeraClient")
-    def test_redraw_numeric_denoise_never_looks_up_the_recipe(
-            self, chimera_class, run_redraw, fetch_source):
-        cli.main(["redraw", "gen-1", "--method", "canvas", "--denoise", "0.7"])
-        fetch_source.assert_not_called()
-        kwargs = run_redraw.call_args.kwargs
-        self.assertEqual(kwargs["denoise"], 0.7)
-        self.assertIsNone(kwargs["context"])
 
     @patch.object(cli, "work")
     @patch.object(cli, "ChimeraClient")
