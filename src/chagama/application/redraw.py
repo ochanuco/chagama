@@ -3,16 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..domain.generation.models import PromptPair
-from ..domain.regions import rects_from_fractions
 from ..domain.yukari import delivery_style
-from ..domain.yukari.delivery_style import Light
 from ..domain.yukari.prompt_style import HEIGHT, WIDTH
-from ..domain.yukari.recipe import refinement_prompt
 from ..infrastructure.comfyui.base_graph import (
     BaseRoles,
     base_roles,
@@ -20,11 +16,8 @@ from ..infrastructure.comfyui.base_graph import (
     sampler_settings,
 )
 from ..infrastructure.comfyui.deliver_graph import cut_graph
-from ..infrastructure.comfyui.light_graph import light_graph
-from ..infrastructure.comfyui.refinement_graph import redraw_graph, sizes
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.delivery import image_size
-from ..infrastructure.imaging.masks import render_soft_mask_png
 from ..infrastructure.imaging.matting import cutout_png
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import (
@@ -33,8 +26,6 @@ from .cut_assets import (
     DEPTH_ROLE,
     attach_cut,
     current_cut,
-    reusable,
-    stored_cut,
 )
 from .ingest import (
     asset_key,
@@ -47,9 +38,6 @@ from .ingest import (
     upload_generation,
 )
 from .picture_source import DERIVED_KINDS, check_resample_source, is_delivered
-
-# `render_soft_mask_png`'s feather, as a share of the redraw canvas' longest side.
-KEEP_FEATHER_FRACTION = 0.03
 
 # Applies when `hires` is given without a denoise.
 HIRES_DENOISE = 0.45
@@ -75,9 +63,7 @@ class RedrawServices:
     output_root: Path
     emit: Callable[[str], None] = print
     image_size: Callable[[bytes], tuple[int, int]] = image_size
-    redraw_graph: Callable[..., dict] = redraw_graph
     hires_graph: Callable[..., dict] = hires_graph
-    light_graph: Callable[..., dict] = light_graph
     cut_graph: Callable[..., dict] = cut_graph
     state: JsonRunState = field(default_factory=JsonRunState)
 
@@ -97,9 +83,6 @@ class _Prepared:
     graph: dict
     seed: int
     parameters: dict
-    cut_roles: tuple[str, ...] = ()
-    stored: dict = field(default_factory=dict)
-    asset_roles: frozenset = frozenset()
 
 
 def _load_source(generation_id: str, services: RedrawServices,
@@ -153,53 +136,6 @@ def _require_anima(source: _Source) -> BaseRoles:
     return source.roles
 
 
-def _prepare_canvas(services: RedrawServices, source: _Source, prefix: str, *, denoise: float | None,
-                    size: int | None, latent_route: bool | None,
-                    finalizer: str | None, upscale: str | None,
-                    keep_regions: Sequence[Sequence[float]],
-                    keep_strength: float) -> _Prepared:
-    roles = _require_anima(source)
-    denoise = delivery_style.REDRAW_DENOISE if denoise is None else denoise
-    size = delivery_style.REDRAW_SIZE if size is None else size
-    latent_route = bool(latent_route) and not roles.stitched
-    loader = finalizer or delivery_style.REDRAW_MODEL
-    prompt = refinement_prompt(PromptPair(
-        source.graph[roles.positive_id]["inputs"]["text"],
-        source.graph[roles.negative_id]["inputs"]["text"]))
-    source_image = None
-    if source.derived:
-        source_image = services.comfyui.upload_image(
-            f"{prefix}-{uuid.uuid4().hex[:8]}-source.png", source.picked)
-    keep_mask_image = None
-    if keep_regions:
-        redraw_width, redraw_height = sizes(*services.image_size(source.picked), size)
-        keep_rects = rects_from_fractions(keep_regions, redraw_width, redraw_height)
-        feather = round(KEEP_FEATHER_FRACTION * max(redraw_width, redraw_height))
-        keep_mask_image = services.comfyui.upload_image(
-            f"{prefix}-keep-mask.png",
-            render_soft_mask_png(redraw_width, redraw_height, keep_rects,
-                                 keep_strength, feather))
-    graph = services.redraw_graph(
-        source.graph, size, denoise, prefix,
-        prompt=(prompt.positive, prompt.negative),
-        latent_route=latent_route,
-        sampler=delivery_style.REDRAW_SAMPLER, loader=loader,
-        sampling=(delivery_style.REDRAW_STEPS, delivery_style.REDRAW_CFG),
-        source_image=source_image, keep_mask_image=keep_mask_image,
-        upscale=upscale or "bicubic",
-        redraw_from_source=source.derived and not latent_route,
-        canvas=services.image_size(source.picked))
-    parameters = {
-        "size": size, "denoise": denoise,
-        **({"route": "latent"} if latent_route else {}),
-        "finalizer": loader,
-        **({"upscale": upscale} if upscale else {}),
-        **({"keep_regions": [list(region) for region in keep_regions],
-            "keep_strength": keep_strength} if keep_regions else {})}
-    return _Prepared(graph, sampler_settings(source.graph, roles.sampler_id)["seed"],
-                     parameters)
-
-
 def _prepare_hires(source: _Source, prefix: str, services: RedrawServices, *,
                    hires: int, denoise: float) -> _Prepared:
     check_resample_source(
@@ -214,39 +150,6 @@ def _prepare_hires(source: _Source, prefix: str, services: RedrawServices, *,
     return _Prepared(
         graph, sampler_settings(source.graph, source.roles.sampler_id)["seed"],
         {"hires": hires, "denoise": denoise})
-
-
-def _prepare_light(generation_id: str, services: RedrawServices,
-                   source: _Source, prefix: str, light: Light) -> _Prepared:
-    check_resample_source(
-        "light", has_graph=source.roles is not None, repaired=False,
-        stitched=source.roles is not None and source.roles.stitched,
-        is_anima=source.is_anima)
-    current = current_cut()
-    stored, assets = stored_cut(services, generation_id)
-    alpha_bytes = reusable(services, generation_id, ALPHA_ROLE, stored, assets, current)
-    depth_bytes = reusable(services, generation_id, DEPTH_ROLE, stored, assets, current)
-    token = uuid.uuid4().hex[:8]
-    upload = services.comfyui.upload_image
-    source_image = upload(f"{prefix}-source-{token}.png", source.picked)
-    alpha_image = (upload(f"{prefix}-alpha-in-{token}.png", alpha_bytes)
-                   if alpha_bytes is not None else None)
-    depth_image = (upload(f"{prefix}-depth-in-{token}.png", depth_bytes)
-                   if depth_bytes is not None else None)
-    try:
-        graph = services.light_graph(
-            source.graph, source.roles, source_image, delivery_style.MATTE_MODEL,
-            light.scene, light.direction, prefix, cut=True,
-            alpha_image=alpha_image, depth_image=depth_image,
-            size=services.image_size(source.picked))
-    except ValueError as error:
-        raise SystemExit(str(error)) from error
-    cut_roles = tuple(role for role, found in (
-        (ALPHA_ROLE, alpha_bytes), (DEPTH_ROLE, depth_bytes)) if found is None)
-    return _Prepared(
-        graph, sampler_settings(source.graph, source.roles.sampler_id)["seed"],
-        {"scene": light.scene, "from": light.direction},
-        cut_roles=cut_roles, stored=stored, asset_roles=frozenset(assets))
 
 
 def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, bytes], *,
@@ -286,12 +189,8 @@ def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, 
 
 
 def redraw(generation_id: str, services: RedrawServices, *, method: str,
-           denoise: float | None = None, size: int | None = None,
-           latent_route: bool | None = None, finalizer: str | None = None,
-           upscale: str | None = None,
-           keep_regions: Sequence[Sequence[float]] = (),
-           keep_strength: float = 0.25, hires: int | None = None,
-           light: Light | None = None, cut: bool = False, key_prefix: str | None = None,
+           denoise: float | None = None, hires: int | None = None,
+           cut: bool = False, key_prefix: str | None = None,
            request_id: str | None = None, context: dict | None = None) -> dict:
     """Redraw `generation_id` by `method` and record the result; with `cut`,
     also cut the result as a deliver would (see `_cut_output`)."""
@@ -305,16 +204,9 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
     source = _load_source(generation_id, services, context)
 
     prefix = f"rdw-{generation_id}"
-    if method == "canvas":
-        prepared = _prepare_canvas(
-            services, source, prefix, denoise=denoise, size=size,
-            latent_route=latent_route, finalizer=finalizer, upscale=upscale,
-            keep_regions=keep_regions, keep_strength=keep_strength)
-    elif method == "hires":
+    if method == "hires":
         prepared = _prepare_hires(
             source, prefix, services, hires=hires, denoise=denoise)
-    elif method == "light":
-        prepared = _prepare_light(generation_id, services, source, prefix, light)
     else:
         raise SystemExit(f"unsupported redraw method: {method!r}")
     graph = prepared.graph
@@ -331,17 +223,12 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
     services.emit(f"{prefix} {prompt_id}")
 
     outputs = classify_redraw_outputs(services.comfyui.wait_for(prompt_id))
-    missing = [role for role in ("picture", *prepared.cut_roles)
-               if not outputs[role]]
-    if missing:
-        raise SystemExit(f"{prefix} is missing its {', '.join(missing)} output(s)")
+    if not outputs["picture"]:
+        raise SystemExit(f"{prefix} is missing its picture output(s)")
     services.output_root.mkdir(parents=True, exist_ok=True)
-    fetched = {}
-    for role in ("picture", *prepared.cut_roles):
-        out = outputs[role][-1]
-        fetched[role] = (out["filename"], services.comfyui.fetch(out))
-        (services.output_root / out["filename"]).write_bytes(fetched[role][1])
-    name, data = fetched["picture"]
+    out = outputs["picture"][-1]
+    name, data = out["filename"], services.comfyui.fetch(out)
+    (services.output_root / name).write_bytes(data)
 
     git = services.git_metadata()
     request = open_request(
@@ -364,15 +251,10 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
     rendered = upload_generation(
         management, services.emit, job["id"], seed=prepared.seed, name=name,
         data=data, index=0, idempotency_key=generation_key(key_prefix, 0, 0))
-    if prepared.cut_roles:
-        attach_cut(management, services.emit, generation_id,
-                   key_prefix=key_prefix, fetched=fetched,
-                   stored=prepared.stored, roles=set(prepared.asset_roles),
-                   current=current_cut(), cut_roles=list(prepared.cut_roles))
     management.request("PATCH", f"/api/v1/jobs/{job['id']}", {"status": "ingested"})
     note_ingested(services.comfyui, prompt_id)
     if cut:
-        _cut_output(services, rendered["id"], fetched["picture"], prefix=f"{prefix}-out",
+        _cut_output(services, rendered["id"], (name, data), prefix=f"{prefix}-out",
                     key_prefix=key_prefix, state=state, state_path=state_path)
     services.notifier.send(
         f"**redraw {method}** `{generation_id}`\n"

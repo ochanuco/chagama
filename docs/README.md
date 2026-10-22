@@ -19,8 +19,8 @@ Each line carries a scope tag:
 
 - `[all]` holds on the current pipeline.
 - `[Anima]` was measured on Anima, stage 1 today.
-- `[IL]` was measured on the retired Illustrious stage 1 and matters only
-  for the opt-in IL redraw.
+- `[IL]` was measured on the retired Illustrious stage 1 and is kept for
+  history.
 
 `(a3 §The gradient direction)` points at archive file 3, at the heading
 that starts with those words; `uv run scripts/atlas.py notes "The gradient

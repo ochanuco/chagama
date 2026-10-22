@@ -83,12 +83,3 @@ GUIDED_STEPS = 4
 SAMPLER = "euler"
 SCHEDULER = "normal"
 HIRES_DENOISE = 0.4
-
-# The delivery redraw's own line-breaking and hand/shading guards -- pass 2
-# only, run through `refinement_prompt`.
-DOT_BAN = ("(dotted line:1.3), (dashed line:1.3), (stipple:1.3), "
-           "(halftone:1.2), ")
-HAND_BAN = ("(bad hands:1.5), (mutated hands:1.5), (extra digits:1.5), "
-            "(fused fingers:1.45), (long fingers:1.4), ")
-SHADE_BAN = ("(detailed shading:1.5), (heavy shading:1.5), (impasto:1.45), "
-             "(painterly:1.45), ")

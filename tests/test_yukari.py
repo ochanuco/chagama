@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 from chagama.application.generate import request_graph, validate_request
-from chagama.domain.generation.models import PromptPair
 from chagama.domain.generation.prompt_lint import tags as prompt_tags
 from chagama.domain.yukari import prompt_style as ps
 from chagama.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
@@ -27,10 +26,9 @@ from chagama.domain.yukari.expressions import (
 from chagama.domain.yukari.poses import POSES
 from chagama.domain.yukari.recipe import (
     PART_NAMES, identity_tags, negative, positive, positive_parts,
-    refinement_prompt, render_spec,
+    render_spec,
 )
 from chagama.infrastructure.comfyui import anima_graph
-from chagama.infrastructure.comfyui.refinement_graph import redraw_graph
 from chagama.interfaces import cli
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -282,62 +280,6 @@ COFFEE_POSITIVE = _with_nails(COFFEE_POSITIVE)
 AMAE_POSITIVE = _with_nails(AMAE_POSITIVE)
 STAND_POSITIVE = _with_nails(STAND_POSITIVE)
 BUST_POSITIVE = _with_nails(BUST_POSITIVE)
-
-REDRAW_STAND_POSITIVE = (
-    "1girl, solo, yuzuki yukari, "
-    "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
-    "light purple hair, short hair with long locks, very long sidelocks, "
-    "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
-    "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
-    "eyes:1.3), (unamused:1.15), (from front:1.3), (full body:1.45), (wide "
-    "shot:1.3), (thighs:1.1), (mature female:1.3), (adult:1.2), (wide "
-    "hips:1.2), (thick thighs:1.2), (soft thighs:1.3), (long legs:1.35), "
-    "(narrow waist:1.25), adult proportions, long torso, seven heads tall, "
-    "(collarbone:1.2), "
-    "(standing:1.5), (own hands together:1.3), (hands up:1.2), (arched "
-    "back:1.15), "
-    "(v-shaped eyebrows:1.25), (smirk:1.3), (smug:1.2), closed mouth, "
-    "(looking at viewer:1.2), "
-    "(sneakers:1.3), (white sneakers:1.2), (oversized sweatshirt:1.35), "
-    "(white sweatshirt:1.2), (sleeves past wrists:1.25), (denim shorts:1.3), "
-    "(sheer black pantyhose:1.5), (dark violet tint:1.2), (see-through "
-    "legwear:1.4), (skin visible through legwear:1.3), (pantyhose:1.4), (subtle "
-    "sheen on legwear:1.05), (anime coloring:1.2), simple background, (green "
-    "background:1.3), (large eyes:1.2), (round face:1.3), (tareme:1.2), "
-    "(thick eyelashes:1.3), (long eyelashes:1.15), (sketch:1.45), "
-    "(rough sketch:1.4), "
-    "rough lines, sketchy lines, pencil sketch, (unfinished:1.2), "
-    "construction lines, (colored pencil (medium):1.2), (soft shading:1.1)"
-)
-REDRAW_STAND_POSITIVE = _with_nails(REDRAW_STAND_POSITIVE)
-
-REDRAW_STAND_NEGATIVE = (
-    "(clean lineart:1.3), (smooth lines:1.2), (cel shading:1.2), (flat "
-    "color:1.2), (brown legwear:1.5), (brown pantyhose:1.4), (detailed "
-    "shading:1.5), (heavy shading:1.5), (impasto:1.45), (painterly:1.45), "
-    "(bad hands:1.5), (mutated hands:1.5), (extra digits:1.5), (fused "
-    "fingers:1.45), (long fingers:1.4), (detailed shading:1.5), (heavy "
-    "shading:1.5), (impasto:1.45), (painterly:1.45), (dotted line:1.3), "
-    "(dashed line:1.3), (stipple:1.3), (halftone:1.2), (extra digits:1.5), "
-    "bad anatomy, bad hands, (skinny:1.3), (thin legs:1.3), (slender "
-    "legs:1.2), (slender:1.1), (sitting:1.3), (cowboy shot:1.2), (upper "
-    "body:1.2), (shiny hair:1.4), (hair highlights:1.2), (watercolor:1.3), "
-    "(ink wash:1.3), (painterly:1.3), (sparkling eyes:1.4), (glitter:1.3), "
-    "(multiple highlights:1.3), (gradient eyes:1.2), (speed lines:1.45), "
-    "(motion lines:1.4), (emphasis lines:1.4), (light purple eyes:1.3), (bright eyes:1.2), (pink eyes:1.2), (magenta:1.45), (pink "
-    "legwear:1.45), (bright purple:1.35), (vivid colors:1.3), (neon:1.3), "
-    "(red:1.3), (maroon:1.35), (wine red:1.3), (hood:1.3), (cardigan:1.3), "
-    "(opaque legwear:1.3), (latex:1.3), (photorealistic:1.4), "
-    "(realistic:1.3), (photo:1.2), (tan skin:1.35), (dark skin:1.3), (brown "
-    "legwear:1.4), (brown pantyhose:1.4), (tan:1.2), (beige legwear:1.3), "
-    "score_1, score_2, score_3, (fat:1.35), (chubby:1.35), (short legs:1.35), "
-    "(muscular:1.3), (toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged "
-    "down:1.2)"
-    ", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-    "(english text:1.2), signature, watermark"
-    "(glossy:1.3), (specular highlights:1.3), (reflection:1.2), "
-    "(ribbed legwear:1.3), (vertical-striped legwear:1.3), "
-)
 
 
 def _outing_for(pose):
@@ -606,13 +548,6 @@ class IdentityTagsTest(unittest.TestCase):
 
     def test_costume_override_does_not_change_the_identity_set(self):
         self.assertEqual(identity_tags("coffee", "roomwear"), self.EXPECTED)
-
-
-class RefinementPromptTest(unittest.TestCase):
-    def test_stand_refinement_prompt_matches_the_confirmed_redraw(self):
-        result = refinement_prompt(PromptPair(STAND_POSITIVE, STAND_NEGATIVE))
-        self.assertEqual(result.positive, REDRAW_STAND_POSITIVE)
-        self.assertEqual(result.negative, REDRAW_STAND_NEGATIVE)
 
 
 class PoseTableTest(unittest.TestCase):
@@ -974,18 +909,6 @@ class GraphTest(unittest.TestCase):
         self.assertEqual(graph["11"]["inputs"]["width"], spec.hires.width)
         self.assertEqual(graph["11"]["inputs"]["height"], spec.hires.height)
         self.assertEqual(graph["8"]["inputs"]["samples"], ["12", 0])
-
-    def test_redraw_graph_accepts_the_built_graph(self):
-        spec = render_spec("coffee", 42, "p")
-        base = anima_graph.build_graph(spec)
-        out = redraw_graph(
-            base, 2560, 0.20, "fin-prefix",
-            prompt=(spec.prompts.positive, spec.prompts.negative),
-            latent_route=False,
-            sampler=("euler", "normal"),
-            canvas=(spec.width, spec.height))
-        self.assertIsInstance(out, dict)
-
 
 class GuidedStepsTest(unittest.TestCase):
     """`render_spec`'s default now draws on SilvermoonMix with `guided_steps`

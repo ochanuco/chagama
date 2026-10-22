@@ -29,7 +29,7 @@ Options, defaults and ranges live here:
 | Kind | Payload | Does |
 |---|---|---|
 | `generate` | a request.json body | render the recipe with its parameters and patches |
-| `redraw` | `{generation_id, options}` | one pixel-changing `method` (`canvas`, `hires` or `light`) on a picture Generation; uploads one green-background picture |
+| `redraw` | `{generation_id, options}` | one pixel-changing `method` (`hires`) on a picture Generation; uploads one green-background picture |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: backdrop, outline bands; never redraws |
 | `saturation` | `{generation_id, options}` | compress a delivery's figure and outline layers' saturation and recompose the picture |
 | `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern, in a frame or in a photo, unblurred |
@@ -67,27 +67,14 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   picture Generation (green background, no delivery) that refines the source,
   saved under `rdw-<generation id>`. Its `parameters` are `kind: "redraw"`,
   `method`, `base_generation` and the resolved options; `seed` is the sampler seed.
-- `canvas` takes `denoise` (also the `redraw` dial words), `size`, `route`,
-  `finalizer`, `upscale`, `keep_regions` and `keep_strength`, defaults as
-  `redraw.defaults.canvas`. It re-samples the source on a bigger canvas and
-  only redraws an Anima source.
 - `hires` takes `hires` (the long side in px of the area a 1024x1640 canvas
   has) and `denoise` (0 < d <= 1, default 0.45). It re-samples the stored
   graph of the Anima generate output, so a `repair`, `masked_redraw` or
   `redraw` output and a stitched base are refused.
-- `light` takes `scene` (`sunset` or `moon`) and `from` (any `stroke_light`
-  direction, default `nw`; `redraw.light` in the catalog): the picture is painted with the
-  scene's shade, tint and rim, then re-sampled at denoise 0.40 with the
-  original graph's seed and negative and a positive that adds the scene's
-  words. It works on any Anima picture, a `repair`, `masked_redraw` or
-  `redraw` output included. The scene is cut with the source's `alpha` and
-  `depth` assets under the same `cut` rule as deliver; assets that are
-  missing or stale are cut in the graph and attached to the source.
 - A source is refused when it is a delivered picture (the same set deliver refuses)
-  or a LayerDiffuse picture. A `repair`, `masked_redraw` or `redraw` output is
-  redrawn from its own pixels, with prompts and seed read from the original generate
-  graph by following `base_generation` (at most 10 hops).
-- Every method takes `cut` (default false): the result is also cut as deliver
+  or a LayerDiffuse picture. The graph is read from the original generate
+  output by following `base_generation` (at most 10 hops).
+- `cut` (default false) is taken too: the result is also cut as deliver
   cuts it, its `alpha`, `depth` and `cut` assets attached to it for deliver
   to reuse, with an RGBA `cutout` (figure colour under the alpha).
 
@@ -176,10 +163,10 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 - The ambient is the backdrop in a ring around the card (6% of the longest
   side). Figure and outline take `(ambient luminance / 0.35) ** (0.4 ×
   strength)` (within 0.35..1.15, linear) and half its colour cast at
-  strength 1. A `direction` first shades the figure as the `light` redraw
-  underpaint does, its lit side tinted by the backdrop's brightest light.
+  strength 1. A `direction` first shades the figure with the scene's
+  underpaint, its lit side tinted by the backdrop's brightest light.
   `strength` 0..1 (default 0.7). A `scene` (sunset / moon) shades and tints
-  the figure as that light redraw does (`direction` default nw) and tints a
+  the figure the same way (`direction` default nw) and tints a
   pattern backdrop; a photo backdrop is never changed.
 - The output (`-lit`) carries the relit layers (and backdrop) and records
   `kind: "lighting"`, `direction` and `strength`.

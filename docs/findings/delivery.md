@@ -9,8 +9,8 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 ## The look now
 
 - Deliver delivers the raw Anima pick: matte, repin, backdrop and purple
-  stroke, no redraw. An IL redraw (`redraw` method `canvas`: hassaku-il-v22
-  at 2560, d0.4) is opt-in per request and is delivered afterwards.
+  stroke, no redraw. A `redraw` (method `hires`) is opt-in per request and
+  is delivered afterwards.
   Defaults: `DELIVER_DEFAULTS` in `delivery_style.py`. `[Anima]`
 - Deliver defaults: repin on, backdrop `dots`, stroke light from `n`. The
   diagonal stripes + faint focus lines backdrop is `backdrop=stripes`. `[Anima]`

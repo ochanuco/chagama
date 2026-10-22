@@ -66,8 +66,7 @@ generations.
 ## Getting models onto it
 
 A Hugging Face or Civitai file listed in `manifests/worker-models.toml` gets there by
-code (silvermoon-turbo, the Anima text encoder and VAE, the hassaku-il-v22 diffusers
-folder and the Pixal3D / TRELLIS.2 files): the `fetch worker models` workflow runs `scripts/worker_models.py` on
+code (silvermoon-turbo, the Anima text encoder and VAE, the Pixal3D / TRELLIS.2 files): the `fetch worker models` workflow runs `scripts/worker_models.py` on
 the box by hand (`workflow_dispatch`, with `dry_run` to only check). It
 checks every file upstream before downloading any, resumes from `.part`,
 keeps the box awake while it runs, and renames a file into place only when
@@ -88,27 +87,9 @@ leaves running a command over there.
 
 [models.md](models.md) is the inventory to work from, with the Hugging Face
 repo or Civitai version each model came from and its SHA256. `scripts/fetch-models-windows.ps1` automates that pull for a
-Windows portable install, but only for the legacy optional Civitai files (two
-LoRAs and a reserve stage-1 model), so anything else still needs a command by
+Windows portable install, but only for the legacy optional Civitai files (a reserve
+stage-1 model), so anything else still needs a command by
 hand.
-
-For a checkpoint mirrored to Hugging Face in diffusers layout that the
-manifest does not list:
-
-```powershell
-# on the Windows machine, from the portable install root
-.\python_embeded\python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('John6666/<repo>', local_dir=r'.\ComfyUI\models\diffusers\<folder>')"
-```
-
-The `hf` CLI is a trap on a portable install. It imports `venv` on startup,
-which the embedded Python does not ship, so it dies before downloading
-anything; `snapshot_download` never touches that import.
-
-`DiffusersLoader` lists a directory the moment its `model_index.json` lands,
-which is long before the 5GB `unet/` does. A model showing up in
-`/object_info/DiffusersLoader` is therefore not a signal that it can be loaded.
-Loading a half-fetched folder fails with `'NoneType' object has no attribute
-'lower'`, which is ComfyUI reporting a missing file badly.
 
 ### A download must outlive the ssh session
 

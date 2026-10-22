@@ -47,7 +47,6 @@ from ..domain.yukari.delivery_style import (
     STROKE_LIGHTS,
     Light,
 )
-from ..domain.yukari.dials import DIALS
 from ..infrastructure.imaging.backdrops import PATTERNS, is_backdrop
 from .deliver import RECIPE_DEFAULT
 from .picture_source import stroke_light_conflict
@@ -81,64 +80,8 @@ _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
 _KNOWN_SATURATION_OPTIONS = frozenset({"strength"})
 
 _KNOWN_REDRAW_OPTIONS = {
-    "canvas": frozenset({"denoise", "size", "route", "finalizer", "upscale",
-                         "keep_regions", "keep_strength"}),
     "hires": frozenset({"hires", "denoise"}),
-    "light": frozenset({"scene", "from"}),
 }
-
-# `generation.recipe` -> its published `dials` block (see domain/*/dials.py).
-_RECIPE_DIALS = {
-    "yukari": DIALS,
-}
-
-# Kept in sync by hand with the resolve_dial() call sites in the *_arguments()
-# functions. Public: interfaces/cli.py reads them too, to resolve the same
-# keys' words from its own parsed args.
-REDRAW_DIAL_KEYS = ("denoise",)
-
-
-def dials_scope(recipe: str, scope: str) -> Mapping[str, Mapping[str, float]]:
-    return _RECIPE_DIALS.get(recipe, {}).get(scope, {})
-
-
-def resolve_dial(key: str, value: object,
-                  dials: Mapping[str, Mapping[str, float]]) -> object:
-    """A string option value is looked up in `dials[key]`; every other value
-    (a number, `true`, `null`) passes through for the option's own checks.
-    """
-    if not isinstance(value, str):
-        return value
-    words = dials.get(key) or {}
-    if value not in words:
-        raise ValueError(f"unknown {key} word: {value!r}")
-    return words[value]
-
-
-def _resolved_options(options: Mapping, arguments: Mapping,
-                      dial_keys: tuple[str, ...]) -> dict:
-    """The request's own options, with each dial-eligible key's value
-    replaced by what `arguments` actually resolved it to -- the single
-    source of truth for what the request ran with.
-    """
-    return {key: (arguments[key] if key in dial_keys else value)
-           for key, value in options.items()}
-
-
-def _regions_argument(value: object, *, key: str = "regions") -> list[list[float]]:
-    if not isinstance(value, list):
-        raise ValueError(f"{key} must be an array, got {type(value).__name__}")
-    parsed = []
-    for region in value:
-        if (not isinstance(region, list) or len(region) != 4
-                or any(not isinstance(v, (int, float)) or isinstance(v, bool)
-                       for v in region)):
-            raise ValueError(
-                f"each region must be [x0, y0, x1, y1] numbers, got {region!r}")
-        if any(not (0 <= v <= 1) for v in region):
-            raise ValueError(f"region values must be within 0..1, got {region!r}")
-        parsed.append([float(v) for v in region])
-    return parsed
 
 
 def _outlines_argument(value: object, *, key: str = "outlines") -> list[dict]:
@@ -324,16 +267,7 @@ def _denoise_argument(value: object, *, key: str = "denoise", max_value: float =
     return float(value)
 
 
-def _keep_strength_argument(value: object, *, key: str = "keep_strength") -> float:
-    if not (isinstance(value, (int, float)) and not isinstance(value, bool)):
-        raise ValueError(f"{key} must be a number, got {type(value).__name__}")
-    if not (0 < value < 1):
-        raise ValueError(f"{key} must be > 0 and < 1, got {value!r}")
-    return float(value)
-
-
-def redraw_arguments(options: Mapping,
-                     dials: Mapping[str, Mapping[str, float]] | None = None) -> dict:
+def redraw_arguments(options: Mapping) -> dict:
     """Validate a redraw request's `options` and map it to redraw() kwargs.
 
     `method` selects which options are accepted, and every method takes
@@ -354,66 +288,15 @@ def redraw_arguments(options: Mapping,
     cut = options.get("cut", False)
     if not isinstance(cut, bool):
         raise ValueError(f"cut must be true or false, got {cut!r}")
-    dials = dials or {}
 
-    if method == "light":
-        light = _light_argument(
-            {"scene": options.get("scene"),
-             **({"from": options["from"]} if "from" in options else {})},
-            key="light")
-        return {"method": method, "light": light, "cut": cut}
-
-    if method == "hires":
-        hires = options.get("hires")
-        if not (isinstance(hires, int) and not isinstance(hires, bool)):
-            raise ValueError(f"hires must be an integer, got {hires!r}")
-        if hires <= 0:
-            raise ValueError(f"hires must be at least 1, got {hires!r}")
-        denoise = (_denoise_argument(options["denoise"]) if "denoise" in options
-                   else HIRES_DENOISE)
-        return {"method": method, "hires": hires, "denoise": denoise, "cut": cut}
-
-    denoise = resolve_dial("denoise", options.get("denoise"), dials)
-    if denoise is not None:
-        denoise = _denoise_argument(denoise)
-
-    route = options.get("route")
-    if route is None:
-        latent_route = None
-    elif route == "latent":
-        latent_route = True
-    elif route == "pixel":
-        latent_route = False
-    else:
-        raise ValueError(f"route must be null, 'latent' or 'pixel', got {route!r}")
-
-    finalizer = options.get("finalizer")
-    if finalizer is not None and not isinstance(finalizer, str):
-        raise ValueError(f"finalizer must be null or a string, got {type(finalizer).__name__}")
-
-    size = options.get("size")
-    if size is not None and not (isinstance(size, int) and not isinstance(size, bool)):
-        raise ValueError(f"size must be null or an integer, got {type(size).__name__}")
-
-    upscale = options.get("upscale")
-    if upscale is not None and upscale not in (
-            "bicubic", "nearest-exact", "bilinear", "lanczos"):
-        raise ValueError(
-            "upscale must be null, 'bicubic', 'nearest-exact', 'bilinear' or "
-            f"'lanczos', got {upscale!r}")
-
-    return {
-        "method": method,
-        "denoise": denoise,
-        "size": size,
-        "latent_route": latent_route,
-        "finalizer": finalizer,
-        "upscale": upscale,
-        "keep_regions": _regions_argument(
-            options.get("keep_regions", []), key="keep_regions"),
-        "keep_strength": _keep_strength_argument(options.get("keep_strength", 0.25)),
-        "cut": cut,
-    }
+    hires = options.get("hires")
+    if not (isinstance(hires, int) and not isinstance(hires, bool)):
+        raise ValueError(f"hires must be an integer, got {hires!r}")
+    if hires <= 0:
+        raise ValueError(f"hires must be at least 1, got {hires!r}")
+    denoise = (_denoise_argument(options["denoise"]) if "denoise" in options
+               else HIRES_DENOISE)
+    return {"method": method, "hires": hires, "denoise": denoise, "cut": cut}
 
 
 def deliver_arguments(options: Mapping) -> dict:

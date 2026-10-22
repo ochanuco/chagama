@@ -368,16 +368,16 @@ class ExecuteTest(unittest.TestCase):
                 redraw_services="redraw-services-sentinel")
             row = redraw_row(payload={
                 "generation_id": "gen-1",
-                "options": {"method": "canvas", "denoise": "keep", "size": 2048}})
+                "options": {"method": "hires", "hires": 2048, "denoise": 0.4}})
             result = execute(services, row)
             self.assertEqual(result, {
                 "generation_ids": ["g2"],
-                "resolved_options": {"method": "canvas", "denoise": 0.4,
-                                     "size": 2048}})
+                "resolved_options": {"method": "hires", "hires": 2048,
+                                     "denoise": 0.4}})
             generation_id, redraw_services, kwargs = calls[0]
             self.assertEqual(generation_id, "gen-1")
             self.assertEqual(redraw_services, "redraw-services-sentinel")
-            self.assertEqual(kwargs["method"], "canvas")
+            self.assertEqual(kwargs["method"], "hires")
             self.assertEqual(kwargs["request_id"], "req-6")
             self.assertEqual(kwargs["key_prefix"], "request:req-6")
             self.assertEqual(kwargs["denoise"], 0.4)
@@ -393,8 +393,11 @@ class ExecuteTest(unittest.TestCase):
                     {"generation_id": "gen-1", "options": {}},
                     {"generation_id": "gen-1"},
                     {"generation_id": "gen-1",
-                     "options": {"method": "light", "scene": "moon", "size": 1}},
-                    {"options": {"method": "canvas"}}):
+                     "options": {"method": "hires", "hires": 2048, "size": 1}},
+                    {"generation_id": "gen-1", "options": {"method": "canvas"}},
+                    {"generation_id": "gen-1",
+                     "options": {"method": "light", "scene": "moon"}},
+                    {"options": {"method": "hires", "hires": 2048}}):
                 with self.subTest(payload=payload), self.assertRaises(SystemExit):
                     execute(services, redraw_row(payload=payload))
             self.assertEqual(calls, [])
@@ -452,18 +455,6 @@ class ExecuteTest(unittest.TestCase):
             })
             result = execute(services, row)
             self.assertEqual(result["generation_ids"], ["g2"])
-
-    def test_a_word_unknown_to_the_source_recipe_fails_the_request(self):
-        with tempfile.TemporaryDirectory() as directory:
-            services = make_services(
-                directory, ManagementFake(),
-                redraw=lambda *a, **k: (_ for _ in ()).throw(
-                    AssertionError("redraw must not run")))
-            row = redraw_row(payload={
-                "generation_id": "gen-1",
-                "options": {"method": "canvas", "denoise": "redraw"}})
-            with self.assertRaisesRegex(SystemExit, "denoise"):
-                execute(services, row)
 
     def test_dof_kind_maps_options_and_uses_the_dof_services(self):
         with tempfile.TemporaryDirectory() as directory:

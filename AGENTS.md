@@ -38,11 +38,8 @@ the exact prompt can be inspected with `get_catalog_pose` on the MCP or
    (`yukari/delivery_style.py`): the WebUI button and an
    option-less `deliver_generation` both deliver this way.
 
-An Illustrious redraw (`redraw` method `canvas`: hassaku-il-v22 at 2560,
-denoise 0.4) is a per-request opt-in the user names, and it makes a new
-picture that is delivered by a separate `deliver` request. A defect in a
-redraw is fixed by redrawing again with `denoise` or `keep_regions` before it
-is delivered.
+A `redraw` (method `hires`) is a per-request opt-in the user names, and it
+makes a new picture that is delivered by a separate `deliver` request.
 
 Which model draws, which model redraws, and whether a picture is redrawn
 at all are the user's decisions. To change one: ask, then change the recipe default
@@ -221,9 +218,8 @@ derive_request        from a rated generation: same recipe, parameters and
                       appended or replaced). A delivered pick resolves to the
                       raw render it came from. Semantic summary is required.
                       → human rates on chimera →
-redraw_generation     optional: the pick redrawn whole -- on a bigger canvas
-                      (`canvas`), re-rendered larger (`hires`) or relit
-                      (`light`); a new picture on the green key.
+redraw_generation     optional: the pick re-rendered larger (`hires`); a new
+                      picture on the green key.
 deliver_generation    the pick, delivered: one ComfyUI graph that cuts a matte
                       and composites the backdrop and outline bands; recorded
                       as a request that refines the source, with its layers
