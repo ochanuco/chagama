@@ -20,6 +20,7 @@ from ..application.lens import LensServices
 from ..application.photo import PhotoServices
 from ..application.stage import StageServices
 from ..application.redraw import RedrawServices
+from ..application.reference import ReferenceServices
 from ..application.generate import GenerateServices, request_graph
 from ..application.work import WorkServices, work
 from ..domain.generation.fingerprint import prompt_fingerprint
@@ -45,7 +46,7 @@ DRAIN_FILE = "worker/drain"
 # Must track the `work` subparser's own defaults in interfaces/cli.py by
 # hand -- no single source both can read.
 DEFAULT_KINDS = ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-                 "lighting", "saturation")
+                 "lighting", "saturation", "reference")
 
 
 def default_worker_id() -> str:
@@ -175,6 +176,27 @@ def build_stage_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifie
     )
 
 
+def build_reference_services(chimera: ChimeraClient, comfyui: ComfyUIClient,
+                             emit: Callable[[str], None] = print) -> ReferenceServices:
+    def load_tagger():
+        from ..infrastructure.reference.anima_tagger import load_tagger
+        return load_tagger()
+
+    def load_verifier():
+        from ..infrastructure.reference.d1 import load_verifier
+        return load_verifier()
+
+    return ReferenceServices(
+        management=chimera,
+        fetch_image=chimera.fetch_reference_image,
+        delete_image=chimera.delete_reference_image,
+        free_comfyui=comfyui.free,
+        load_tagger=load_tagger,
+        load_verifier=load_verifier,
+        emit=emit,
+    )
+
+
 def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier: object,
                         repository: Path, repository_metadata, *, worker_id: str,
                         kinds: tuple[str, ...], hub: bool = True,
@@ -219,6 +241,7 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
             chimera, comfyui, notifier, repository, repository_metadata),
         stage_services=build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata),
+        reference_services=build_reference_services(chimera, comfyui, emit),
         git_metadata=repository_metadata,
         worker_id=worker_id,
         kinds=kinds,

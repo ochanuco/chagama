@@ -37,6 +37,7 @@ Options, defaults and ranges live here:
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 | `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
+| `reference` | `{recipe, seed?}`, the picture uploaded on chimera | read the picture into tags and queue one `generate` that draws them; never renders itself |
 
 A `finalize`, `repair` or `masked_redraw` row is refused. `redraw` leaves a
 picture on the green key; `deliver` makes the delivered picture, and
@@ -285,3 +286,15 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   generation.
 - `experiment.overrides.patches` (from a chimera ExperimentRun) uses the
   same vocabulary and is exclusive with `generation.patches`.
+
+### Reference requests
+
+- The worker fetches the picture, `/free`s ComfyUI, runs the Anima Tagger
+  then d1 on the GPU, unloads both, and posts a `generate`
+  (`created_by: system`, key `reference:{id}`). A 404 for the picture
+  re-queues the row while attempts remain; the picture is deleted only
+  after the generate is queued.
+- Tag choice, the pose table (`full body` → `stand`, waist-to-knee →
+  `coffee`, else `bust`) and the part patches are `domain/yukari/reference.py`.
+- Needs `timm`, `transformers>=5.14` and the `reference/` models of
+  `manifests/worker-models.toml`; without them only reference rows fail.

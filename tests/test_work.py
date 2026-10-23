@@ -609,15 +609,15 @@ class ExecuteTest(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "no longer supported"):
                 execute(services, finalize_row())
 
-    def test_the_default_kinds_are_exactly_the_nine(self):
+    def test_the_default_kinds_are_exactly_the_ten(self):
         self.assertEqual(
             WorkServices.__dataclass_fields__["kinds"].default,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation"))
+             "lighting", "saturation", "reference"))
         self.assertEqual(
             DEFAULT_KINDS,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation"))
+             "lighting", "saturation", "reference"))
 
     def test_unsupported_kind_fails(self):
         with tempfile.TemporaryDirectory() as directory:

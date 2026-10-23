@@ -126,6 +126,30 @@ class ChimeraClient:
         with urllib.request.urlopen(request, timeout=120) as response:
             return response.read()
 
+    def _reference_image_request(self, request_id: str, method: str
+                                 ) -> urllib.request.Request:
+        return urllib.request.Request(
+            f"{self.base_url}/api/v1/requests/"
+            f"{urllib.parse.quote(request_id, safe='')}/reference-image",
+            headers={**self.credentials(), "User-Agent": USER_AGENT}, method=method)
+
+    def fetch_reference_image(self, request_id: str) -> bytes | None:
+        """The uploaded reference picture, or None when chimera holds none."""
+        try:
+            with urllib.request.urlopen(
+                    self._reference_image_request(request_id, "GET"),
+                    timeout=120) as response:
+                return response.read()
+        except urllib.error.HTTPError as error:
+            if error.code == 404:
+                return None
+            raise
+
+    def delete_reference_image(self, request_id: str) -> None:
+        with urllib.request.urlopen(
+                self._reference_image_request(request_id, "DELETE"), timeout=60):
+            pass
+
     def fetch_asset(self, generation_id: str, role: str) -> bytes | None:
         """The stored bytes of the generation's asset, or None when it has none."""
         request = urllib.request.Request(
