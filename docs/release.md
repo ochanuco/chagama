@@ -67,8 +67,9 @@ the release is published and that the asset's sha256 equals the API digest,
 and extracts it to `C:\apps\chagama\releases\<version>\`. Then:
 
 1. `deploy\prepare.ps1` of the new release runs while ComfyUI keeps serving:
-   it fetches the pinned ComfyUI tag and node commits (no checkout) and
-   prefetches the wd-tagger and matting models.
+   it fetches the pinned ComfyUI tag and node commits (no checkout),
+   prefetches the wd-tagger and matting models, and builds the reference
+   analysis env (below) when this release's requirements have none yet.
 2. `deploy\stop.ps1` of the running release drains the worker, stops the
    `comfyui` task and kills leftovers.
 3. The junction `C:\apps\chagama\current` flips to the new release and the
@@ -115,9 +116,25 @@ request `running` until it is handed back to the queue.
 
 The claim loop runs in ComfyUI's embedded Python, so what it imports has to be
 installed there. `run-comfyui.ps1` adds only the gap -- `websockets`, and
-`onnxruntime`, `pymatting` and `timm` (without its dependencies) when missing
--- because numpy, Pillow, OpenCV, SciPy and torch already come with the box and
-reinstalling them into a working ComfyUI is how it stops working.
+`onnxruntime` and `pymatting` when missing -- because numpy, Pillow, OpenCV,
+SciPy and torch already come with the box and reinstalling them into a working
+ComfyUI is how it stops working.
+
+The `reference` kind's Anima Tagger and d1 need `transformers>=5.14` and
+`timm`, which ComfyUI's Python is not given. They run in a subprocess under
+their own env, `data\reference-env\<key>`, where `<key>` hashes
+`scripts/worker/reference-env/requirements*.txt`, so each release finds the
+env built for its pins. `scripts/worker/reference-env.ps1` builds it with uv
+(found on `PATH`, in `UV`, or as `"uv"` in `worker.json`): first a venv over
+ComfyUI's Python with `--system-site-packages`, which borrows its CUDA torch
+and adds the pinned packages; when that venv cannot import them with CUDA, a
+standalone Python 3.12 venv with the pinned cu130 torch wheel (about 5 GB on
+disk). It marks the env `ready` only after that import check passes; until
+then reference rows fail and every other kind runs. The deploy's prepare
+step runs it, and the `reference-env` op reruns it. Older envs are not
+pruned. The worker sends ComfyUI `/free` before the subprocess loads the
+models; d1 in bf16 takes about 7 GB of VRAM, the tagger under 1 GB, and both
+leave with the subprocess.
 
 `scripts/worker/run-comfyui.ps1` is the action of the `comfyui` scheduled
 task. On every start it:

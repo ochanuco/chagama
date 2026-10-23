@@ -290,11 +290,11 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 ### Reference requests
 
 - The worker fetches the picture, `/free`s ComfyUI, runs the Anima Tagger
-  then d1 on the GPU, unloads both, and posts a `generate`
+  then d1 on the GPU in a subprocess, and posts a `generate`
   (`created_by: system`, key `reference:{id}`). A 404 for the picture
   re-queues the row while attempts remain; the picture is deleted only
   after the generate is queued.
 - Tag choice, the pose table (`full body` or a whole-body posture → `stand`,
   waist-to-knee → `coffee`, else `bust`) and the patches: `domain/yukari/reference.py`.
-- Needs `timm`, `transformers>=5.14` and the `reference/` models of
-  `manifests/worker-models.toml`; without them only reference rows fail.
+- The analysis runs in the reference env (`docs/release.md`) with the
+  `reference/` models of `worker-models.toml`; without them only reference rows fail.

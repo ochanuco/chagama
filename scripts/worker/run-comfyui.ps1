@@ -37,7 +37,7 @@ foreach ($pack in Get-ChildItem (Join-Path $release "comfy_nodes") -Directory) {
 
 # Converge
 $manifest = Join-Path $release "manifests\worker-nodes.toml"
-$pipSteps = "websockets>=12;onnxruntime-if-missing;pymatting-if-missing;timm-if-missing"
+$pipSteps = "websockets>=12;onnxruntime-if-missing;pymatting-if-missing"
 $sha = [System.Security.Cryptography.SHA256]::Create()
 $bytes = [System.IO.File]::ReadAllBytes($manifest) + [System.Text.Encoding]::UTF8.GetBytes($pipSteps)
 $stamp = ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace("-", "")
@@ -65,13 +65,6 @@ if ($applied -eq $stamp) {
     if ($LASTEXITCODE) {
         & $EmbeddedPython -m pip install pymatting 2>&1 | Out-Host
         if ($LASTEXITCODE) { "converge: pip pymatting failed"; Stop-Launcher $LASTEXITCODE }
-    }
-    # The reference kind's tagger; without it only reference requests fail.
-    # --no-deps: torch, torchvision, safetensors and pyyaml come with ComfyUI.
-    & $EmbeddedPython -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('timm') is None)"
-    if ($LASTEXITCODE) {
-        & $EmbeddedPython -m pip install --no-deps timm 2>&1 | Out-Host
-        if ($LASTEXITCODE) { "converge: pip timm failed, reference requests will fail" }
     }
     Set-Content -Path $stampFile -Value $stamp -Encoding ASCII
     "converge: done"

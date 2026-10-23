@@ -1,9 +1,9 @@
 """The `reference` kind: read an uploaded picture into tags and queue the
 generate that draws them on the recipe.
 
-The worker never draws here. It frees ComfyUI's models, runs the Anima Tagger
-and d1 one after the other on the GPU, releases both, then queues an ordinary
-generate whose patches carry the picked tags.
+The worker never draws here. It frees ComfyUI's models, has the reference env
+run the Anima Tagger and d1 on the GPU in a subprocess, then queues an
+ordinary generate whose patches carry the picked tags.
 """
 
 from __future__ import annotations
@@ -11,9 +11,8 @@ from __future__ import annotations
 import io
 import random
 import time
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from typing import Protocol
 
 from PIL import Image
 
@@ -31,54 +30,25 @@ class ReferenceImageMissing(Exception):
     """chimera has no picture for this request (yet, or any more)."""
 
 
-class TagResult(Protocol):
-    scores: Mapping[str, float]
-    kept: Mapping[str, float]
-    groups: Sequence
-
-
-class Tagger(Protocol):
-    def predict(self, image: Image.Image) -> TagResult: ...
-    def close(self) -> None: ...
-
-
-class Verifier(Protocol):
-    def verify(self, image: Image.Image, tags: Sequence[str]) -> dict[str, float]: ...
-    def close(self) -> None: ...
-
-
 @dataclass(frozen=True)
 class ReferenceServices:
     management: Management
     fetch_image: Callable[[str], bytes | None]
     delete_image: Callable[[str], None]
     free_comfyui: Callable[[], None]
-    load_tagger: Callable[[], Tagger]
-    load_verifier: Callable[[], Verifier]
+    analyze: Callable[[bytes], Mapping]
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     random_seed: Callable[[], int] = field(
         default=lambda: random.randrange(SEED_LIMIT))
 
 
-def read_tags(image: Image.Image, services: ReferenceServices) -> rules.Plan:
+def read_tags(image: bytes, services: ReferenceServices) -> rules.Plan:
     services.free_comfyui()
     services.sleep(FREE_SETTLE_SECONDS)
-    tagger = services.load_tagger()
-    try:
-        tagging = tagger.predict(image)
-    finally:
-        tagger.close()
-    groups = {group.name: list(group.tags) for group in tagging.groups}
-    asked = rules.questions(tagging.scores, tagging.kept, groups)
-    verdicts: dict[str, float] = {}
-    if asked:
-        verifier = services.load_verifier()
-        try:
-            verdicts = verifier.verify(image, asked)
-        finally:
-            verifier.close()
-    return rules.plan(tagging.scores, tagging.kept, groups, verdicts)
+    found = services.analyze(image)
+    return rules.plan(found["scores"], found["kept"], found["groups"],
+                      found["verdicts"])
 
 
 def generate_request(plan: rules.Plan, *, seed: int, source: str) -> dict:
@@ -108,9 +78,9 @@ def reference(row: Mapping, services: ReferenceServices) -> dict:
     data = services.fetch_image(request_id)
     if data is None:
         raise ReferenceImageMissing(f"no reference image for request {request_id}")
-    image = Image.open(io.BytesIO(data))
-    image.load()
-    plan = read_tags(image.convert("RGB"), services)
+    with Image.open(io.BytesIO(data)) as image:
+        image.verify()
+    plan = read_tags(data, services)
     body = generate_request(plan, seed=seed, source=row.get("short_id") or request_id)
     validate_request(body)
     queued = {"kind": "generate", "created_by": "system",
