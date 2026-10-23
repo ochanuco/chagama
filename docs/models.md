@@ -14,6 +14,7 @@ The code names the files; this is where to look.
 | Stage 1 | `diffusion_models/silvermoonmixAnimaEvolved_v2329BTurbo.safetensors` (SilvermoonMix-Anima-Evolved v2.3_2.9B_Turbo) + `qwen_3_06b_base` + `qwen_image_vae` (the manifest fetches all three) | `domain/yukari/prompt_style.py` `MODEL`, `GUIDED_STEPS` |
 | Stage 1 reserve, opt-in by `render.model` patch | `diffusion_models/fnMomentAnimaTurbo_v20.safetensors` | — |
 | Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | Comfy-Org Pixal3D, TRELLIS.2, MoGe and BiRefNet files | `manifests/worker-models.toml` |
+| Reading a `reference` picture into tags | `reference/anima-tagger` (sorryhyun/anima-tagger head), `reference/caformer_b36.dbv4-full` (its GPL-3.0 trunk, gated) and `reference/d1-3B` (LiquidAI d1 verifier, LFM Open License v1.0) | `infrastructure/reference/models.py` |
 
 `silvermoonmixAnimaEvolved_v2329BTurbo` is sampled with `render.guided_steps`:
 the leading steps at the recipe's own CFG, the rest at CFG 1.0 off the same

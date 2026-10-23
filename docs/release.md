@@ -115,9 +115,9 @@ request `running` until it is handed back to the queue.
 
 The claim loop runs in ComfyUI's embedded Python, so what it imports has to be
 installed there. `run-comfyui.ps1` adds only the gap -- `websockets`, and
-`onnxruntime` and `pymatting` when missing -- because numpy, Pillow, OpenCV and
-SciPy already come with the box and reinstalling them into a working ComfyUI
-is how it stops working.
+`onnxruntime`, `pymatting` and `timm` (without its dependencies) when missing
+-- because numpy, Pillow, OpenCV, SciPy and torch already come with the box and
+reinstalling them into a working ComfyUI is how it stops working.
 
 `scripts/worker/run-comfyui.ps1` is the action of the `comfyui` scheduled
 task. On every start it:

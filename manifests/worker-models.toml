@@ -77,3 +77,140 @@ dest = "vae/qwen_image_vae.safetensors"
 repo = "circlestone-labs/Anima"
 file = "split_files/vae/qwen_image_vae.safetensors"
 revision = "f973fc41ec7545364ac9776c2440285f43ff2a30"
+
+# The reference kind: the Anima Tagger head, its caformer trunk (GPL-3.0,
+# gated: the box's HF_TOKEN must belong to an account that accepted its terms)
+# and the d1 verifier with its remote code. Read in place by
+# src/chagama/infrastructure/reference/; never redistributed.
+
+[[model]]
+dest = "reference/anima-tagger/config.json"
+repo = "sorryhyun/anima-tagger"
+file = "config.json"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/anima-tagger/groups.yaml"
+repo = "sorryhyun/anima-tagger"
+file = "groups.yaml"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/anima-tagger/rules.yaml"
+repo = "sorryhyun/anima-tagger"
+file = "rules.yaml"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/anima-tagger/sidecar.json"
+repo = "sorryhyun/anima-tagger"
+file = "sidecar.json"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/anima-tagger/sidecar.safetensors"
+repo = "sorryhyun/anima-tagger"
+file = "sidecar.safetensors"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/anima-tagger/thresholds.safetensors"
+repo = "sorryhyun/anima-tagger"
+file = "thresholds.safetensors"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/anima-tagger/vocab.json"
+repo = "sorryhyun/anima-tagger"
+file = "vocab.json"
+revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+
+[[model]]
+dest = "reference/caformer_b36.dbv4-full/meta.json"
+repo = "animetimm/caformer_b36.dbv4-full"
+file = "meta.json"
+revision = "aac0699c88553d50eb673b41a81d8222936b22b2"
+
+[[model]]
+dest = "reference/caformer_b36.dbv4-full/model.safetensors"
+repo = "animetimm/caformer_b36.dbv4-full"
+file = "model.safetensors"
+revision = "aac0699c88553d50eb673b41a81d8222936b22b2"
+
+[[model]]
+dest = "reference/caformer_b36.dbv4-full/selected_tags.csv"
+repo = "animetimm/caformer_b36.dbv4-full"
+file = "selected_tags.csv"
+revision = "aac0699c88553d50eb673b41a81d8222936b22b2"
+
+[[model]]
+dest = "reference/d1-3B/api.py"
+repo = "LiquidAI/d1-3B"
+file = "api.py"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/chat_template.jinja"
+repo = "LiquidAI/d1-3B"
+file = "chat_template.jinja"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/config.json"
+repo = "LiquidAI/d1-3B"
+file = "config.json"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/hybrid.py"
+repo = "LiquidAI/d1-3B"
+file = "hybrid.py"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/lfm2_vl.py"
+repo = "LiquidAI/d1-3B"
+file = "lfm2_vl.py"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/model.safetensors"
+repo = "LiquidAI/d1-3B"
+file = "model.safetensors"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/modeling_d1.py"
+repo = "LiquidAI/d1-3B"
+file = "modeling_d1.py"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/processor_config.json"
+repo = "LiquidAI/d1-3B"
+file = "processor_config.json"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/prompt.py"
+repo = "LiquidAI/d1-3B"
+file = "prompt.py"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/runner.py"
+repo = "LiquidAI/d1-3B"
+file = "runner.py"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/tokenizer.json"
+repo = "LiquidAI/d1-3B"
+file = "tokenizer.json"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
+
+[[model]]
+dest = "reference/d1-3B/tokenizer_config.json"
+repo = "LiquidAI/d1-3B"
+file = "tokenizer_config.json"
+revision = "051bcc464b01b9f92942b364d9586b0ef5912432"
