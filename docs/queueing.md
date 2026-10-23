@@ -294,7 +294,7 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   (`created_by: system`, key `reference:{id}`). A 404 for the picture
   re-queues the row while attempts remain; the picture is deleted only
   after the generate is queued.
-- Tag choice, the pose table (`full body` → `stand`, waist-to-knee →
-  `coffee`, else `bust`) and the part patches are `domain/yukari/reference.py`.
+- Tag choice, the pose table (`full body` or a whole-body posture → `stand`,
+  waist-to-knee → `coffee`, else `bust`) and the patches: `domain/yukari/reference.py`.
 - Needs `timm`, `transformers>=5.14` and the `reference/` models of
   `manifests/worker-models.toml`; without them only reference rows fail.
