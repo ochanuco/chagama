@@ -60,6 +60,15 @@ class ComfyUIClient:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.loads(response.read())
 
+    def free(self) -> None:
+        """Ask ComfyUI to unload its models and release their memory."""
+        request = urllib.request.Request(
+            self.base_url + "/free",
+            data=json.dumps({"unload_models": True, "free_memory": True}).encode(),
+            headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(request, timeout=30):
+            pass
+
     def submit(self, graph: dict, purpose: str = "render") -> str:
         try:
             graph = label_roles(graph)

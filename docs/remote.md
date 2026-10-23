@@ -77,7 +77,7 @@ entry's `revision` is a commit SHA, which Renovate bumps in one weekly
 `Hugging Face models` PR. A `<dest>.sha256` sidecar records the content, so a
 fixed `dest` is overwritten when the pinned upstream file changes, even at the
 same size. `HF_TOKEN`, read from `hf-token` in the config directory, is needed
-only for a gated repo; `CIVITAI_TOKEN`, read from `civitai-token` there, is
+only for a gated repo (the caformer trunk under `reference/` is one: the token's account must have accepted its terms on Hugging Face); `CIVITAI_TOKEN`, read from `civitai-token` there, is
 needed for every Civitai download. The rest of this section is for files outside that manifest.
 
 They have to be on that machine's disk, and nothing in the ComfyUI HTTP API can

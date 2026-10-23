@@ -23,6 +23,7 @@ from .lens import LensServices, lens
 from .photo import PhotoServices, photo
 from .stage import StageServices, lighting, saturation, stage
 from .redraw import RedrawServices, redraw
+from .reference import ReferenceImageMissing, ReferenceServices, reference
 from .request_options import (
     deliver_arguments,
     dof_arguments,
@@ -61,6 +62,7 @@ class WorkServices:
     stage_services: StageServices
     git_metadata: Callable[[], dict]
     worker_id: str
+    reference_services: ReferenceServices | None = None
     generate: Callable[..., dict | None] = generate
     deliver: Callable[..., dict] = deliver
     redraw: Callable[..., dict] = redraw
@@ -70,11 +72,13 @@ class WorkServices:
     stage: Callable[..., dict] = stage
     lighting: Callable[..., dict] = lighting
     saturation: Callable[..., dict] = saturation
+    reference: Callable[..., dict] = reference
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
     kinds: tuple[str, ...] = ("generate", "redraw", "deliver", "dof", "lens",
-                              "photo", "stage", "lighting", "saturation")
+                              "photo", "stage", "lighting", "saturation",
+                              "reference")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
@@ -86,6 +90,10 @@ class WorkServices:
     ping_interval: float = 30
     clock: Callable[[], float] = time.monotonic
     timings: AttemptTimings | None = None
+
+
+class ReleaseRequest(Exception):
+    """Hand the row back to the queue instead of failing it."""
 
 
 def _request_path(output_root: Path, request_id: object) -> Path:
@@ -269,6 +277,18 @@ def _execute_saturation(services: WorkServices, row: Mapping) -> dict:
     return result
 
 
+def _execute_reference(services: WorkServices, row: Mapping) -> dict:
+    if services.reference_services is None:
+        raise SystemExit("this worker has no reference services")
+    try:
+        return services.reference(row, services.reference_services)
+    except ReferenceImageMissing as error:
+        # chimera writes the row before the image, so a fresh claim can beat it.
+        if (row.get("attempt") or 0) < (row.get("max_attempts") or 0):
+            raise ReleaseRequest(str(error)) from error
+        raise SystemExit(str(error)) from error
+
+
 def execute(services: WorkServices, row: Mapping) -> dict:
     ref = row.get("recipe_ref")
     if ref != services.git_metadata().get("branch"):
@@ -292,6 +312,8 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_lighting(services, row)
     if kind == "saturation":
         return _execute_saturation(services, row)
+    if kind == "reference":
+        return _execute_reference(services, row)
     if kind == "finalize":
         raise SystemExit(
             "finalize requests are no longer supported; use redraw and deliver")
@@ -360,6 +382,10 @@ def work_once(services: WorkServices, *, dry_run: bool = False,
         finally:
             if relay is not None:
                 relay.current = None
+    if isinstance(failure, ReleaseRequest):
+        _report(services, row["id"], {"status": "queued"})
+        services.emit(f"request {row['id']} released: {failure}")
+        return True
     if failure is not None:
         _report(services, row["id"], {"status": "failed", "error": str(failure)})
         _send_timings(services, row["id"], "failed")

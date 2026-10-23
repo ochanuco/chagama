@@ -266,7 +266,9 @@ tracked file.
   Mac 側の入口は MCP（`derive_request` / `redraw_generation` /
   `deliver_generation` / `create_request`）か `POST /api/v1/requests`。
   semantic 判断（prompt 組み立て、reference の意味付け、検品）は呼び出し元
-  エージェントの仕事で、chimera と worker は実行と記録だけを担う。
+  エージェントの仕事で、chimera と worker は実行と記録だけを担う。例外は
+  `reference` kind で、worker が参考画像のタグから pose と part patch を組み
+  （`domain/yukari/reference.py`）、通常の generate として積む。
 - ComfyUI `/prompt` への直 POST は禁止。レシピが組めない graph は
   `create_request` の payload に `generation.graph` として入れて渡す（seed と
   SaveImage prefix は job ごとに worker が差し替える）。投稿した graph JSON は
