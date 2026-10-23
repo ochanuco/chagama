@@ -177,22 +177,21 @@ def build_stage_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifie
 
 
 def build_reference_services(chimera: ChimeraClient, comfyui: ComfyUIClient,
+                             repository: Path,
                              emit: Callable[[str], None] = print) -> ReferenceServices:
-    def load_tagger():
-        from ..infrastructure.reference.anima_tagger import load_tagger
-        return load_tagger()
+    def analyze(image: bytes) -> dict:
+        from ..infrastructure.reference.env import env_python, run_analysis
+        from ..infrastructure.reference.models import models_dir
 
-    def load_verifier():
-        from ..infrastructure.reference.d1 import load_verifier
-        return load_verifier()
+        return run_analysis(env_python(repository), Path(__file__).resolve().parents[2],
+                            image, models_dir=models_dir())
 
     return ReferenceServices(
         management=chimera,
         fetch_image=chimera.fetch_reference_image,
         delete_image=chimera.delete_reference_image,
         free_comfyui=comfyui.free,
-        load_tagger=load_tagger,
-        load_verifier=load_verifier,
+        analyze=analyze,
         emit=emit,
     )
 
@@ -241,7 +240,7 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
             chimera, comfyui, notifier, repository, repository_metadata),
         stage_services=build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata),
-        reference_services=build_reference_services(chimera, comfyui, emit),
+        reference_services=build_reference_services(chimera, comfyui, repository, emit),
         git_metadata=repository_metadata,
         worker_id=worker_id,
         kinds=kinds,

@@ -17,6 +17,7 @@ from chagama.application.reference import (
     reference,
 )
 from chagama.application.work import work_once
+from chagama.infrastructure.reference.analyze import analyze
 from chagama.infrastructure.reference.anima_tagger import TagGroup
 from test_work import ManagementFake, make_services
 
@@ -82,8 +83,8 @@ def make(chimera, log, image=...):
         fetch_image=lambda request_id: chimera.image if image is ... else image,
         delete_image=chimera.deleted.append,
         free_comfyui=lambda: log.append("free"),
-        load_tagger=lambda: FakeTagger(log),
-        load_verifier=lambda: FakeVerifier(log),
+        analyze=lambda data: analyze(Image.open(io.BytesIO(data)),
+                                     lambda: FakeTagger(log), lambda: FakeVerifier(log)),
         emit=lambda message: None,
         sleep=lambda seconds: log.append(("sleep", seconds)),
         random_seed=lambda: 42,
@@ -137,15 +138,26 @@ class ReferenceTest(unittest.TestCase):
         self.assertEqual(log, [])
         self.assertEqual(chimera.calls, [])
 
-    def test_a_tagger_failure_keeps_the_image(self):
+    def test_an_analysis_failure_keeps_the_image(self):
         chimera, log = Chimera(), []
-        services = dataclasses.replace(
-            make(chimera, log), load_tagger=lambda: (_ for _ in ()).throw(
-                RuntimeError("no timm")))
+
+        def broken(data):
+            raise RuntimeError("reference analysis exited 1: no timm")
+
+        services = dataclasses.replace(make(chimera, log), analyze=broken)
         with self.assertRaisesRegex(RuntimeError, "no timm"):
             reference(row(), services)
         self.assertEqual(chimera.deleted, [])
         self.assertEqual(chimera.calls, [])
+
+    def test_the_analysis_carries_only_candidate_scores(self):
+        found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
+                        lambda: FakeVerifier([]))
+        self.assertEqual(set(found), {"scores", "kept", "groups", "verdicts"})
+        self.assertEqual(set(found["groups"]), set(GROUPS))
+        self.assertIn("1girl", found["kept"])
+        self.assertNotIn("1girl", found["scores"])
+        json.dumps(found)
 
     def test_another_recipe_is_refused(self):
         with self.assertRaisesRegex(SystemExit, "recipe"):
