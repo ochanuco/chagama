@@ -23,6 +23,17 @@ PART_SOURCES = {
     "mouth": ("expression", "emotion"),
     "legwear": ("socks_stockings",),
 }
+# Gesture tags the tagger scores but groups.yaml leaves ungrouped.
+EXTRA_GESTURE = (
+    "hand between legs", "hands on own chest", "hand on own chest",
+    "hands on own face", "own hands together", "hand on own cheek", "head rest",
+    "arm up", "hand up", "leg up", "standing on one leg", "outstretched arm",
+    "reaching towards viewer", "incoming food", "knees up", "hugging own legs",
+    "leaning forward",
+)
+# Where she looks, not where the camera is: plain gesture tags, unweighted.
+GAZE = frozenset({"looking at viewer", "looking up", "looking down",
+                  "looking away", "looking to the side", "eye contact"})
 MIN_SCORE = 0.1
 MIN_VERDICT = 0.5
 FRAMING_WEIGHT = 1.3
@@ -47,6 +58,12 @@ SMILE_CONFLICTS = frozenset({"unamused", "expressionless"})
 FULL_BODY = frozenset({"full body"})
 KNEE_UP = frozenset({"cowboy shot", "feet out of frame", "foot out of frame",
                      "cropped legs"})
+CLOSE = frozenset({"upper body", "portrait", "close-up"})
+WHOLE_BODY_POSTURE = frozenset({
+    "standing", "sitting", "kneeling", "squatting", "lying", "on back",
+    "on stomach", "leg up", "standing on one leg", "knees up", "crossed legs",
+    "seiza", "wariza", "indian style", "jumping", "walking", "running",
+})
 FULL_BODY_POSE = "stand"
 KNEE_UP_POSE = "coffee"
 CLOSE_POSE = "bust"
@@ -68,7 +85,9 @@ def candidates(groups: Mapping[str, Sequence[str]]) -> dict[str, str]:
         for source in sources:
             for tag in groups.get(source, ()):
                 if tag not in DENIED:
-                    part_of[tag] = part
+                    part_of[tag] = "gesture" if tag in GAZE else part
+    for tag in EXTRA_GESTURE:
+        part_of.setdefault(tag, "gesture")
     return part_of
 
 
@@ -96,11 +115,13 @@ def extract(scores: Mapping[str, float], kept: Collection[str],
     return accepted
 
 
-def choose_pose(framing: Collection[str]) -> str:
+def choose_pose(framing: Collection[str], gesture: Collection[str] = ()) -> str:
     if FULL_BODY & set(framing):
         return FULL_BODY_POSE
     if KNEE_UP & set(framing):
         return KNEE_UP_POSE
+    if not CLOSE & set(framing) and WHOLE_BODY_POSTURE & set(gesture):
+        return FULL_BODY_POSE
     return CLOSE_POSE
 
 
@@ -140,7 +161,7 @@ def plan(scores: Mapping[str, float], kept: Collection[str],
          groups: Mapping[str, Sequence[str]],
          verdicts: Mapping[str, float]) -> Plan:
     accepted = extract(scores, kept, groups, verdicts)
-    pose = choose_pose(accepted["framing_tags"])
+    pose = choose_pose(accepted["framing_tags"], accepted["gesture"])
     if not POSES[pose].legwear:
         accepted["legwear"] = []
     current = dict(positive_parts(pose))

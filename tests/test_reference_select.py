@@ -33,27 +33,29 @@ def plan_for(stem: str) -> reference.Plan:
 
 EXPECTED = {
     "ref01": ("bust", {
-        "framing_tags": ["(looking at viewer:1.3)", "(upper body:1.3)"],
-        "gesture": ["head tilt"],
+        "framing_tags": ["(upper body:1.3)"],
+        "gesture": ["looking at viewer", "hand on own cheek", "head rest", "head tilt"],
         "mouth": ["open mouth", "smile", "blush", ":d"]}),
     "ref02": ("coffee", {
-        "framing_tags": ["(looking at viewer:1.3)", "(feet out of frame:1.3)",
-                         "(from above:1.3)", "(looking up:1.3)"],
-        "gesture": ["sitting", "between legs"],
+        "framing_tags": ["(feet out of frame:1.3)", "(from above:1.3)"],
+        "gesture": ["looking at viewer", "sitting", "between legs",
+                    "hand between legs", "looking up"],
         "mouth": ["smile", "closed mouth", "blush", "light blush", "light smile"],
         "legwear": ["pantyhose", "black pantyhose"]}),
     "ref03": ("stand", {
-        "framing_tags": ["(looking at viewer:1.3)", "(full body:1.3)"],
-        "gesture": ["sitting", "knees up"],
+        "framing_tags": ["(full body:1.3)"],
+        "gesture": ["looking at viewer", "sitting", "knees up"],
         "mouth": ["blush"],
         "legwear": ["thighhighs", "black thighhighs"]}),
-    "ref04": ("bust", {
-        "framing_tags": ["(looking at viewer:1.3)"],
-        "gesture": ["standing", "standing on one leg", "hand up", "arm up", "leg up"],
-        "mouth": ["one eye closed", "smile", "blush", "closed mouth"]}),
+    "ref04": ("stand", {
+        "gesture": ["looking at viewer", "standing", "standing on one leg",
+                    "hand up", "arm up", "leg up"],
+        "mouth": ["one eye closed", "smile", "blush", "closed mouth"],
+        "legwear": ["thighhighs", "black thighhighs"]}),
     "ref05": ("coffee", {
-        "framing_tags": ["(looking at viewer:1.3)", "(cowboy shot:1.3)"],
-        "gesture": ["standing", "legs together"]}),
+        "framing_tags": ["(cowboy shot:1.3)"],
+        "gesture": ["hands on own chest", "looking at viewer", "standing",
+                    "legs together"]}),
 }
 
 
@@ -93,11 +95,16 @@ class PinnedPicturesTest(unittest.TestCase):
                 self.assertFalse(used & negative)
 
     def test_a_smile_clears_the_cold_eyes(self):
-        result = plan_for("ref04")
+        result = plan_for("ref01")
         spec = apply_patches(render_spec("bust", 1, "t"), parse_patches(result.patches))
         eyes = dict(spec.positive_parts)["eye_quality"]
         self.assertEqual(eyes, "(half-closed eyes:1.35), ")
         self.assertNotIn("(smile:1.2)", spec.prompts.negative)
+
+    def test_without_a_camera_tag_the_pose_keeps_its_framing(self):
+        result = plan_for("ref04")
+        self.assertFalse(any(patch["target"] == "prompt.positive.framing_tags"
+                             for patch in result.patches))
 
     def test_no_smile_keeps_the_cold_eyes(self):
         result = plan_for("ref05")
@@ -105,7 +112,7 @@ class PinnedPicturesTest(unittest.TestCase):
                              for patch in result.patches))
 
     def test_a_bust_drops_legwear(self):
-        data = picture("ref04")
+        data = picture("ref01")
         kept = data["kept"] + ["black pantyhose"]
         result = reference.plan(data["scores"], kept, GROUPS, data["verdicts"])
         self.assertEqual(result.pose, "bust")
@@ -120,13 +127,22 @@ class PinnedPicturesTest(unittest.TestCase):
 
 class RulesTest(unittest.TestCase):
     groups = {"pose": ["sitting", "on floor", "on couch"],
+              "viewpoint_angle": ["looking at viewer", "from above"],
               "framing": ["full body", "cowboy shot"],
               "expression": ["smile"], "hair_color": ["purple hair"]}
 
     def test_denied_and_ungrouped_tags_are_never_candidates(self):
-        self.assertEqual(reference.candidates(self.groups), {
+        found = reference.candidates(self.groups)
+        self.assertEqual({tag: part for tag, part in found.items()
+                          if tag not in reference.EXTRA_GESTURE}, {
             "sitting": "gesture", "full body": "framing_tags",
-            "cowboy shot": "framing_tags", "smile": "mouth"})
+            "cowboy shot": "framing_tags", "smile": "mouth",
+            "looking at viewer": "gesture", "from above": "framing_tags"})
+
+    def test_listed_ungrouped_gestures_are_candidates(self):
+        found = reference.candidates(self.groups)
+        self.assertEqual(found["hand between legs"], "gesture")
+        self.assertEqual(found["hands on own chest"], "gesture")
 
     def test_acceptance_needs_kept_or_score_and_verdict(self):
         scores = {"sitting": 0.3, "smile": 0.3, "cowboy shot": 0.05}
@@ -140,8 +156,13 @@ class RulesTest(unittest.TestCase):
     def test_pose_follows_the_framing(self):
         self.assertEqual(reference.choose_pose({"full body", "cowboy shot"}), "stand")
         self.assertEqual(reference.choose_pose({"feet out of frame"}), "coffee")
-        self.assertEqual(reference.choose_pose({"upper body"}), "bust")
+        self.assertEqual(reference.choose_pose({"upper body"}, {"sitting"}), "bust")
         self.assertEqual(reference.choose_pose(set()), "bust")
+
+    def test_a_whole_body_posture_picks_stand_when_framing_is_silent(self):
+        self.assertEqual(reference.choose_pose(set(), {"leg up"}), "stand")
+        self.assertEqual(reference.choose_pose({"from above"}, {"sitting"}), "stand")
+        self.assertEqual(reference.choose_pose(set(), {"head tilt"}), "bust")
 
     def test_an_empty_part_is_filled_by_append(self):
         data = picture("ref05")
