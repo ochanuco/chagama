@@ -514,7 +514,7 @@ def main(argv: list[str] | None = None) -> None:
                                  args.legwear, args.legwear_state,
                                  args.angle, args.framing),
             "negative": negative(args.pose, args.costume, args.expression,
-                                 args.legwear, args.legwear_state),
+                                 args.legwear, args.legwear_state, args.framing),
         }
         if args.json:
             print(json.dumps(prompts, ensure_ascii=False, indent=2))

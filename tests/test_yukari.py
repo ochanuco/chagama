@@ -1150,6 +1150,22 @@ class AngleFramingOverrideTest(unittest.TestCase):
         spec = render_spec("stand", 7, "p", framing="bust")
         self.assertEqual((spec.width, spec.height), (1280, 2048))
 
+    def test_framing_drops_the_pose_negative_shot_bans(self):
+        default = negative("stand")
+        self.assertIn("(cowboy shot:1.2), (upper body:1.2), ", default)
+        overridden = negative("stand", framing="cowboy")
+        self.assertEqual(
+            overridden,
+            default.replace("(cowboy shot:1.2), (upper body:1.2), ", ""))
+        self.assertEqual(render_spec("stand", 7, "p", framing="cowboy")
+                         .prompts.negative, overridden)
+
+    def test_framing_equal_to_the_pose_keeps_the_negative(self):
+        for pose, spec in POSES.items():
+            with self.subTest(pose=pose):
+                self.assertEqual(
+                    negative(pose, framing=spec.framing.value), negative(pose))
+
     def test_unknown_framing_is_rejected(self):
         with self.assertRaises(ValueError):
             positive("stand", framing="extreme")
