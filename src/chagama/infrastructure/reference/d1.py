@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gc
 import re
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -28,6 +29,19 @@ def questions(tags: Sequence[str]) -> dict[str, dict]:
             for tag in tags}
 
 
+def flash_attention_built(torch) -> bool:
+    check = getattr(torch.backends.cuda, "is_flash_attention_available", None)
+    return bool(check and check())
+
+
+def disable_fused_attention() -> None:
+    """Route d1's attention to its SDPA path instead of the flash kernels."""
+    for name, module in list(sys.modules.items()):
+        if name.startswith("transformers_modules.") and name.endswith(".hybrid") \
+                and hasattr(module, "_fused"):
+            module._fused = lambda q: False
+
+
 class D1Verifier:
     def __init__(self, model_dir: Path, device: str | None = None) -> None:
         try:
@@ -48,6 +62,8 @@ class D1Verifier:
         self._model = AutoModel.from_pretrained(
             str(model_dir), trust_remote_code=True, dtype=torch.bfloat16,
         ).to(self.device)
+        if not flash_attention_built(torch):
+            disable_fused_attention()
 
     def verify(self, image: Image.Image, tags: Sequence[str]) -> dict[str, float]:
         """P(yes) per tag, all asked in one pass over the picture."""
