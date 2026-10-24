@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from ..generation.models import HiresSpec, PromptPair, RenderSpec
 from ..generation.prompt_lint import tags as prompt_tags
-from .components import Component, Priority, Section, assemble, part_groups
+from .angles import angle_text
+from .components import (Component, Framing, Priority, Section, assemble,
+                         part_groups)
 from .costumes import (
     COSTUME_BAN,
     COSTUMES,
@@ -82,10 +84,16 @@ def _legwear_state(pose: Pose, legwear_state: str | None) -> LegwearState:
            else pose.legwear_state)
 
 
+def _framing(pose: Pose, framing: str | None) -> Framing:
+    return Framing(framing) if framing is not None else pose.framing
+
+
 def _components(pose: str, costume: str | None = None,
                 expression: str | None = None,
                 legwear: str | None = None,
-                legwear_state: str | None = None) -> tuple[Component, ...]:
+                legwear_state: str | None = None,
+                angle: str | list[str] | None = None,
+                framing: str | None = None) -> tuple[Component, ...]:
     p = POSES[pose]
     e = EXPRESSIONS[expression if expression is not None else p.expression]
     c = costume if costume is not None else p.costume
@@ -110,7 +118,9 @@ def _components(pose: str, costume: str | None = None,
         Component("nails", G, M, NAILS),
         Component("costume", G, M, COSTUMES[c]),
         Component("legwear", G, M, legwear_positive),
-        Component("framing_tags", G, L, p.angle + FRAMING[p.framing].text),
+        Component("framing_tags", G, L,
+                  (angle_text(angle) if angle is not None else p.angle)
+                  + p.angle_action + FRAMING[_framing(p, framing)].text),
         Component("leg_display", G, L, p.leg_display),
         Component("body_build", G, L, p.body if p.body is not None else BODY),
         Component("cutout", G, M,
@@ -124,18 +134,24 @@ def _components(pose: str, costume: str | None = None,
 def positive_parts(pose: str, costume: str | None = None,
                    expression: str | None = None,
                    legwear: str | None = None,
-                   legwear_state: str | None = None) -> tuple[tuple[str, str], ...]:
-    components = _components(pose, costume, expression, legwear, legwear_state)
+                   legwear_state: str | None = None,
+                   angle: str | list[str] | None = None,
+                   framing: str | None = None) -> tuple[tuple[str, str], ...]:
+    components = _components(pose, costume, expression, legwear, legwear_state,
+                             angle, framing)
     return tuple((c.name, c.text) for c in components)
 
 
 def positive(pose: str, costume: str | None = None,
             expression: str | None = None,
             legwear: str | None = None,
-            legwear_state: str | None = None) -> str:
+            legwear_state: str | None = None,
+            angle: str | list[str] | None = None,
+            framing: str | None = None) -> str:
     return "".join(
         text for _, text in
-        positive_parts(pose, costume, expression, legwear, legwear_state))
+        positive_parts(pose, costume, expression, legwear, legwear_state,
+                       angle, framing))
 
 
 def identity_tags(pose: str, costume: str | None = None) -> frozenset[str]:
@@ -187,13 +203,17 @@ def render_spec(pose: str, seed: int, prefix: str, hires: int = 0,
                 denoise: float | None = None, costume: str | None = None,
                 expression: str | None = None,
                 legwear: str | None = None,
-                legwear_state: str | None = None) -> RenderSpec:
+                legwear_state: str | None = None,
+                angle: str | list[str] | None = None,
+                framing: str | None = None) -> RenderSpec:
     if not hires and denoise is not None:
         raise ValueError("yukari denoise needs hires")
     p = POSES[pose]
-    width, height = (p.canvas or FRAMING[p.framing].canvas
+    pose_canvas = p.canvas if framing is None else None
+    width, height = (pose_canvas or FRAMING[_framing(p, framing)].canvas
                      or (WIDTH, HEIGHT))
-    parts = positive_parts(pose, costume, expression, legwear, legwear_state)
+    parts = positive_parts(pose, costume, expression, legwear, legwear_state,
+                           angle, framing)
     base_negative = negative(pose, costume, expression, legwear, legwear_state)
     hires_spec = None
     if hires:

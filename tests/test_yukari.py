@@ -1108,5 +1108,60 @@ class CliTest(unittest.TestCase):
         self.assertEqual(payload["negative"], negative("stand", legwear_state="off"))
 
 
+class AngleFramingOverrideTest(unittest.TestCase):
+    def test_unset_angle_and_framing_keep_every_pose_byte_for_byte(self):
+        for pose in POSES:
+            with self.subTest(pose=pose):
+                self.assertEqual(positive(pose, angle=None, framing=None),
+                                 positive(pose))
+
+    def test_angle_replaces_the_camera_and_keeps_the_action_tags(self):
+        parts = dict(positive_parts("gao", angle="from_below"))
+        self.assertEqual(
+            parts["framing_tags"],
+            "(from below:1.3), (looking back:1.3), "
+            "(looking over shoulder:1.2), (upper body:1.3), ")
+
+    def test_angle_words_join_in_axis_order(self):
+        for value in ("dutch,from_above", ["dutch", "from_above"]):
+            with self.subTest(value=value):
+                parts = dict(positive_parts("stand", angle=value))
+                self.assertTrue(parts["framing_tags"].startswith(
+                    "(from above:1.35), (dutch angle:1.3), "))
+
+    def test_two_words_on_one_axis_are_rejected(self):
+        with self.assertRaisesRegex(ValueError, "軸ごとに 1 語"):
+            positive("stand", angle="from_above,from_below")
+
+    def test_unknown_angle_word_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "語彙にありません"):
+            positive("stand", angle="from_space")
+
+    def test_framing_swaps_the_shot_tags(self):
+        parts = dict(positive_parts("coffee", framing="full"))
+        self.assertTrue(parts["framing_tags"].endswith(
+            "(full body:1.45), (wide shot:1.3), "))
+
+    def test_framing_takes_its_own_canvas_over_the_pose_canvas(self):
+        self.assertEqual((render_spec("gao", 7, "p").width,
+                          render_spec("gao", 7, "p").height), (1024, 1280))
+        spec = render_spec("gao", 7, "p", framing="full")
+        self.assertEqual((spec.width, spec.height), (ps.WIDTH, ps.HEIGHT))
+        spec = render_spec("stand", 7, "p", framing="bust")
+        self.assertEqual((spec.width, spec.height), (1280, 2048))
+
+    def test_unknown_framing_is_rejected(self):
+        with self.assertRaises(ValueError):
+            positive("stand", framing="extreme")
+
+    def test_request_parameters_reach_the_prompt(self):
+        generation = {"recipe": "yukari", "parameters": {
+            "pose": "stand", "angle": "from_below", "framing": "cowboy"}}
+        graph = request_graph(generation, 7, "p", render_spec,
+                              lambda spec: {"positive": spec.prompts.positive})
+        self.assertIn("(from below:1.3), (cowboy shot:1.3), ", graph["positive"])
+        self.assertNotIn("(from front:1.3)", graph["positive"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -31,6 +31,8 @@ from ..application.request_options import (
 )
 from ..application.watch import WatchServices, watch
 from ..application.work import work
+from ..domain.yukari.angles import ANGLES
+from ..domain.yukari.components import Framing
 from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
 from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
@@ -496,6 +498,10 @@ def parser() -> argparse.ArgumentParser:
     yukari_prompt.add_argument("--legwear", choices=LEGWEARS, default=None)
     yukari_prompt.add_argument("--legwear-state", dest="legwear_state",
                                choices=LEGWEAR_STATES, default=None)
+    yukari_prompt.add_argument("--angle", default=None,
+                               help=f"comma-separated: {', '.join(ANGLES)}")
+    yukari_prompt.add_argument("--framing", default=None,
+                               choices=[framing.value for framing in Framing])
     yukari_prompt.add_argument("--json", action="store_true")
     return root
 
@@ -505,7 +511,8 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "yukari":
         prompts = {
             "positive": positive(args.pose, args.costume, args.expression,
-                                 args.legwear, args.legwear_state),
+                                 args.legwear, args.legwear_state,
+                                 args.angle, args.framing),
             "negative": negative(args.pose, args.costume, args.expression,
                                  args.legwear, args.legwear_state),
         }

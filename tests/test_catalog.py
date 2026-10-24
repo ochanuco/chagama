@@ -58,6 +58,7 @@ _DUMMY_VALUES = {
     "hires": 1024, "denoise": 0.5, "costume": "default", "character": "yukari",
     "character_id": "char-1", "arm": "a", "expression": "doya",
     "legwear": "sheer-gloss", "legwear_state": "removing",
+    "angle": "from_below,dutch", "framing": "full",
 }
 
 
@@ -201,6 +202,15 @@ class BuildCatalogTest(unittest.TestCase):
         by_pose = {pose["name"]: pose for pose in yukari["poses"]}
         self.assertEqual(by_pose["stand"]["legwear_state"], "worn")
         self.assertIsNone(by_pose["bust"]["legwear_state"])
+
+    def test_yukari_publishes_angle_words_and_framings(self):
+        catalog = build_catalog(GIT)
+        by_name = {recipe["name"]: recipe for recipe in catalog["recipes"]}
+        yukari = by_name["yukari"]
+        self.assertIn("from_below", yukari["angles"])
+        self.assertIn("full", yukari["framings"])
+        by_pose = {pose["name"]: pose for pose in yukari["poses"]}
+        self.assertEqual(by_pose["bust"]["framing"], "bust")
 
     def test_yukari_poses_carry_parts_that_join_into_positive(self):
         catalog = build_catalog(GIT)

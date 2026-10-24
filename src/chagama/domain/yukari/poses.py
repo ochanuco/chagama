@@ -29,6 +29,7 @@ class Pose:
     background: str | None = None
     loras: tuple[tuple[str, float], ...] = ()
     angle: str = ""
+    angle_action: str = ""
 
 
 POSES = {
@@ -118,8 +119,8 @@ POSES = {
         mood="",
         gesture="(looking at viewer:1.2), ",
         framing=Framing.UPPER,
-        angle=("(from behind:1.2), (looking back:1.3), "
-               "(looking over shoulder:1.2), "),
+        angle="(from behind:1.2), ",
+        angle_action="(looking back:1.3), (looking over shoulder:1.2), ",
         leg_display="",
         expression="gao", costume="standard",
         canvas=(1024, 1280),
@@ -139,7 +140,8 @@ POSES = {
         gesture=("(looking down at viewer:1.35), (looking at viewer:1.2), "
                  "(no shoes:1.2), (legwear feet:1.1), "),
         framing=Framing.FULL,
-        angle="(from front:1.2), (pov:1.2), (foreshortening:1.35), ",
+        angle="(from front:1.2), (pov:1.2), ",
+        angle_action="(foreshortening:1.35), ",
         leg_display="(thighs:1.2), ",
         expression="disdain", costume="standard",
         negative=("(upper body:1.2), (chair:1.4), (furniture:1.3), "

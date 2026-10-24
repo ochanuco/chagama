@@ -557,6 +557,26 @@ class GenerateApplicationTest(unittest.TestCase):
         self.assertEqual(
             seen["kwargs"], {"costume": "outing", "expression": "doya"})
 
+    def test_request_graph_passes_angle_and_framing_to_builder(self):
+        from chagama.domain.generation.models import PromptPair, RenderSpec
+
+        seen = {}
+
+        def builder(*args, **kwargs):
+            seen["kwargs"] = kwargs
+            return RenderSpec(
+                model_path="m", prompts=PromptPair("built", "built-neg"),
+                width=8, height=8, seed=42, steps=30, cfg=5.0,
+                sampler_name="s", scheduler="k", denoise=1.0,
+                filename_prefix="p")
+
+        generation = base_request()["generation"]
+        generation["parameters"] = {
+            "pose": "gao", "angle": "from_below,dutch", "framing": "full"}
+        request_graph(generation, 7, "prefix", builder, lambda spec: {})
+        self.assertEqual(seen["kwargs"],
+                         {"angle": "from_below,dutch", "framing": "full"})
+
     def test_generate_resume_ingested_job_does_not_submit_or_create_job(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "request.json"

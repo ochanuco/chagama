@@ -150,7 +150,7 @@ class FramingTagsComponentTest(unittest.TestCase):
                 parts = dict(positive_parts(pose))
                 self.assertEqual(
                     parts["framing_tags"],
-                    spec.angle + FRAMING[spec.framing].text)
+                    spec.angle + spec.angle_action + FRAMING[spec.framing].text)
 
     def test_every_framing_kind_has_a_spec(self):
         for framing in Framing:
