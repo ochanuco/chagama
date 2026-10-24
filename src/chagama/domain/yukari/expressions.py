@@ -54,4 +54,24 @@ EXPRESSIONS = {
         mouth="(closed mouth:1.2), ",
         eyes="(half-closed eyes:1.35), (unamused:1.35), (expressionless:1.2), ",
         eye_quality=EyeQuality.BLANK),
+    "neutral": Expression(
+        mouth="(closed mouth:1.2), ",
+        eyes="(half-closed eyes:1.35), (unamused:1.35), (expressionless:1.2), ",
+        eye_quality=EyeQuality.BLANK),
+    "joy": Expression(
+        mouth="(open mouth:1.25), (smile:1.35), (happy:1.35), (blush:1.1), ",
+        eye_quality=EyeQuality.BLANK),
+    "amused": Expression(
+        mouth="(closed mouth:1.1), (smirk:1.3), (amused:1.3), ",
+        eyes="(raised eyebrow:1.15), ", eye_quality=EyeQuality.BLANK),
+    "anger": Expression(
+        mouth="(clenched teeth:1.3), (angry:1.4), (anger vein:1.25), ",
+        eyes="(v-shaped eyebrows:1.4), (furrowed brow:1.25), ",
+        eye_quality=EyeQuality.BLANK),
+    "sorrow": Expression(
+        mouth="(closed mouth:1.1), (frown:1.25), (sad:1.4), (tearing up:1.2), ",
+        eyes="(upturned eyebrows:1.35), ", eye_quality=EyeQuality.BLANK),
+    "surprised": Expression(
+        mouth="(open mouth:1.35), (:o:1.3), (surprised:1.4), ",
+        eyes="(raised eyebrows:1.3), ", eye_quality=EyeQuality.BLANK),
 }

@@ -29,4 +29,6 @@ FRAMING = {
     Framing.FULL: FramingSpec(text="(full body:1.45), (wide shot:1.3), "),
     Framing.LYING: FramingSpec(text="(lying:1.3), (full body:1.35), "),
     Framing.CLOSE: FramingSpec(text="(close-up:1.15), (cropped:1.2), "),
+    Framing.FACE: FramingSpec(
+        text="(portrait:1.5), (close-up:1.3), (face focus:1.45), "),
 }
