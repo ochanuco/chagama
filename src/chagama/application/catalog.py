@@ -19,7 +19,7 @@ from ..domain.generation.patches import (
     TEXT_OP_KEYS,
     TEXT_TARGETS,
 )
-from ..domain.yukari.angles import ANGLES
+from ..domain.yukari.angles import ANGLE_LABELS, ANGLES
 from ..domain.yukari.components import Framing
 from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
 from ..domain.yukari.delivery_style import (
@@ -64,7 +64,8 @@ from ..domain.yukari.delivery_style import (
 )
 from ..domain.yukari.dials import DIALS
 from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.poses import POSES
+from ..domain.yukari.framing import FRAMING_LABELS
+from ..domain.yukari.poses import POSE_LABELS, POSES
 from ..domain.yukari.recipe import PART_GROUPS, identity_tags, render_spec
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
@@ -102,6 +103,7 @@ def _yukari_recipe() -> dict:
             "expression": pose.expression,
             "legwear": pose.legwear_kind if pose.legwear else None,
             "legwear_state": pose.legwear_state.value if pose.legwear else None,
+            "label": POSE_LABELS[name],
             "framing": pose.framing.value,
             "canvas": [spec.width, spec.height],
             "positive": spec.prompts.positive,
@@ -120,6 +122,9 @@ def _yukari_recipe() -> dict:
         "legwear_state": list(LEGWEAR_STATES),
         "angles": list(ANGLES),
         "framings": [framing.value for framing in Framing],
+        "angle_labels": ANGLE_LABELS,
+        "framing_labels": {framing.value: FRAMING_LABELS[framing]
+                           for framing in Framing},
         "expressions": sorted(EXPRESSIONS),
         "poses": poses,
         "parts": [name for name, _ in

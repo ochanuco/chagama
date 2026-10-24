@@ -23,11 +23,11 @@ production worker sees it.
 | File | Holds |
 |---|---|
 | `prompt_style.py` | blocks every pose wears (`QUALITY`, `CHARACTER`, `BODY`, `NAILS`, `BACKGROUND`, `FACE`, `STYLE`), the negative bans, render constants (model, canvas, steps, cfg, sampler) |
-| `poses.py` | one `Pose` per pose: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/style/negative/canvas/loras |
-| `angles.py` | the `angle` request words (`from_below`, `from_above`, `from_front`, `from_side`, `from_behind`, `dutch`, `pov`), one axis each: height, facing, tilt, pov |
+| `poses.py` | `POSE_LABELS` (the Japanese display name every pose must have, published as the catalog pose's `label`) and one `Pose` per pose: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/style/negative/canvas/loras |
+| `angles.py` | `ANGLE_LABELS` (Japanese display names, published as `angle_labels`) and the `angle` request words (`from_below`, `from_above`, `from_front`, `from_side`, `from_behind`, `dutch`, `pov`), one axis each: height, facing, tilt, pov |
 | `costumes.py` | garment block per costume, `LEGWEAR` per costume, the legwear kinds (`sheer` default, `sheer-gloss`, `opaque`) and states (`worn`, `removing`, `off`) with their negative edits |
 | `expressions.py` | mouth/eyes per expression and the `EyeQuality` routing |
-| `framing.py` | shot tags per `Framing` kind; `BUST` also carries its canvas |
+| `framing.py` | `FRAMING_LABELS` (published as `framing_labels`) and shot tags per `Framing` kind; `BUST` also carries its canvas |
 | `components.py` | the component model: `(name, section, priority, text)`, legacy part groups |
 | `recipe.py` | assembly, `render_spec`, identity tags, the IL redraw prompt |
 | `dials.py` | words for `render.width`/`render.height` patches |

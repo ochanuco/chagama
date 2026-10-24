@@ -186,3 +186,17 @@ POSES = {
         face=("(large eyes:1.15), (mature face:1.2), (tareme:1.2), "
               "(thick eyelashes:1.3), (long eyelashes:1.15), ")),
 }
+
+POSE_LABELS = {
+    "amae": "おねだり",
+    "anyo": "あんよ",
+    "avatar": "アバター",
+    "bust": "バストアップ",
+    "cinema": "映画館",
+    "coffee": "アイスコーヒー",
+    "dance": "ダンス",
+    "gao": "がおー",
+    "pillow": "抱き枕",
+    "stand": "立ち",
+    "step": "大股",
+}
