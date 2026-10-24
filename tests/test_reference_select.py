@@ -248,3 +248,39 @@ class D1QuestionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FusedAttentionTest(unittest.TestCase):
+    def test_disable_routes_only_d1_hybrid_modules_off_flash(self):
+        import sys
+        import types
+
+        from chagama.infrastructure.reference import d1
+
+        hybrid = types.ModuleType("transformers_modules.d1_hyphen_3B.abc.hybrid")
+        hybrid._fused = lambda q: True
+        other = types.ModuleType("transformers_modules.other.hybrid_extra")
+        other._fused = lambda q: True
+        sys.modules[hybrid.__name__] = hybrid
+        sys.modules[other.__name__] = other
+        try:
+            d1.disable_fused_attention()
+            self.assertFalse(hybrid._fused(object()))
+            self.assertTrue(other._fused(object()))
+        finally:
+            del sys.modules[hybrid.__name__]
+            del sys.modules[other.__name__]
+
+    def test_flash_attention_built_reads_torch(self):
+        import types
+
+        from chagama.infrastructure.reference.d1 import flash_attention_built
+
+        def fake(available):
+            return types.SimpleNamespace(backends=types.SimpleNamespace(cuda=types.SimpleNamespace(
+                is_flash_attention_available=lambda: available)))
+
+        self.assertTrue(flash_attention_built(fake(True)))
+        self.assertFalse(flash_attention_built(fake(False)))
+        self.assertFalse(flash_attention_built(types.SimpleNamespace(
+            backends=types.SimpleNamespace(cuda=types.SimpleNamespace()))))
