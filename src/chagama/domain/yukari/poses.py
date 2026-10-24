@@ -180,5 +180,7 @@ POSES = {
         negative=("(upper body:1.3), (cowboy shot:1.3), (multiple views:1.3), "
                   "(inset:1.3), "),
         legwear=False,
-        body="(mature female:1.3), (adult:1.2), "),
+        body="(mature female:1.3), (adult:1.2), ",
+        face=("(large eyes:1.15), (mature face:1.2), (tareme:1.2), "
+              "(thick eyelashes:1.3), (long eyelashes:1.15), ")),
 }

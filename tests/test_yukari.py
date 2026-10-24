@@ -595,6 +595,8 @@ class PoseTableTest(unittest.TestCase):
         spec = render_spec("avatar", 7, "x")
         self.assertEqual((spec.width, spec.height), POSES["avatar"].canvas)
         self.assertIn("(face focus:1.45)", spec.prompts.positive)
+        self.assertIn("(mature face:1.2)", spec.prompts.positive)
+        self.assertNotIn("round face", spec.prompts.positive)
 
     def test_anyo_does_not_depend_on_another_pose(self):
         self.assertEqual(POSES["anyo"].expression, "disdain")
