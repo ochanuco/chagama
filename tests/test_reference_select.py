@@ -33,17 +33,17 @@ def plan_for(stem: str) -> reference.Plan:
 
 EXPECTED = {
     "ref01": ("bust", {
-        "framing_tags": ["(upper body:1.3)"],
+        "framing_tags": ["upper body"],
         "gesture": ["looking at viewer", "hand on own cheek", "head rest", "head tilt"],
         "mouth": ["open mouth", "smile", "blush", ":d"]}),
     "ref02": ("coffee", {
-        "framing_tags": ["(feet out of frame:1.3)", "(from above:1.3)"],
+        "framing_tags": ["feet out of frame", "from above"],
         "gesture": ["looking at viewer", "sitting", "between legs",
                     "hand between legs", "looking up"],
         "mouth": ["smile", "closed mouth", "blush", "light blush", "light smile"],
         "legwear": ["pantyhose", "black pantyhose"]}),
     "ref03": ("stand", {
-        "framing_tags": ["(full body:1.3)"],
+        "framing_tags": ["full body"],
         "gesture": ["looking at viewer", "sitting", "knees up"],
         "mouth": ["blush"],
         "legwear": ["thighhighs", "black thighhighs"]}),
@@ -53,7 +53,7 @@ EXPECTED = {
         "mouth": ["one eye closed", "smile", "blush", "closed mouth"],
         "legwear": ["thighhighs", "black thighhighs"]}),
     "ref05": ("coffee", {
-        "framing_tags": ["(cowboy shot:1.3)"],
+        "framing_tags": ["cowboy shot"],
         "gesture": ["hands on own chest", "looking at viewer", "standing",
                     "legs together"]}),
 }
@@ -87,11 +87,11 @@ class PinnedPicturesTest(unittest.TestCase):
                 self.assertEqual(parts["action"], "")
                 positive = set(bare_tags(spec.prompts.positive))
                 self.assertLessEqual(identity_tags(result.pose), positive)
-                for part, forms in result.applied.items():
-                    self.assertEqual(parts[part], "".join(f"{form}, " for form in forms))
+                for part, tags in result.applied.items():
+                    self.assertEqual(parts[part], "".join(
+                        f"{reference.prompt_form(part, tag)}, " for tag in tags))
                 negative = set(bare_tags(spec.prompts.negative))
-                used = {bare_tags(form)[0] for forms in result.applied.values()
-                        for form in forms}
+                used = {tag for tags in result.applied.values() for tag in tags}
                 self.assertFalse(used & negative)
 
     def test_a_smile_clears_the_cold_eyes(self):
@@ -172,6 +172,67 @@ class RulesTest(unittest.TestCase):
                  if patch["target"] == "prompt.positive.mouth"]
         self.assertEqual(mouth, [{"target": "prompt.positive.mouth", "op": "append",
                                   "value": "smile, ", "reason": reference.REASON}])
+
+
+class CandidateRowsTest(unittest.TestCase):
+    def test_rows_list_every_shown_candidate_with_its_numbers(self):
+        data = picture("ref02")
+        proposal = plan_for("ref02")
+        rows = reference.candidate_rows(data["scores"], data["kept"], GROUPS,
+                                        data["verdicts"], proposal)
+        by_tag = {row["tag"]: row for row in rows}
+        self.assertEqual(by_tag["looking up"]["d1"], data["verdicts"]["looking up"])
+        self.assertTrue(by_tag["looking up"]["applied"])
+        self.assertIsNone(by_tag["sitting"]["d1"])
+        for row in rows:
+            self.assertEqual(set(row), {"tag", "part", "score", "kept", "d1", "applied"})
+            self.assertNotIn(row["tag"], reference.DENIED)
+            self.assertTrue(row["score"] >= reference.MIN_LISTED_SCORE
+                            or row["kept"] or row["applied"])
+        for part, tags in proposal.applied.items():
+            for tag in tags:
+                self.assertEqual(by_tag[tag]["part"], part)
+
+    def test_a_bust_lists_legwear_unapplied(self):
+        data = picture("ref01")
+        kept = data["kept"] + ["black pantyhose"]
+        proposal = reference.plan(data["scores"], kept, GROUPS, data["verdicts"])
+        rows = reference.candidate_rows(data["scores"], kept, GROUPS,
+                                        data["verdicts"], proposal)
+        row = next(row for row in rows if row["tag"] == "black pantyhose")
+        self.assertEqual((row["part"], row["kept"], row["applied"]),
+                         ("legwear", True, False))
+
+
+class SelectionTest(unittest.TestCase):
+    rows = [{"tag": "sitting", "part": "gesture"},
+            {"tag": "from above", "part": "framing_tags"}]
+
+    def test_a_listed_selection_passes(self):
+        reference.check_selection(self.rows, "stand",
+                                  {"gesture": ["sitting"], "framing_tags": ["from above"]})
+
+    def test_a_tag_outside_the_candidates_or_its_part_fails(self):
+        with self.assertRaisesRegex(ValueError, "gesture:smile"):
+            reference.check_selection(self.rows, "stand", {"gesture": ["smile"]})
+        with self.assertRaisesRegex(ValueError, "mouth:sitting"):
+            reference.check_selection(self.rows, "stand", {"mouth": ["sitting"]})
+
+    def test_an_unknown_pose_fails(self):
+        with self.assertRaisesRegex(ValueError, "pose"):
+            reference.check_selection(self.rows, "anyo", {})
+
+    def test_build_keeps_the_given_order_and_weights_framing(self):
+        plan = reference.build("coffee", {"framing_tags": ["from above"],
+                                          "gesture": ["sitting", "head tilt"]})
+        framing = next(patch for patch in plan.patches
+                       if patch["target"] == "prompt.positive.framing_tags")
+        gesture = next(patch for patch in plan.patches
+                       if patch["target"] == "prompt.positive.gesture")
+        self.assertEqual(framing["value"], "(from above:1.3), ")
+        self.assertEqual(gesture["value"], "sitting, head tilt, ")
+        self.assertEqual(plan.applied, {"framing_tags": ["from above"],
+                                        "gesture": ["sitting", "head tilt"]})
 
 
 class D1QuestionTest(unittest.TestCase):

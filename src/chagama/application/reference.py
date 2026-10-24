@@ -1,9 +1,10 @@
-"""The `reference` kind: read an uploaded picture into tags and queue the
-generate that draws them on the recipe.
+"""The reference kinds: `reference` reads an uploaded picture into tags,
+`reference_render` draws the tags picked from that reading.
 
-The worker never draws here. It frees ComfyUI's models, has the reference env
-run the Anima Tagger and d1 on the GPU in a subprocess, then queues an
-ordinary generate whose patches carry the picked tags.
+`reference` frees ComfyUI's models and has the reference env run the Anima
+Tagger and d1 on the GPU in a subprocess; it proposes a pose and tags and
+lists every candidate. `reference_render` needs no GPU: it turns the picked
+tags into part patches and queues an ordinary generate.
 """
 
 from __future__ import annotations
@@ -43,12 +44,22 @@ class ReferenceServices:
         default=lambda: random.randrange(SEED_LIMIT))
 
 
-def read_tags(image: bytes, services: ReferenceServices) -> rules.Plan:
+def analyze(image: bytes, services: ReferenceServices) -> dict:
+    """The `reference` result: the proposed pose and tags, and every candidate."""
     services.free_comfyui()
     services.sleep(FREE_SETTLE_SECONDS)
     found = services.analyze(image)
-    return rules.plan(found["scores"], found["kept"], found["groups"],
-                      found["verdicts"])
+    proposal = rules.plan(found["scores"], found["kept"], found["groups"],
+                          found["verdicts"])
+    return {
+        "generation_ids": [],
+        "pose": proposal.pose,
+        "candidates": rules.candidate_rows(found["scores"], found["kept"],
+                                           found["groups"], found["verdicts"],
+                                           proposal),
+        "applied": proposal.applied,
+        "dropped": proposal.dropped,
+    }
 
 
 def generate_request(plan: rules.Plan, *, seed: int, source: str) -> dict:
@@ -61,40 +72,72 @@ def generate_request(plan: rules.Plan, *, seed: int, source: str) -> dict:
             "summary": f"参考画像から: {plan.pose}",
             "attributes": {"reference": {
                 "source_request": source, "pose": plan.pose,
-                "applied": plan.applied, "dropped": plan.dropped}},
+                "applied": plan.applied}},
         },
     }
 
 
 def reference(row: Mapping, services: ReferenceServices) -> dict:
+    """Analyse the uploaded picture; drawing is a later `reference_render`."""
     payload = row.get("payload") or {}
     if payload.get("recipe") != RECIPE:
         raise SystemExit(
             f"reference payload.recipe must be {RECIPE!r}, got {payload.get('recipe')!r}")
-    seed = payload.get("seed")
-    if seed is None:
-        seed = services.random_seed()
     request_id = row["id"]
     data = services.fetch_image(request_id)
     if data is None:
         raise ReferenceImageMissing(f"no reference image for request {request_id}")
     with Image.open(io.BytesIO(data)) as image:
         image.verify()
-    plan = read_tags(data, services)
-    body = generate_request(plan, seed=seed, source=row.get("short_id") or request_id)
-    validate_request(body)
-    queued = {"kind": "generate", "created_by": "system",
-              "idempotency_key": f"reference:{request_id}", "payload": body}
-    if row.get("recipe_ref"):
-        queued["recipe_ref"] = row["recipe_ref"]
-    created = services.management.request("POST", "/api/v1/requests", queued)
-    services.emit(f"reference {request_id}: {plan.pose} -> generate {created['id']}")
+    result = analyze(data, services)
+    services.emit(f"reference {request_id}: proposed {result['pose']}, "
+                  f"{len(result['candidates'])} candidates")
     try:
         services.delete_image(request_id)
     except (SystemExit, Exception) as error:
         services.emit(f"  ! reference image delete failed: {error}")
-    result = {"generation_ids": [], "generate_request_id": created["id"],
-              "pose": plan.pose, "applied": plan.applied, "dropped": plan.dropped}
-    if created.get("short_id"):
-        result["generate_request_short_id"] = created["short_id"]
     return result
+
+
+def _selection(payload: Mapping) -> tuple[str, str, dict[str, list[str]]]:
+    source = payload.get("reference_request_id")
+    pose = payload.get("pose")
+    applied = payload.get("applied")
+    if not isinstance(source, str) or not source:
+        raise SystemExit("reference_render payload.reference_request_id is required")
+    if not isinstance(pose, str):
+        raise SystemExit("reference_render payload.pose is required")
+    if (not isinstance(applied, Mapping)
+            or not all(isinstance(tags, list) and all(isinstance(tag, str) for tag in tags)
+                       for tags in applied.values())):
+        raise SystemExit("reference_render payload.applied must map parts to tag lists")
+    return source, pose, {part: list(tags) for part, tags in applied.items()}
+
+
+def reference_render(row: Mapping, services: ReferenceServices) -> dict:
+    """Queue the generate that draws the tags picked from a reference."""
+    payload = row.get("payload") or {}
+    source_id, pose, applied = _selection(payload)
+    source = services.management.request("GET", f"/api/v1/requests/{source_id}") or {}
+    if source.get("kind") != "reference" or source.get("status") != "done":
+        raise SystemExit(f"request {source_id} is not a done reference")
+    try:
+        rules.check_selection((source.get("result") or {}).get("candidates") or [],
+                              pose, applied)
+        plan = rules.build(pose, applied)
+    except ValueError as error:
+        raise SystemExit(f"reference_render: {error}") from error
+    seed = payload.get("seed")
+    if seed is None:
+        seed = services.random_seed()
+    body = generate_request(plan, seed=seed,
+                            source=source.get("short_id") or source_id)
+    validate_request(body)
+    queued = {"kind": "generate", "created_by": "system",
+              "idempotency_key": f"reference_render:{row['id']}", "payload": body}
+    if row.get("recipe_ref"):
+        queued["recipe_ref"] = row["recipe_ref"]
+    created = services.management.request("POST", "/api/v1/requests", queued)
+    services.emit(f"reference_render {row['id']}: {pose} -> generate {created['id']}")
+    return {"generation_ids": [], "generate_request_id": created["id"],
+            "generate_request_short_id": created.get("short_id")}
