@@ -19,6 +19,8 @@ from ..domain.generation.patches import (
     TEXT_OP_KEYS,
     TEXT_TARGETS,
 )
+from ..domain.yukari.angles import ANGLES
+from ..domain.yukari.components import Framing
 from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
 from ..domain.yukari.delivery_style import (
     BACKDROP,
@@ -100,6 +102,7 @@ def _yukari_recipe() -> dict:
             "expression": pose.expression,
             "legwear": pose.legwear_kind if pose.legwear else None,
             "legwear_state": pose.legwear_state.value if pose.legwear else None,
+            "framing": pose.framing.value,
             "canvas": [spec.width, spec.height],
             "positive": spec.prompts.positive,
             "negative": spec.prompts.negative,
@@ -115,6 +118,8 @@ def _yukari_recipe() -> dict:
         "costumes": sorted(COSTUMES),
         "legwear": list(LEGWEARS),
         "legwear_state": list(LEGWEAR_STATES),
+        "angles": list(ANGLES),
+        "framings": [framing.value for framing in Framing],
         "expressions": sorted(EXPRESSIONS),
         "poses": poses,
         "parts": [name for name, _ in

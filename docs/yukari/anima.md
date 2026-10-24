@@ -23,7 +23,8 @@ production worker sees it.
 | File | Holds |
 |---|---|
 | `prompt_style.py` | blocks every pose wears (`QUALITY`, `CHARACTER`, `BODY`, `NAILS`, `BACKGROUND`, `FACE`, `STYLE`), the negative bans, render constants (model, canvas, steps, cfg, sampler) |
-| `poses.py` | one `Pose` per pose: action, mood, gesture, framing, angle, default expression/costume/legwear, optional body/style/negative/canvas/loras |
+| `poses.py` | one `Pose` per pose: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/style/negative/canvas/loras |
+| `angles.py` | the `angle` request words (`from_below`, `from_above`, `from_front`, `from_side`, `from_behind`, `dutch`, `pov`), one axis each: height, facing, tilt, pov |
 | `costumes.py` | garment block per costume, `LEGWEAR` per costume, the legwear kinds (`sheer` default, `sheer-gloss`, `opaque`) and states (`worn`, `removing`, `off`) with their negative edits |
 | `expressions.py` | mouth/eyes per expression and the `EyeQuality` routing |
 | `framing.py` | shot tags per `Framing` kind; `BUST` also carries its canvas |
@@ -42,13 +43,19 @@ The graph is built by `infrastructure/comfyui/anima_graph.py`.
   components equal the positive byte for byte (`tests/test_yukari_components.py`).
 - Each component name is a `prompt.positive.<name>` patch target. The 13
   legacy part names still resolve through `PART_GROUPS`.
-- A request's `costume`, `expression`, `legwear` and `legwear_state`
-  override the pose's own. `body`, `style` and `loras` belong to the pose.
-  `pose.legwear=False` ignores both legwear parameters.
+- A request's `costume`, `expression`, `legwear`, `legwear_state`, `angle`
+  and `framing` override the pose's own. `body`, `style` and `loras` belong
+  to the pose. `pose.legwear=False` ignores both legwear parameters.
+- `framing_tags` is the camera angle, then `pose.angle_action`, then the
+  framing's shot tags. `angle` (comma-separated words or a list, at most
+  one word per axis, joined in axis order) replaces only the camera angle;
+  `angle_action` (gao's `looking back`, anyo's `foreshortening`) stays.
+  `framing` takes a `Framing` value (`bust`, `upper`, `cowboy`, `full`,
+  `lying`, `close`, `face`).
 - No pose carries a place tag. Every pose draws on the green key the matte
   despills.
 - Canvas precedence is `pose.canvas`, then the framing's canvas, then
-  `1024x1640`. `hires` scales that canvas to the given long side (multiple
+  `1024x1640`. A request's `framing` skips `pose.canvas`. `hires` scales that canvas to the given long side (multiple
   of 8), and `denoise` needs `hires`.
 - `redraw` takes only an Anima source (a `UNETLoader` in its base graph).
   Other sources are delivered as drawn.
