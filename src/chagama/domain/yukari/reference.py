@@ -35,6 +35,7 @@ EXTRA_GESTURE = (
 GAZE = frozenset({"looking at viewer", "looking up", "looking down",
                   "looking away", "looking to the side", "eye contact"})
 MIN_SCORE = 0.1
+MIN_LISTED_SCORE = 0.05
 MIN_VERDICT = 0.5
 FRAMING_WEIGHT = 1.3
 # Tags of those groups that describe furniture, the floor, other people,
@@ -67,6 +68,7 @@ WHOLE_BODY_POSTURE = frozenset({
 FULL_BODY_POSE = "stand"
 KNEE_UP_POSE = "coffee"
 CLOSE_POSE = "bust"
+POSE_CHOICES = (CLOSE_POSE, KNEE_UP_POSE, FULL_BODY_POSE)
 REASON = "参考画像のタグ"
 
 
@@ -157,11 +159,16 @@ def _remove_items(target: str, text: str, names: Collection[str]) -> list[dict]:
             for old in olds]
 
 
-def plan(scores: Mapping[str, float], kept: Collection[str],
-         groups: Mapping[str, Sequence[str]],
-         verdicts: Mapping[str, float]) -> Plan:
-    accepted = extract(scores, kept, groups, verdicts)
-    pose = choose_pose(accepted["framing_tags"], accepted["gesture"])
+def build(pose: str, accepted: Mapping[str, Sequence[str]],
+          kept: Collection[str] = ()) -> Plan:
+    """The patches that put `accepted` (part -> tags) onto `pose`."""
+    if pose not in POSE_CHOICES:
+        raise ValueError(f"pose must be one of {POSE_CHOICES}, got {pose!r}")
+    unknown = set(accepted) - set(PART_SOURCES)
+    if unknown:
+        raise ValueError(f"unknown parts {sorted(unknown)}")
+    accepted = {part: list(dict.fromkeys(accepted.get(part, ())))
+                for part in PART_SOURCES}
     if not POSES[pose].legwear:
         accepted["legwear"] = []
     current = dict(positive_parts(pose))
@@ -174,11 +181,11 @@ def plan(scores: Mapping[str, float], kept: Collection[str],
     for part, tags in accepted.items():
         if not tags:
             continue
-        forms = [prompt_form(part, tag) for tag in tags]
-        patch = _part_patch(part, current[part], "".join(f"{form}, " for form in forms))
+        text = "".join(f"{prompt_form(part, tag)}, " for tag in tags)
+        patch = _part_patch(part, current[part], text)
         if patch:
             patches.append(patch)
-        applied[part] = forms
+        applied[part] = tags
 
     used = {tag for tags in accepted.values() for tag in tags}
     if used & SMILES:
@@ -187,3 +194,44 @@ def plan(scores: Mapping[str, float], kept: Collection[str],
     patches += _remove_items("prompt.negative", negative(pose), used)
     dropped = sorted(set(kept) - used)
     return Plan(pose=pose, applied=applied, patches=patches, dropped=dropped)
+
+
+def plan(scores: Mapping[str, float], kept: Collection[str],
+         groups: Mapping[str, Sequence[str]],
+         verdicts: Mapping[str, float]) -> Plan:
+    accepted = extract(scores, kept, groups, verdicts)
+    pose = choose_pose(accepted["framing_tags"], accepted["gesture"])
+    return build(pose, accepted, kept)
+
+
+def candidate_rows(scores: Mapping[str, float], kept: Collection[str],
+                   groups: Mapping[str, Sequence[str]],
+                   verdicts: Mapping[str, float], proposal: Plan) -> list[dict]:
+    """Every candidate worth showing: scored at least `MIN_LISTED_SCORE`,
+    kept, or applied; `d1` is None for a tag d1 was not asked about."""
+    rows = []
+    for tag, part in candidates(groups).items():
+        score = scores.get(tag, 0.0)
+        applied = tag in proposal.applied.get(part, ())
+        if score < MIN_LISTED_SCORE and tag not in kept and not applied:
+            continue
+        rows.append({"tag": tag, "part": part, "score": round(score, 4),
+                     "kept": tag in kept,
+                     "d1": round(verdicts[tag], 4) if tag in verdicts else None,
+                     "applied": applied})
+    order = list(PART_SOURCES)
+    rows.sort(key=lambda row: (order.index(row["part"]), -row["score"], row["tag"]))
+    return rows
+
+
+def check_selection(rows: Sequence[Mapping], pose: str,
+                    applied: Mapping[str, Sequence[str]]) -> None:
+    """A render may only pick from its reference's candidates, each under the
+    part it was listed with."""
+    if pose not in POSE_CHOICES:
+        raise ValueError(f"pose must be one of {POSE_CHOICES}, got {pose!r}")
+    listed = {(row.get("part"), row.get("tag")) for row in rows}
+    stray = sorted(f"{part}:{tag}" for part, tags in applied.items()
+                   for tag in tags if (part, tag) not in listed)
+    if stray:
+        raise ValueError(f"not candidates of the reference: {', '.join(stray)}")

@@ -613,11 +613,11 @@ class ExecuteTest(unittest.TestCase):
         self.assertEqual(
             WorkServices.__dataclass_fields__["kinds"].default,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation", "reference"))
+             "lighting", "saturation", "reference", "reference_render"))
         self.assertEqual(
             DEFAULT_KINDS,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation", "reference"))
+             "lighting", "saturation", "reference", "reference_render"))
 
     def test_unsupported_kind_fails(self):
         with tempfile.TemporaryDirectory() as directory:

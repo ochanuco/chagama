@@ -23,7 +23,12 @@ from .lens import LensServices, lens
 from .photo import PhotoServices, photo
 from .stage import StageServices, lighting, saturation, stage
 from .redraw import RedrawServices, redraw
-from .reference import ReferenceImageMissing, ReferenceServices, reference
+from .reference import (
+    ReferenceImageMissing,
+    ReferenceServices,
+    reference,
+    reference_render,
+)
 from .request_options import (
     deliver_arguments,
     dof_arguments,
@@ -73,12 +78,13 @@ class WorkServices:
     lighting: Callable[..., dict] = lighting
     saturation: Callable[..., dict] = saturation
     reference: Callable[..., dict] = reference
+    reference_render: Callable[..., dict] = reference_render
     emit: Callable[[str], None] = print
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
     kinds: tuple[str, ...] = ("generate", "redraw", "deliver", "dof", "lens",
                               "photo", "stage", "lighting", "saturation",
-                              "reference")
+                              "reference", "reference_render")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
     hub: Callable[[], Connection] | None = None
@@ -289,6 +295,12 @@ def _execute_reference(services: WorkServices, row: Mapping) -> dict:
         raise SystemExit(str(error)) from error
 
 
+def _execute_reference_render(services: WorkServices, row: Mapping) -> dict:
+    if services.reference_services is None:
+        raise SystemExit("this worker has no reference services")
+    return services.reference_render(row, services.reference_services)
+
+
 def execute(services: WorkServices, row: Mapping) -> dict:
     ref = row.get("recipe_ref")
     if ref != services.git_metadata().get("branch"):
@@ -314,6 +326,8 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_saturation(services, row)
     if kind == "reference":
         return _execute_reference(services, row)
+    if kind == "reference_render":
+        return _execute_reference_render(services, row)
     if kind == "finalize":
         raise SystemExit(
             "finalize requests are no longer supported; use redraw and deliver")

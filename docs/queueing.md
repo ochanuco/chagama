@@ -37,7 +37,8 @@ Options, defaults and ranges live here:
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 | `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
-| `reference` | `{recipe, seed?}`, the picture uploaded on chimera | read the picture into tags and queue one `generate` that draws them; never renders itself |
+| `reference` | `{recipe}`, the picture uploaded on chimera | read the picture into tags: a proposed pose and tags, and every candidate; draws nothing |
+| `reference_render` | `{reference_request_id, pose, seed?, applied}` | queue one `generate` that draws the tags picked from a done `reference`; no GPU |
 
 A `finalize`, `repair` or `masked_redraw` row is refused. `redraw` leaves a
 picture on the green key; `deliver` makes the delivered picture, and
@@ -289,12 +290,10 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 
 ### Reference requests
 
-- The worker fetches the picture, `/free`s ComfyUI, runs the Anima Tagger
-  then d1 on the GPU in a subprocess, and posts a `generate`
-  (`created_by: system`, key `reference:{id}`). A 404 for the picture
-  re-queues the row while attempts remain; the picture is deleted only
-  after the generate is queued.
-- Tag choice, the pose table (`full body` or a whole-body posture → `stand`,
-  waist-to-knee → `coffee`, else `bust`) and the patches: `domain/yukari/reference.py`.
+- `reference` fetches the picture, `/free`s ComfyUI, runs the tagger then d1
+  in a subprocess and deletes the picture; a 404 re-queues while attempts remain.
+- `reference_render` rechecks each `(part, tag)` against the source's
+  `candidates` and posts a `generate` (`system`, key `reference_render:{id}`).
+- Rules, pose table and patches: `domain/yukari/reference.py`.
 - The analysis runs in the reference env (`docs/release.md`) with the
   `reference/` models of `worker-models.toml`; without them only reference rows fail.
