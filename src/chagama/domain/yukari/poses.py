@@ -176,7 +176,7 @@ POSES = {
         angle="(from front:1.2), ",
         leg_display="",
         expression="neutral", costume="standard",
-        canvas=(512, 512),
+        canvas=(384, 384),
         negative=("(upper body:1.3), (cowboy shot:1.3), (multiple views:1.3), "
                   "(inset:1.3), "),
         legwear=False,
