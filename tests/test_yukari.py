@@ -467,7 +467,10 @@ class EyeQualityTest(unittest.TestCase):
         "v": EyeQuality.COLD, "sleepy": EyeQuality.BLANK,
         "smile": EyeQuality.BLANK, "gao": EyeQuality.BLANK,
         "jitome": EyeQuality.BLANK, "disdain": EyeQuality.BLANK,
-        "dubious": EyeQuality.BLANK,
+        "dubious": EyeQuality.BLANK, "neutral": EyeQuality.BLANK,
+        "joy": EyeQuality.BLANK, "amused": EyeQuality.BLANK,
+        "anger": EyeQuality.BLANK, "sorrow": EyeQuality.BLANK,
+        "surprised": EyeQuality.BLANK,
     }
 
     def test_eye_quality_mapping_per_expression(self):
@@ -584,6 +587,14 @@ class PoseTableTest(unittest.TestCase):
         self.assertEqual(POSES["gao"].costume, "standard")
         self.assertEqual(POSES["gao"].canvas, (1024, 1280))
         self.assertFalse(POSES["gao"].legwear)
+
+    def test_avatar_pose_defaults(self):
+        self.assertEqual(POSES["avatar"].expression, "neutral")
+        self.assertEqual(POSES["avatar"].costume, "standard")
+        self.assertFalse(POSES["avatar"].legwear)
+        spec = render_spec("avatar", 7, "x")
+        self.assertEqual((spec.width, spec.height), POSES["avatar"].canvas)
+        self.assertIn("(face focus:1.45)", spec.prompts.positive)
 
     def test_anyo_does_not_depend_on_another_pose(self):
         self.assertEqual(POSES["anyo"].expression, "disdain")

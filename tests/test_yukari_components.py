@@ -131,7 +131,7 @@ class FramingTest(unittest.TestCase):
             "amae": Framing.COWBOY, "gao": Framing.UPPER,
             "step": Framing.FULL, "stand": Framing.FULL, "dance": Framing.FULL,
             "bust": Framing.BUST, "anyo": Framing.FULL,
-            "pillow": Framing.CLOSE,
+            "pillow": Framing.CLOSE, "avatar": Framing.FACE,
         }
         self.assertEqual({pose: spec.framing for pose, spec in POSES.items()},
                          expected)

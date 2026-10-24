@@ -168,4 +168,17 @@ POSES = {
                        "(stuffed animal:1.35), (plushie:1.35), (mascot:1.35), "
                        "(creature:1.3), (character print:1.35), "
                        "(dakimakura:1.3)")),
+    "avatar": Pose(
+        action="",
+        mood="",
+        gesture="(looking at viewer:1.2), ",
+        framing=Framing.FACE,
+        angle="(from front:1.2), ",
+        leg_display="",
+        expression="neutral", costume="standard",
+        canvas=(512, 512),
+        negative=("(upper body:1.3), (cowboy shot:1.3), (multiple views:1.3), "
+                  "(inset:1.3), "),
+        legwear=False,
+        body="(mature female:1.3), (adult:1.2), "),
 }
