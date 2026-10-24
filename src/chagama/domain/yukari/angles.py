@@ -29,6 +29,16 @@ ANGLES = {
     "pov": Angle(AngleAxis.POV, "(pov:1.2), "),
 }
 
+ANGLE_LABELS = {
+    "from_below": "あおり",
+    "from_above": "俯瞰",
+    "from_front": "正面",
+    "from_side": "横",
+    "from_behind": "背面",
+    "dutch": "傾き",
+    "pov": "主観",
+}
+
 
 def angle_names(value: str | list[str]) -> tuple[str, ...]:
     names = value.split(",") if isinstance(value, str) else value

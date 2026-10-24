@@ -20,6 +20,16 @@ class FramingSpec:
     canvas: tuple[int, int] | None = None
 
 
+FRAMING_LABELS = {
+    Framing.FACE: "顔",
+    Framing.BUST: "バスト",
+    Framing.UPPER: "上半身",
+    Framing.COWBOY: "膝上",
+    Framing.FULL: "全身",
+    Framing.LYING: "寝そべり",
+    Framing.CLOSE: "寄り",
+}
+
 FRAMING = {
     Framing.BUST: FramingSpec(
         text=("(portrait:1.5), (head and shoulders:1.4), (upper body:1.35), "

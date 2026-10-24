@@ -212,6 +212,16 @@ class BuildCatalogTest(unittest.TestCase):
         by_pose = {pose["name"]: pose for pose in yukari["poses"]}
         self.assertEqual(by_pose["bust"]["framing"], "bust")
 
+    def test_yukari_publishes_japanese_labels(self):
+        catalog = build_catalog(GIT)
+        yukari = {recipe["name"]: recipe for recipe in catalog["recipes"]}["yukari"]
+        self.assertEqual(set(yukari["angle_labels"]), set(yukari["angles"]))
+        self.assertEqual(set(yukari["framing_labels"]), set(yukari["framings"]))
+        self.assertEqual(yukari["angle_labels"]["from_below"], "あおり")
+        for pose in yukari["poses"]:
+            with self.subTest(pose=pose["name"]):
+                self.assertTrue(pose["label"])
+
     def test_yukari_poses_carry_parts_that_join_into_positive(self):
         catalog = build_catalog(GIT)
         by_name = {recipe["name"]: recipe for recipe in catalog["recipes"]}
