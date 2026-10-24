@@ -268,6 +268,9 @@ def pending(models: list[Model], found: dict[str, Upstream],
 def _keep_awake() -> contextlib.AbstractContextManager:
     if sys.platform != "win32":
         return contextlib.nullcontext()
+    src = str(Path(__file__).resolve().parents[1] / "src")
+    if src not in sys.path:
+        sys.path.insert(0, src)
     from chagama.infrastructure.power.windows import keep_awake
     return keep_awake()
 
