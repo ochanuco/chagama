@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from ..generation.models import HiresSpec, PromptPair, RenderSpec
 from ..generation.prompt_lint import tags as prompt_tags
 from .angles import angle_text
@@ -159,11 +161,24 @@ def identity_tags(pose: str, costume: str | None = None) -> frozenset[str]:
     return frozenset(IDENTITY_TAG_NAMES & bare)
 
 
+FRAMING_TAG_NAMES = frozenset(
+    tag for spec in FRAMING.values() for tag in prompt_tags(spec.text))
+
+
+def _without_framing_tags(text: str) -> str:
+    return ", ".join(chunk for chunk in text.split(", ")
+                     if not set(prompt_tags(chunk)) & FRAMING_TAG_NAMES)
+
+
 def negative(pose: str, costume: str | None = None,
             expression: str | None = None,
             legwear: str | None = None,
-            legwear_state: str | None = None) -> str:
+            legwear_state: str | None = None,
+            framing: str | None = None) -> str:
     p = POSES[pose]
+    if framing is not None and _framing(p, framing) is not p.framing:
+        p = replace(p, negative=_without_framing_tags(p.negative),
+                    negative_tail=_without_framing_tags(p.negative_tail))
     _ = EXPRESSIONS[expression if expression is not None else p.expression]
     c = costume if costume is not None else p.costume
     lw = legwear if legwear is not None else p.legwear_kind
@@ -214,7 +229,8 @@ def render_spec(pose: str, seed: int, prefix: str, hires: int = 0,
                      or (WIDTH, HEIGHT))
     parts = positive_parts(pose, costume, expression, legwear, legwear_state,
                            angle, framing)
-    base_negative = negative(pose, costume, expression, legwear, legwear_state)
+    base_negative = negative(pose, costume, expression, legwear, legwear_state,
+                             framing)
     hires_spec = None
     if hires:
         longest = max(width, height)

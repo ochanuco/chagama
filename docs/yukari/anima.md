@@ -51,7 +51,10 @@ The graph is built by `infrastructure/comfyui/anima_graph.py`.
   one word per axis, joined in axis order) replaces only the camera angle;
   `angle_action` (gao's `looking back`, anyo's `foreshortening`) stays.
   `framing` takes a `Framing` value (`bust`, `upper`, `cowboy`, `full`,
-  `lying`, `close`, `face`).
+  `lying`, `close`, `face`). A `framing` other than the pose's own also drops
+  the shot tags (`FRAMING_TAG_NAMES`: every tag any framing text uses) from
+  the pose's `negative` and `negative_tail`, so a full-body pose's
+  `(cowboy shot)` ban does not fight a requested `cowboy`.
 - No pose carries a place tag. Every pose draws on the green key the matte
   despills.
 - Canvas precedence is `pose.canvas`, then the framing's canvas, then
