@@ -1,6 +1,6 @@
 # The reference analysis env (scripts/worker/reference-env.ps1): the Anima
 # Tagger and d1. A change to either requirements file builds a new env.
-transformers==5.16.1
-timm==1.0.29
+transformers==5.20.1
+timm==1.0.30
 safetensors==0.8.0
 pyyaml==6.0.3
