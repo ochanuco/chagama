@@ -1,9 +1,10 @@
-"""A reference picture's tags onto a yukari pose: which tags, which pose, which
-part patches.
+"""A reference picture's tags onto the yukari base: which tags, which part
+patches.
 
-Only the composition, the gesture, the expression and the legwear are taken
-from the picture; the character stays the recipe's (the identity part is
-never touched).
+The base is the character alone, so the composition, the gesture, the
+expression and the legwear all come from the picture and no prepared pose
+pulls them back; the character stays the recipe's (the identity part is never
+touched).
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 
 from ..generation.prompt_lint import tags as bare_tags
-from .poses import POSES
+from .poses import BASE_POSE
 from .recipe import negative, positive_parts
 
 # Prompt part -> the Anima Tagger groups (groups.yaml) whose tags it takes.
@@ -50,25 +51,7 @@ DENIED = frozenset({
     "saliva trail", "drooling", "ahegao", "torogao", "penis awe", "aroused",
     "moaning",
 })
-SMILES = frozenset({
-    "smile", "light smile", "seductive smile", "grin", ":d", ";d", "laughing",
-    "open mouth", "one eye closed", "^ ^",
-})
-SMILE_CONFLICTS = frozenset({"unamused", "expressionless"})
-
-FULL_BODY = frozenset({"full body"})
-KNEE_UP = frozenset({"cowboy shot", "feet out of frame", "foot out of frame",
-                     "cropped legs"})
-CLOSE = frozenset({"upper body", "portrait", "close-up"})
-WHOLE_BODY_POSTURE = frozenset({
-    "standing", "sitting", "kneeling", "squatting", "lying", "on back",
-    "on stomach", "leg up", "standing on one leg", "knees up", "crossed legs",
-    "seiza", "wariza", "indian style", "jumping", "walking", "running",
-})
-FULL_BODY_POSE = "stand"
-KNEE_UP_POSE = "coffee"
-CLOSE_POSE = "bust"
-POSE_CHOICES = (CLOSE_POSE, KNEE_UP_POSE, FULL_BODY_POSE)
+POSE_CHOICES = (BASE_POSE,)
 REASON = "参考画像のタグ"
 
 
@@ -117,16 +100,6 @@ def extract(scores: Mapping[str, float], kept: Collection[str],
     return accepted
 
 
-def choose_pose(framing: Collection[str], gesture: Collection[str] = ()) -> str:
-    if FULL_BODY & set(framing):
-        return FULL_BODY_POSE
-    if KNEE_UP & set(framing):
-        return KNEE_UP_POSE
-    if not CLOSE & set(framing) and WHOLE_BODY_POSTURE & set(gesture):
-        return FULL_BODY_POSE
-    return CLOSE_POSE
-
-
 def prompt_form(part: str, tag: str) -> str:
     return f"({tag}:{FRAMING_WEIGHT})" if part == "framing_tags" else tag
 
@@ -169,8 +142,6 @@ def build(pose: str, accepted: Mapping[str, Sequence[str]],
         raise ValueError(f"unknown parts {sorted(unknown)}")
     accepted = {part: list(dict.fromkeys(accepted.get(part, ())))
                 for part in PART_SOURCES}
-    if not POSES[pose].legwear:
-        accepted["legwear"] = []
     current = dict(positive_parts(pose))
     patches: list[dict] = []
     applied: dict[str, list[str]] = {}
@@ -188,9 +159,6 @@ def build(pose: str, accepted: Mapping[str, Sequence[str]],
         applied[part] = tags
 
     used = {tag for tags in accepted.values() for tag in tags}
-    if used & SMILES:
-        patches += _remove_items("prompt.positive.eye_quality",
-                                 current["eye_quality"], SMILE_CONFLICTS)
     patches += _remove_items("prompt.negative", negative(pose), used)
     dropped = sorted(set(kept) - used)
     return Plan(pose=pose, applied=applied, patches=patches, dropped=dropped)
@@ -200,8 +168,7 @@ def plan(scores: Mapping[str, float], kept: Collection[str],
          groups: Mapping[str, Sequence[str]],
          verdicts: Mapping[str, float]) -> Plan:
     accepted = extract(scores, kept, groups, verdicts)
-    pose = choose_pose(accepted["framing_tags"], accepted["gesture"])
-    return build(pose, accepted, kept)
+    return build(BASE_POSE, accepted, kept)
 
 
 def candidate_rows(scores: Mapping[str, float], kept: Collection[str],

@@ -13,9 +13,9 @@ class Pose:
     action: str
     mood: str
     gesture: str
-    framing: Framing
+    framing: Framing | None
     leg_display: str
-    expression: str
+    expression: str | None
     costume: str
     negative: str = ""
     negative_tail: str = ""
@@ -186,6 +186,18 @@ POSES = {
         face=("(large eyes:1.15), (mature face:1.2), (tareme:1.2), "
               "(thick eyelashes:1.3), (long eyelashes:1.15), ")),
 }
+
+# The character alone, for a reference render: no pose, framing, angle,
+# expression or legwear of its own, so the reference's tags decide them all.
+# Kept out of POSES so the catalog never lists it as a look.
+BASE_POSE = "base"
+BASE = Pose(action="", mood="", gesture="", framing=None, leg_display="",
+            expression=None, costume="standard", legwear=False)
+
+
+def pose_record(name: str) -> Pose:
+    return BASE if name == BASE_POSE else POSES[name]
+
 
 POSE_LABELS = {
     "amae": "おねだり",
