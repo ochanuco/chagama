@@ -114,7 +114,7 @@ class ReferenceTest(unittest.TestCase):
         self.assertEqual(set(result), {"generation_ids", "pose", "candidates",
                                        "applied", "dropped"})
         self.assertEqual(result["generation_ids"], [])
-        self.assertEqual(result["pose"], "base")
+        self.assertEqual(result["pose"], "yukari_persona")
         self.assertIn("hand between legs", result["applied"]["gesture"])
         listed = {(row["part"], row["tag"]) for row in result["candidates"]}
         for part, tags in result["applied"].items():
@@ -156,7 +156,7 @@ class ReferenceTest(unittest.TestCase):
 
 def render_row(**payload):
     return {"id": "rr-1", "kind": "reference_render", "recipe_ref": "production",
-            "payload": {"reference_request_id": "ref-1", "pose": "base",
+            "payload": {"reference_request_id": "ref-1", "pose": "yukari_persona",
                         "applied": {"gesture": ["sitting"],
                                     "framing_tags": ["from above"]},
                         **payload}}
@@ -184,9 +184,9 @@ class ReferenceRenderTest(unittest.TestCase):
         payload = body["payload"]
         validate_request(payload)
         self.assertEqual(payload["request"]["seeds"], [9])
-        self.assertEqual(payload["generation"]["parameters"], {"pose": "base"})
+        self.assertEqual(payload["generation"]["parameters"], {"pose": "yukari_persona"})
         self.assertEqual(payload["semantic"]["attributes"]["reference"], {
-            "source_request": "r00001", "pose": "base",
+            "source_request": "r00001", "pose": "yukari_persona",
             "applied": {"framing_tags": ["from above"], "gesture": ["sitting"]}})
         patches = {patch["target"]: patch for patch in payload["generation"]["patches"]
                    if patch["op"] != "remove"}

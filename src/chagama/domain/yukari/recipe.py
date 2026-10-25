@@ -1,4 +1,5 @@
-"""The interpreter: pose, costume and expression records into a prompt pair."""
+"""The interpreter: the layers plus pose, costume and expression records into
+a prompt pair."""
 
 from __future__ import annotations
 
@@ -21,19 +22,13 @@ from .costumes import (
 )
 from .expressions import BLANK, EXPRESSIONS, EYE_QUALITY, Expression
 from .framing import FRAMING
+from .layers import CHARACTER, CUSTOMIZATION, PRODUCTION
 from .poses import Pose, pose_record
 from .prompt_style import (
-    ARTIST_TAG,
-    BACKGROUND,
-    BODY,
     CFG,
-    CHARACTER_TAG,
     COLORED_LINE_BAN,
-    COUNT_TAG,
     DETAIL_BAN,
     DIGIT_BAN,
-    EYE_SHAPE,
-    FACE,
     GARMENT_BLACK_BAN,
     GARMENT_GLOSS_TAGS,
     GRADIENT_BAN,
@@ -41,22 +36,17 @@ from .prompt_style import (
     HEIGHT,
     HIRES_DENOISE,
     HOOD_BAN,
-    IDENTITY,
     MODEL,
-    NAILS,
     NEGATIVE_TAIL,
     PROPORTION_BAN,
-    QUALITY_TAG,
     SAMPLER,
     SCHEDULER,
     SCORE_BAN,
-    SERIES_TAG,
     SHEER_BAN,
     SHEER_GLOSS_BAN,
     SHEER_TONE_BAN,
     SHINE_BAN,
     STEPS,
-    STYLE,
     TEXT_BAN,
     THIN_BODY_BAN,
     VIVID_BAN,
@@ -99,6 +89,10 @@ def _expression(pose: Pose, expression: str | None) -> Expression:
     return EXPRESSIONS[name] if name is not None else BLANK
 
 
+def _own(override: str | None, layer: str) -> str:
+    return override if override is not None else layer
+
+
 def _components(pose: str, costume: str | None = None,
                 expression: str | None = None,
                 legwear: str | None = None,
@@ -114,30 +108,29 @@ def _components(pose: str, costume: str | None = None,
     G, M = Section.GENERAL, Priority.MAIN
     L, T = Priority.LEAD, Priority.TAIL
     declared = (
-        Component("quality", Section.QUALITY, M, QUALITY_TAG),
-        Component("count", Section.COUNT, M, COUNT_TAG),
-        Component("character", Section.CHARACTER, M, CHARACTER_TAG),
-        Component("series", Section.SERIES, M, SERIES_TAG),
-        Component("artist", Section.ARTIST, M, ARTIST_TAG),
-        Component("identity", G, L, IDENTITY),
+        Component("quality", Section.QUALITY, M, PRODUCTION.quality),
+        Component("count", Section.COUNT, M, PRODUCTION.count),
+        Component("character", Section.CHARACTER, M, CHARACTER.character),
+        Component("series", Section.SERIES, M, CHARACTER.series),
+        Component("artist", Section.ARTIST, M, CUSTOMIZATION.artist),
+        Component("identity", G, L, CHARACTER.identity),
         Component("action", G, M, p.action),
         Component("mouth", G, M, e.mouth),
         Component("mood", G, M, p.mood),
-        Component("eye_base", G, L, EYE_SHAPE),
+        Component("eye_base", G, L, CUSTOMIZATION.eye_shape),
         Component("eye_quality", G, L, EYE_QUALITY[e.eye_quality] + e.eyes),
         Component("gesture", G, M, p.gesture),
-        Component("nails", G, M, NAILS),
+        Component("nails", G, M, CUSTOMIZATION.nails),
         Component("costume", G, M, COSTUMES[c]),
         Component("legwear", G, M, legwear_positive),
         Component("framing_tags", G, L,
                   (angle_text(angle) if angle is not None else p.angle)
                   + p.angle_action + _framing_text(_framing(p, framing))),
         Component("leg_display", G, L, p.leg_display),
-        Component("body_build", G, L, p.body if p.body is not None else BODY),
-        Component("cutout", G, M,
-                  p.background if p.background is not None else BACKGROUND),
-        Component("face", G, T, p.face if p.face is not None else FACE),
-        Component("style", G, T, p.style if p.style is not None else STYLE),
+        Component("body_build", G, L, _own(p.body, CUSTOMIZATION.body)),
+        Component("cutout", G, M, _own(p.background, PRODUCTION.background)),
+        Component("face", G, T, _own(p.face, CUSTOMIZATION.face)),
+        Component("style", G, T, _own(p.style, CUSTOMIZATION.style)),
     )
     return assemble(declared)
 
