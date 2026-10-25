@@ -19,9 +19,9 @@ from .costumes import (
     legwear_block,
     legwear_text,
 )
-from .expressions import EXPRESSIONS, EYE_QUALITY
+from .expressions import BLANK, EXPRESSIONS, EYE_QUALITY, Expression
 from .framing import FRAMING
-from .poses import POSES, Pose
+from .poses import Pose, pose_record
 from .prompt_style import (
     ARTIST_TAG,
     BACKGROUND,
@@ -86,8 +86,17 @@ def _legwear_state(pose: Pose, legwear_state: str | None) -> LegwearState:
            else pose.legwear_state)
 
 
-def _framing(pose: Pose, framing: str | None) -> Framing:
+def _framing(pose: Pose, framing: str | None) -> Framing | None:
     return Framing(framing) if framing is not None else pose.framing
+
+
+def _framing_text(framing: Framing | None) -> str:
+    return FRAMING[framing].text if framing is not None else ""
+
+
+def _expression(pose: Pose, expression: str | None) -> Expression:
+    name = expression if expression is not None else pose.expression
+    return EXPRESSIONS[name] if name is not None else BLANK
 
 
 def _components(pose: str, costume: str | None = None,
@@ -96,8 +105,8 @@ def _components(pose: str, costume: str | None = None,
                 legwear_state: str | None = None,
                 angle: str | list[str] | None = None,
                 framing: str | None = None) -> tuple[Component, ...]:
-    p = POSES[pose]
-    e = EXPRESSIONS[expression if expression is not None else p.expression]
+    p = pose_record(pose)
+    e = _expression(p, expression)
     c = costume if costume is not None else p.costume
     lw = legwear if legwear is not None else p.legwear_kind
     ls = _legwear_state(p, legwear_state)
@@ -122,7 +131,7 @@ def _components(pose: str, costume: str | None = None,
         Component("legwear", G, M, legwear_positive),
         Component("framing_tags", G, L,
                   (angle_text(angle) if angle is not None else p.angle)
-                  + p.angle_action + FRAMING[_framing(p, framing)].text),
+                  + p.angle_action + _framing_text(_framing(p, framing))),
         Component("leg_display", G, L, p.leg_display),
         Component("body_build", G, L, p.body if p.body is not None else BODY),
         Component("cutout", G, M,
@@ -175,11 +184,11 @@ def negative(pose: str, costume: str | None = None,
             legwear: str | None = None,
             legwear_state: str | None = None,
             framing: str | None = None) -> str:
-    p = POSES[pose]
+    p = pose_record(pose)
     if framing is not None and _framing(p, framing) is not p.framing:
         p = replace(p, negative=_without_framing_tags(p.negative),
                     negative_tail=_without_framing_tags(p.negative_tail))
-    _ = EXPRESSIONS[expression if expression is not None else p.expression]
+    _ = _expression(p, expression)
     c = costume if costume is not None else p.costume
     lw = legwear if legwear is not None else p.legwear_kind
     ls = _legwear_state(p, legwear_state)
@@ -223,9 +232,11 @@ def render_spec(pose: str, seed: int, prefix: str, hires: int = 0,
                 framing: str | None = None) -> RenderSpec:
     if not hires and denoise is not None:
         raise ValueError("yukari denoise needs hires")
-    p = POSES[pose]
+    p = pose_record(pose)
     pose_canvas = p.canvas if framing is None else None
-    width, height = (pose_canvas or FRAMING[_framing(p, framing)].canvas
+    resolved = _framing(p, framing)
+    width, height = (pose_canvas
+                     or (FRAMING[resolved].canvas if resolved is not None else None)
                      or (WIDTH, HEIGHT))
     parts = positive_parts(pose, costume, expression, legwear, legwear_state,
                            angle, framing)
@@ -254,5 +265,5 @@ def render_spec(pose: str, seed: int, prefix: str, hires: int = 0,
         part_groups=PART_GROUPS,
         width=width, height=height, seed=seed, steps=STEPS, cfg=CFG,
         sampler_name=SAMPLER, scheduler=SCHEDULER, denoise=1.0,
-        filename_prefix=prefix, hires=hires_spec, loras=POSES[pose].loras,
+        filename_prefix=prefix, hires=hires_spec, loras=p.loras,
         guided_steps=GUIDED_STEPS)

@@ -2,7 +2,7 @@
 `reference_render` draws the tags picked from that reading.
 
 `reference` frees ComfyUI's models and has the reference env run the Anima
-Tagger and d1 on the GPU in a subprocess; it proposes a pose and tags and
+Tagger and d1 on the GPU in a subprocess; it proposes tags and
 lists every candidate. `reference_render` needs no GPU: it turns the picked
 tags into part patches and queues an ordinary generate.
 """

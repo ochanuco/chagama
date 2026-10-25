@@ -37,8 +37,8 @@ Options, defaults and ranges live here:
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 | `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
-| `reference` | `{recipe}`, the picture uploaded on chimera | read the picture into tags: a proposed pose and tags, and every candidate; draws nothing |
-| `reference_render` | `{reference_request_id, pose, seed?, applied}` | queue one `generate` that draws the tags picked from a done `reference`; no GPU |
+| `reference` | `{recipe}`, the picture uploaded on chimera | read the picture into tags: the proposed tags and every candidate; draws nothing |
+| `reference_render` | `{reference_request_id, pose, seed?, applied}` | queue one `generate` that draws the tags picked from a done `reference` on the base (`pose` is always `base`); no GPU |
 
 A `finalize`, `repair` or `masked_redraw` row is refused. `redraw` leaves a
 picture on the green key; `deliver` makes the delivered picture, and
@@ -294,6 +294,7 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   in a subprocess and deletes the picture; a 404 re-queues while attempts remain.
 - `reference_render` rechecks each `(part, tag)` against the source's
   `candidates` and posts a `generate` (`system`, key `reference_render:{id}`).
-- Rules, pose table and patches: `domain/yukari/reference.py`.
+- The render draws on `BASE` (`domain/yukari/poses.py`, not in the catalog):
+  the character with no pose, framing, angle, expression or legwear of its own.
 - The analysis runs in the reference env (`docs/release.md`) with the
   `reference/` models of `worker-models.toml`; without them only reference rows fail.

@@ -15,7 +15,7 @@ from pathlib import Path
 from chagama.domain.generation.patches import apply_patches, parse_patches
 from chagama.domain.generation.prompt_lint import tags as bare_tags
 from chagama.domain.yukari import reference
-from chagama.domain.yukari.recipe import identity_tags, render_spec
+from chagama.domain.yukari.recipe import identity_tags, positive_parts, render_spec
 from chagama.infrastructure.reference.d1 import QUESTION, questions, version_tuple
 
 FIXTURES = Path(__file__).parent / "fixtures" / "reference"
@@ -32,39 +32,39 @@ def plan_for(stem: str) -> reference.Plan:
 
 
 EXPECTED = {
-    "ref01": ("bust", {
+    "ref01": {
         "framing_tags": ["upper body"],
         "gesture": ["looking at viewer", "hand on own cheek", "head rest", "head tilt"],
-        "mouth": ["open mouth", "smile", "blush", ":d"]}),
-    "ref02": ("coffee", {
+        "mouth": ["open mouth", "smile", "blush", ":d"]},
+    "ref02": {
         "framing_tags": ["feet out of frame", "from above"],
         "gesture": ["looking at viewer", "sitting", "between legs",
                     "hand between legs", "looking up"],
         "mouth": ["smile", "closed mouth", "blush", "light blush", "light smile"],
-        "legwear": ["pantyhose", "black pantyhose"]}),
-    "ref03": ("stand", {
+        "legwear": ["pantyhose", "black pantyhose"]},
+    "ref03": {
         "framing_tags": ["full body"],
         "gesture": ["looking at viewer", "sitting", "knees up"],
         "mouth": ["blush"],
-        "legwear": ["thighhighs", "black thighhighs"]}),
-    "ref04": ("stand", {
+        "legwear": ["thighhighs", "black thighhighs"]},
+    "ref04": {
         "gesture": ["looking at viewer", "standing", "standing on one leg",
                     "hand up", "arm up", "leg up"],
         "mouth": ["one eye closed", "smile", "blush", "closed mouth"],
-        "legwear": ["thighhighs", "black thighhighs"]}),
-    "ref05": ("coffee", {
+        "legwear": ["thighhighs", "black thighhighs"]},
+    "ref05": {
         "framing_tags": ["cowboy shot"],
         "gesture": ["hands on own chest", "looking at viewer", "standing",
-                    "legs together"]}),
+                    "legs together"]},
 }
 
 
 class PinnedPicturesTest(unittest.TestCase):
-    def test_pose_and_applied_tags(self):
-        for stem, (pose, applied) in EXPECTED.items():
+    def test_every_picture_is_drawn_on_the_base(self):
+        for stem, applied in EXPECTED.items():
             with self.subTest(stem):
                 result = plan_for(stem)
-                self.assertEqual(result.pose, pose)
+                self.assertEqual(result.pose, "base")
                 self.assertEqual(result.applied, applied)
 
     def test_d1_is_asked_only_about_undecided_candidates(self):
@@ -94,30 +94,16 @@ class PinnedPicturesTest(unittest.TestCase):
                 used = {tag for tags in result.applied.values() for tag in tags}
                 self.assertFalse(used & negative)
 
-    def test_a_smile_clears_the_cold_eyes(self):
-        result = plan_for("ref01")
-        spec = apply_patches(render_spec("bust", 1, "t"), parse_patches(result.patches))
-        eyes = dict(spec.positive_parts)["eye_quality"]
-        self.assertEqual(eyes, "(half-closed eyes:1.35), ")
-        self.assertNotIn("(smile:1.2)", spec.prompts.negative)
-
-    def test_without_a_camera_tag_the_pose_keeps_its_framing(self):
+    def test_without_a_camera_tag_the_base_has_no_framing(self):
         result = plan_for("ref04")
-        self.assertFalse(any(patch["target"] == "prompt.positive.framing_tags"
-                             for patch in result.patches))
+        spec = apply_patches(render_spec("base", 1, "t"), parse_patches(result.patches))
+        self.assertEqual(dict(spec.positive_parts)["framing_tags"], "")
 
-    def test_no_smile_keeps_the_cold_eyes(self):
-        result = plan_for("ref05")
-        self.assertFalse(any(patch["target"] == "prompt.positive.eye_quality"
-                             for patch in result.patches))
-
-    def test_a_bust_drops_legwear(self):
+    def test_legwear_is_taken_whatever_the_framing(self):
         data = picture("ref01")
         kept = data["kept"] + ["black pantyhose"]
         result = reference.plan(data["scores"], kept, GROUPS, data["verdicts"])
-        self.assertEqual(result.pose, "bust")
-        self.assertNotIn("legwear", result.applied)
-        self.assertIn("black pantyhose", result.dropped)
+        self.assertIn("black pantyhose", result.applied["legwear"])
 
     def test_dropped_is_every_kept_tag_not_applied(self):
         result = plan_for("ref02")
@@ -153,17 +139,6 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(accepted["mouth"], [])
         self.assertEqual(accepted["framing_tags"], ["full body"])
 
-    def test_pose_follows_the_framing(self):
-        self.assertEqual(reference.choose_pose({"full body", "cowboy shot"}), "stand")
-        self.assertEqual(reference.choose_pose({"feet out of frame"}), "coffee")
-        self.assertEqual(reference.choose_pose({"upper body"}, {"sitting"}), "bust")
-        self.assertEqual(reference.choose_pose(set()), "bust")
-
-    def test_a_whole_body_posture_picks_stand_when_framing_is_silent(self):
-        self.assertEqual(reference.choose_pose(set(), {"leg up"}), "stand")
-        self.assertEqual(reference.choose_pose({"from above"}, {"sitting"}), "stand")
-        self.assertEqual(reference.choose_pose(set(), {"head tilt"}), "bust")
-
     def test_an_empty_part_is_filled_by_append(self):
         data = picture("ref05")
         result = reference.plan(data["scores"], data["kept"] + ["smile"],
@@ -193,38 +168,28 @@ class CandidateRowsTest(unittest.TestCase):
             for tag in tags:
                 self.assertEqual(by_tag[tag]["part"], part)
 
-    def test_a_bust_lists_legwear_unapplied(self):
-        data = picture("ref01")
-        kept = data["kept"] + ["black pantyhose"]
-        proposal = reference.plan(data["scores"], kept, GROUPS, data["verdicts"])
-        rows = reference.candidate_rows(data["scores"], kept, GROUPS,
-                                        data["verdicts"], proposal)
-        row = next(row for row in rows if row["tag"] == "black pantyhose")
-        self.assertEqual((row["part"], row["kept"], row["applied"]),
-                         ("legwear", True, False))
-
 
 class SelectionTest(unittest.TestCase):
     rows = [{"tag": "sitting", "part": "gesture"},
             {"tag": "from above", "part": "framing_tags"}]
 
     def test_a_listed_selection_passes(self):
-        reference.check_selection(self.rows, "stand",
+        reference.check_selection(self.rows, "base",
                                   {"gesture": ["sitting"], "framing_tags": ["from above"]})
 
     def test_a_tag_outside_the_candidates_or_its_part_fails(self):
         with self.assertRaisesRegex(ValueError, "gesture:smile"):
-            reference.check_selection(self.rows, "stand", {"gesture": ["smile"]})
+            reference.check_selection(self.rows, "base", {"gesture": ["smile"]})
         with self.assertRaisesRegex(ValueError, "mouth:sitting"):
-            reference.check_selection(self.rows, "stand", {"mouth": ["sitting"]})
+            reference.check_selection(self.rows, "base", {"mouth": ["sitting"]})
 
-    def test_an_unknown_pose_fails(self):
+    def test_a_prepared_pose_fails(self):
         with self.assertRaisesRegex(ValueError, "pose"):
-            reference.check_selection(self.rows, "anyo", {})
+            reference.check_selection(self.rows, "stand", {})
 
     def test_build_keeps_the_given_order_and_weights_framing(self):
-        plan = reference.build("coffee", {"framing_tags": ["from above"],
-                                          "gesture": ["sitting", "head tilt"]})
+        plan = reference.build("base", {"framing_tags": ["from above"],
+                                        "gesture": ["sitting", "head tilt"]})
         framing = next(patch for patch in plan.patches
                        if patch["target"] == "prompt.positive.framing_tags")
         gesture = next(patch for patch in plan.patches
@@ -233,6 +198,20 @@ class SelectionTest(unittest.TestCase):
         self.assertEqual(gesture["value"], "sitting, head tilt, ")
         self.assertEqual(plan.applied, {"framing_tags": ["from above"],
                                         "gesture": ["sitting", "head tilt"]})
+
+
+class BaseTest(unittest.TestCase):
+    def test_the_base_is_the_character_alone(self):
+        parts = dict(positive_parts("base"))
+        for part in ("action", "mood", "gesture", "mouth", "eye_quality",
+                     "legwear", "framing_tags", "leg_display"):
+            self.assertEqual(parts[part], "", part)
+        self.assertTrue(identity_tags("base"))
+        self.assertEqual(identity_tags("base"), identity_tags("stand"))
+
+    def test_the_base_is_not_a_catalog_pose(self):
+        from chagama.domain.yukari.poses import POSES
+        self.assertNotIn("base", POSES)
 
 
 class D1QuestionTest(unittest.TestCase):
