@@ -1,10 +1,10 @@
-"""A reference picture's tags onto the yukari base: which tags, which part
+"""A reference picture's tags onto `yukari_persona`: which tags, which part
 patches.
 
-The base is the character alone, so the composition, the gesture, the
-expression and the legwear all come from the picture and no prepared pose
-pulls them back; the character stays the recipe's (the identity part is never
-touched).
+`yukari_persona` is the layers alone (`layers.py`), so the composition, the
+gesture and the expression all come from the picture and no prepared pose
+pulls them back. Legwear tags replace the customization's tights; the
+character stays the recipe's (the identity part is never touched).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 
 from ..generation.prompt_lint import tags as bare_tags
-from .poses import BASE_POSE
+from .poses import PERSONA_POSE
 from .recipe import negative, positive_parts
 
 # Prompt part -> the Anima Tagger groups (groups.yaml) whose tags it takes.
@@ -51,7 +51,7 @@ DENIED = frozenset({
     "saliva trail", "drooling", "ahegao", "torogao", "penis awe", "aroused",
     "moaning",
 })
-POSE_CHOICES = (BASE_POSE,)
+POSE_CHOICES = (PERSONA_POSE,)
 REASON = "参考画像のタグ"
 
 
@@ -168,7 +168,7 @@ def plan(scores: Mapping[str, float], kept: Collection[str],
          groups: Mapping[str, Sequence[str]],
          verdicts: Mapping[str, float]) -> Plan:
     accepted = extract(scores, kept, groups, verdicts)
-    return build(BASE_POSE, accepted, kept)
+    return build(PERSONA_POSE, accepted, kept)
 
 
 def candidate_rows(scores: Mapping[str, float], kept: Collection[str],

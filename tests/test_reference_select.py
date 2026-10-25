@@ -60,11 +60,11 @@ EXPECTED = {
 
 
 class PinnedPicturesTest(unittest.TestCase):
-    def test_every_picture_is_drawn_on_the_base(self):
+    def test_every_picture_is_drawn_on_the_persona(self):
         for stem, applied in EXPECTED.items():
             with self.subTest(stem):
                 result = plan_for(stem)
-                self.assertEqual(result.pose, "base")
+                self.assertEqual(result.pose, "yukari_persona")
                 self.assertEqual(result.applied, applied)
 
     def test_d1_is_asked_only_about_undecided_candidates(self):
@@ -94,9 +94,9 @@ class PinnedPicturesTest(unittest.TestCase):
                 used = {tag for tags in result.applied.values() for tag in tags}
                 self.assertFalse(used & negative)
 
-    def test_without_a_camera_tag_the_base_has_no_framing(self):
+    def test_without_a_camera_tag_the_persona_has_no_framing(self):
         result = plan_for("ref04")
-        spec = apply_patches(render_spec("base", 1, "t"), parse_patches(result.patches))
+        spec = apply_patches(render_spec("yukari_persona", 1, "t"), parse_patches(result.patches))
         self.assertEqual(dict(spec.positive_parts)["framing_tags"], "")
 
     def test_legwear_is_taken_whatever_the_framing(self):
@@ -174,21 +174,21 @@ class SelectionTest(unittest.TestCase):
             {"tag": "from above", "part": "framing_tags"}]
 
     def test_a_listed_selection_passes(self):
-        reference.check_selection(self.rows, "base",
+        reference.check_selection(self.rows, "yukari_persona",
                                   {"gesture": ["sitting"], "framing_tags": ["from above"]})
 
     def test_a_tag_outside_the_candidates_or_its_part_fails(self):
         with self.assertRaisesRegex(ValueError, "gesture:smile"):
-            reference.check_selection(self.rows, "base", {"gesture": ["smile"]})
+            reference.check_selection(self.rows, "yukari_persona", {"gesture": ["smile"]})
         with self.assertRaisesRegex(ValueError, "mouth:sitting"):
-            reference.check_selection(self.rows, "base", {"mouth": ["sitting"]})
+            reference.check_selection(self.rows, "yukari_persona", {"mouth": ["sitting"]})
 
     def test_a_prepared_pose_fails(self):
         with self.assertRaisesRegex(ValueError, "pose"):
             reference.check_selection(self.rows, "stand", {})
 
     def test_build_keeps_the_given_order_and_weights_framing(self):
-        plan = reference.build("base", {"framing_tags": ["from above"],
+        plan = reference.build("yukari_persona", {"framing_tags": ["from above"],
                                         "gesture": ["sitting", "head tilt"]})
         framing = next(patch for patch in plan.patches
                        if patch["target"] == "prompt.positive.framing_tags")
@@ -200,18 +200,29 @@ class SelectionTest(unittest.TestCase):
                                         "gesture": ["sitting", "head tilt"]})
 
 
-class BaseTest(unittest.TestCase):
-    def test_the_base_is_the_character_alone(self):
-        parts = dict(positive_parts("base"))
+class PersonaTest(unittest.TestCase):
+    def test_the_persona_is_the_layers_alone(self):
+        parts = dict(positive_parts("yukari_persona"))
         for part in ("action", "mood", "gesture", "mouth", "eye_quality",
-                     "legwear", "framing_tags", "leg_display"):
+                     "framing_tags", "leg_display"):
             self.assertEqual(parts[part], "", part)
-        self.assertTrue(identity_tags("base"))
-        self.assertEqual(identity_tags("base"), identity_tags("stand"))
+        self.assertTrue(identity_tags("yukari_persona"))
+        self.assertEqual(identity_tags("yukari_persona"), identity_tags("stand"))
 
-    def test_the_base_is_not_a_catalog_pose(self):
+    def test_the_persona_wears_the_customization_tights(self):
+        persona = dict(positive_parts("yukari_persona"))
+        self.assertTrue(persona["legwear"])
+        self.assertEqual(persona["legwear"], dict(positive_parts("stand"))["legwear"])
+
+    def test_a_legwear_tag_replaces_the_tights(self):
+        plan = reference.build("yukari_persona", {"legwear": ["black pantyhose"]})
+        spec = apply_patches(render_spec("yukari_persona", 1, "t"),
+                             parse_patches(plan.patches))
+        self.assertEqual(dict(spec.positive_parts)["legwear"], "black pantyhose, ")
+
+    def test_the_persona_is_not_a_catalog_pose(self):
         from chagama.domain.yukari.poses import POSES
-        self.assertNotIn("base", POSES)
+        self.assertNotIn("yukari_persona", POSES)
 
 
 class D1QuestionTest(unittest.TestCase):

@@ -26,7 +26,7 @@ class Expression:
     eye_quality: EyeQuality = EyeQuality.COLD
 
 
-# No expression at all: the base pose leaves the face to its reference's tags.
+# No expression at all: `yukari_persona` leaves the face to its reference's tags.
 BLANK = Expression(mouth="", eye_quality=EyeQuality.BLANK)
 
 EXPRESSIONS = {

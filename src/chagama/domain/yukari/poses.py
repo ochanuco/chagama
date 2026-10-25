@@ -1,11 +1,13 @@
-"""Every pose: its own tag blocks plus the expression/costume it defaults to."""
+"""Every pose: its own tag blocks plus the expression/costume it defaults to,
+on top of the layers in `layers.py`."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from .components import Framing
-from .costumes import DEFAULT_LEGWEAR, LegwearState
+from .costumes import LegwearState
+from .layers import CHARACTER, CUSTOMIZATION
 
 
 @dataclass(frozen=True)
@@ -21,7 +23,7 @@ class Pose:
     negative_tail: str = ""
     canvas: tuple[int, int] | None = None
     legwear: bool = True
-    legwear_kind: str = DEFAULT_LEGWEAR
+    legwear_kind: str = CUSTOMIZATION.legwear_kind
     legwear_state: LegwearState = LegwearState.WORN
     body: str | None = None
     style: str | None = None
@@ -187,16 +189,17 @@ POSES = {
               "(thick eyelashes:1.3), (long eyelashes:1.15), ")),
 }
 
-# The character alone, for a reference render: no pose, framing, angle,
-# expression or legwear of its own, so the reference's tags decide them all.
-# Kept out of POSES so the catalog never lists it as a look.
-BASE_POSE = "base"
-BASE = Pose(action="", mood="", gesture="", framing=None, leg_display="",
-            expression=None, costume="standard", legwear=False)
+# The layers alone, for a reference render: no pose, framing, angle or
+# expression of its own, so the reference's tags decide them; the tights come
+# from `CUSTOMIZATION` until a reference's legwear tag replaces them. Kept out
+# of POSES so the catalog never lists it as a look.
+PERSONA_POSE = "yukari_persona"
+PERSONA = Pose(action="", mood="", gesture="", framing=None, leg_display="",
+               expression=None, costume=CHARACTER.costume)
 
 
 def pose_record(name: str) -> Pose:
-    return BASE if name == BASE_POSE else POSES[name]
+    return PERSONA if name == PERSONA_POSE else POSES[name]
 
 
 POSE_LABELS = {

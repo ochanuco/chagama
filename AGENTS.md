@@ -268,7 +268,7 @@ tracked file.
   semantic 判断（prompt 組み立て、reference の意味付け、検品）は呼び出し元
   エージェントの仕事で、chimera と worker は実行と記録だけを担う。例外は
   参考画像で、worker が `reference` でタグを提案し、GUI で選ばれたタグから
-  `reference_render` が base（pose を持たないキャラクターだけの土台）への
+  `reference_render` が `yukari_persona`（pose を持たない 3 層、`layers.py`）への
   part patch を組んで（`domain/yukari/reference.py`）
   通常の generate として積む。GUI は prompt を書かず、候補から選ぶだけ。
 - ComfyUI `/prompt` への直 POST は禁止。レシピが組めない graph は

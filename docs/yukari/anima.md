@@ -22,8 +22,9 @@ production worker sees it.
 
 | File | Holds |
 |---|---|
-| `prompt_style.py` | blocks every pose wears (`QUALITY`, `CHARACTER`, `BODY`, `NAILS`, `BACKGROUND`, `FACE`, `STYLE`), the negative bans, render constants (model, canvas, steps, cfg, sampler) |
-| `poses.py` | `POSE_LABELS` (the Japanese display name every pose must have, published as the catalog pose's `label`) and one `Pose` per pose: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/style/negative/canvas/loras |
+| `layers.py` | the three layers every pose stands on: `CHARACTER` (character/series tags, identity, costume `standard`), `CUSTOMIZATION` (artist, eye shape, nails, body, face, style, default legwear kind) and `PRODUCTION` (quality/count tags, the green cut-out backdrop) |
+| `prompt_style.py` | the text of those blocks, the negative bans, render constants (model, canvas, steps, cfg, sampler) |
+| `poses.py` | `POSE_LABELS` (the Japanese display name every pose must have, published as the catalog pose's `label`) and one `Pose` per pose: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/style/negative/canvas/loras; `yukari_persona` (`PERSONA`), the layers with no pose, framing or expression, is kept out of `POSES` |
 | `angles.py` | `ANGLE_LABELS` (Japanese display names, published as `angle_labels`) and the `angle` request words (`from_below`, `from_above`, `from_front`, `from_side`, `from_behind`, `dutch`, `pov`), one axis each: height, facing, tilt, pov |
 | `costumes.py` | garment block per costume, `LEGWEAR` per costume, the legwear kinds (`sheer` default, `sheer-gloss`, `opaque`) and states (`worn`, `removing`, `off`) with their negative edits |
 | `expressions.py` | mouth/eyes per expression and the `EyeQuality` routing |
@@ -44,8 +45,8 @@ The graph is built by `infrastructure/comfyui/anima_graph.py`.
 - Each component name is a `prompt.positive.<name>` patch target. The 13
   legacy part names still resolve through `PART_GROUPS`.
 - A request's `costume`, `expression`, `legwear`, `legwear_state`, `angle`
-  and `framing` override the pose's own. `body`, `style` and `loras` belong
-  to the pose. `pose.legwear=False` ignores both legwear parameters.
+  and `framing` override the pose's own. `body`, `face` and `style` override
+  `CUSTOMIZATION` per pose; `loras` belong to the pose. `pose.legwear=False` ignores both legwear parameters.
 - `framing_tags` is the camera angle, then `pose.angle_action`, then the
   framing's shot tags. `angle` (comma-separated words or a list, at most
   one word per axis, joined in axis order) replaces only the camera angle;
