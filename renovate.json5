@@ -80,5 +80,9 @@
       matchDepNames: ['diffusion_models/silvermoon-turbo.safetensors'],
       allowedVersions: '/ # .*2\\.9B.*Turbo/',
     },
+    {
+      matchDepNames: ['diffusion_models/silvermoon.safetensors'],
+      allowedVersions: '/ # [^#]*2\\.9B Anima$/',
+    },
   ],
 }

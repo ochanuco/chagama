@@ -65,6 +65,13 @@ dest = "diffusion_models/silvermoon-turbo.safetensors"
 civitai_model = 2639339
 civitai_version = 3335132 # v2.3_2.9B_Turbo
 
+# The same mix without Turbo distillation, chosen per request with render.model
+# when negatives must take effect.
+[[model]]
+dest = "diffusion_models/silvermoon.safetensors"
+civitai_model = 2639339
+civitai_version = 3335123 # v2.3_2.9B Anima
+
 # Anima's text encoder and VAE, which the yukari graph loads by name.
 [[model]]
 dest = "text_encoders/qwen_3_06b_base.safetensors"
