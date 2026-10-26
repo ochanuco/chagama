@@ -460,6 +460,32 @@ class GenerateApplicationTest(unittest.TestCase):
              {"target": "render.cfg", "op": "set", "value": 4.5, "reason": "own"}])
         self.assertEqual(generation, frozen)
 
+    def test_apply_presets_fills_parameters_and_identity_override_the_request_leaves_out(self):
+        generation = {
+            "recipe": "yukari",
+            "parameters": {"pose": "nomakeup", "expression": "smile"},
+            "presets": [{"kind": "pose", "name": "nomakeup", "version": 1}],
+        }
+        result = apply_presets(generation, lambda *_: {
+            "record": {"recipe_pose": "bust"},
+            "patches": [],
+            "parameters": {"costume": "roomwear", "expression": "jitome"},
+            "identity_override": "drop the hair ornament",
+        })
+        self.assertEqual(result["parameters"],
+                         {"pose": "bust", "costume": "roomwear", "expression": "smile"})
+        self.assertEqual(result["identity_override"], "drop the hair ornament")
+
+    def test_apply_presets_keeps_the_request_identity_override(self):
+        generation = {
+            "recipe": "yukari", "parameters": {"pose": "nomakeup"},
+            "identity_override": "own reason",
+            "presets": [{"kind": "pose", "name": "nomakeup", "version": 1}],
+        }
+        result = apply_presets(generation, lambda *_: {
+            "record": {"recipe_pose": "bust"}, "identity_override": "preset reason"})
+        self.assertEqual(result["identity_override"], "own reason")
+
     def test_apply_presets_raises_on_unsupported_kind(self):
         generation = {
             "recipe": "yukari", "parameters": {},

@@ -312,13 +312,15 @@ def request_generation(req: Mapping) -> dict:
 def apply_presets(generation: dict, fetch: PresetFetcher) -> dict:
     """Resolve generation.presets into parameters.pose and leading patches.
 
-    Preset patches apply before the request's own generation.patches.
+    Preset patches apply before the request's own generation.patches; preset
+    parameters and identity_override fill in only what the request leaves out.
     """
     presets = generation.get("presets")
     if not presets:
         return dict(generation)
     resolved = dict(generation)
-    parameters = dict(resolved.get("parameters", {}))
+    own_parameters = resolved.get("parameters", {})
+    parameters = dict(own_parameters)
     preset_patches: list = []
     for entry in presets:
         label = f"{generation['recipe']}/{entry['kind']}/{entry['name']}/{entry['version']}"
@@ -330,6 +332,15 @@ def apply_presets(generation: dict, fetch: PresetFetcher) -> dict:
         if not isinstance(pose, str) or not pose:
             raise SystemExit(f"preset {label}: record.recipe_pose missing or empty")
         parameters["pose"] = pose
+        carried = body.get("parameters") or {}
+        if not isinstance(carried, dict):
+            raise SystemExit(f"preset {label}: parameters must be an object")
+        for key, value in carried.items():
+            if key not in own_parameters:
+                parameters[key] = value
+        override = body.get("identity_override")
+        if override and not resolved.get("identity_override"):
+            resolved["identity_override"] = override
         patches = body.get("patches") or []
         if not isinstance(patches, list):
             raise SystemExit(f"preset {label}: patches must be an array")
