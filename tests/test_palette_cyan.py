@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 
 from chagama.domain.yukari.delivery_style import (
-    REPIN_DARK, REPIN_LIGHT, REPIN_SKIN_CAP,
+    REPIN_DARK, REPIN_LIGHT, REPIN_MID, REPIN_SKIN_CAP,
 )
 from chagama.infrastructure.imaging.palette import palette_window, repin
 
@@ -78,6 +78,22 @@ class CyanWindowTest(unittest.TestCase):
         center = center_hsv(rgb)
         self.assertAlmostEqual(center[..., 1].mean(), compressed(150), delta=3)
         self.assertAlmostEqual(center[..., 0].mean(), input_h, delta=1)
+
+    def test_navy_cushion_is_compressed_without_hue_easing(self):
+        knee, ratio = REPIN_MID
+        pixels = swatch((160, 124, 92))
+        input_h = center_hsv(pixels)[..., 0].mean()
+        rgb, _ = repin(pixels)
+        center = center_hsv(rgb)
+        self.assertAlmostEqual(center[..., 1].mean(),
+                               knee + (124 - knee) * ratio, delta=3)
+        self.assertAlmostEqual(center[..., 0].mean(), input_h, delta=1)
+
+    def test_light_blue_is_not_capped_as_skin(self):
+        pixels = swatch((155, 120, 245))
+        rgb, _ = repin(pixels)
+        center = center_hsv(rgb)
+        self.assertAlmostEqual(center[..., 1].mean(), 120, delta=2)
 
     def test_light_pink_skin_shading_is_left_alone(self):
         pixels = swatch((248, 70, 232))
