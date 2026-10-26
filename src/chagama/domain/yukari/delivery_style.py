@@ -287,11 +287,14 @@ PALETTE_WINDOWS = (
 
 # The windows `repin` compresses and hue-eases, by name into PALETTE_WINDOWS.
 REPIN_CHROMA_WINDOWS = ("purple", "cyan")
+# The pink between purple and skin; its light end is skin shading.
+REPIN_PINK_WINDOW = (225.0, 255.0)
 # Hue ranges `repin` compresses on the same curve without easing their hue,
 # only below REPIN_SAT_ONLY_V_MAX (fading to zero over the last 20 levels).
-REPIN_SAT_ONLY_WINDOWS = ((225.0, 255.0),)
+# (140, 170) is the navy of the cushion, between cyan and purple.
+REPIN_SAT_ONLY_WINDOWS = ((140.0, 170.0), REPIN_PINK_WINDOW)
 REPIN_SAT_ONLY_V_MAX = 210.0
-# Light skin (skin window and REPIN_SAT_ONLY_WINDOWS, V from
+# Light skin (skin window and REPIN_PINK_WINDOW, V from
 # REPIN_SKIN_CAP_V up, full 20 levels later) is compressed on this
 # (knee, ratio); accents keep ACCENT_KEEP of their excess as elsewhere.
 REPIN_SKIN_CAP = (75.0, 0.3)

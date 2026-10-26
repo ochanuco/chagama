@@ -20,7 +20,8 @@ from ...domain.yukari.delivery_style import (
     ACCENT_KEEP, ACCENT_RAMP, ACCENT_VALUE_RAMP, BACKDROP_SPREAD_MAX, BG_SAT_MAX,
     FIGURE_LIGHT_SAT_TARGET, FIGURE_LIGHT_V, FIGURE_MIDTONE_V,
     FIGURE_SAT_MEAN_MAX, FIGURE_SAT_P90_MAX, PALETTE_WINDOWS, REPIN_CHROMA_WINDOWS,
-    REPIN_DARK, REPIN_DARK_EXEMPT, REPIN_LIGHT, REPIN_MID, REPIN_SAT_ONLY_V_MAX,
+    REPIN_DARK, REPIN_DARK_EXEMPT, REPIN_LIGHT, REPIN_MID, REPIN_PINK_WINDOW,
+    REPIN_SAT_ONLY_V_MAX,
     REPIN_SAT_ONLY_WINDOWS, REPIN_SKIN_CAP, REPIN_SKIN_CAP_V,
     REPIN_SKIN_WINDOW,
     SAT_BAND, SKIN_PIN_MIN_AREA, SKIN_SOURCE_S_MIN, SKIN_SOURCE_V_MIN,
@@ -112,7 +113,7 @@ def repin(im: np.ndarray, protect: np.ndarray | None = None,
 
     w_skin = np.zeros_like(S)
     for lo, hi in (palette_window(REPIN_SKIN_WINDOW)["hue"],
-                   *REPIN_SAT_ONLY_WINDOWS):
+                   REPIN_PINK_WINDOW):
         w_skin = np.maximum(w_skin, window_w(H, lo, hi))
     w_skin = w_skin * fig * smoothstep((V - REPIN_SKIN_CAP_V) / 20.0)
     s_delta = s_delta + w_skin * np.minimum(compress(REPIN_SKIN_CAP) - S - s_delta, 0)
