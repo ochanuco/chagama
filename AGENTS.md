@@ -51,8 +51,11 @@ the pose at its defaults (`plain_render`, or `derive_request` with
 build the round from there.
 
 A new picture an agent queues is a draft: patch `render.width` /
-`render.height` to 896x1440 for a tall pose (one whose default canvas is
-1024x1640) and to 1024x1280 for a bust or upper-body pose. Only a picture
+`render.height` to about 1.3 megapixels at the pose's default aspect ratio,
+each side a multiple of 8. The aspect carries the look (a squarer bust
+canvas draws a child's face), so take it from the canvas the pose resolves
+to, not from the pose's kind: 896x1440 for a 1024x1640 or 1280x2048 canvas,
+1024x1280 for a 1024x1280 one. Only a picture
 the user picks is re-rendered with `redraw` method `hires` (2048,
 denoise 0.45). A smaller draft is not a shortcut: the hires latent upscale
 breaks past about 1.4x (see `docs/findings/composition.md`).
