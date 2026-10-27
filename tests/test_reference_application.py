@@ -14,6 +14,7 @@ from chagama.application.reference import (
     FREE_SETTLE_SECONDS,
     ReferenceImageMissing,
     ReferenceServices,
+    pose_canvas,
     reference,
     reference_render,
 )
@@ -214,9 +215,16 @@ class ReferenceRenderTest(unittest.TestCase):
                          "(from above:1.3), ")
         self.assertEqual(patches["render.pose"]["value"], {
             **chimera.source["result"]["figure"], "strength": 1.0})
+        self.assertEqual((patches["render.width"]["value"], patches["render.height"]["value"]),
+                         pose_canvas("yukari_persona", 8 / 12))
         self.assertEqual(result, {"generation_ids": [],
                                   "generate_request_id": "gen-req-1",
                                   "generate_request_short_id": "abc123"})
+
+    def test_the_canvas_keeps_the_pose_area_at_the_reference_aspect(self):
+        self.assertEqual(pose_canvas("yukari_persona", 1.39), (1520, 1104))
+        self.assertEqual(pose_canvas("yukari_persona", 1024 / 1640), (1024, 1632))
+        self.assertEqual(pose_canvas("yukari_persona", 5.0), pose_canvas("yukari_persona", 2.0))
 
     def test_pose_strength_zero_follows_only_the_tags(self):
         chimera = Chimera()
@@ -224,8 +232,9 @@ class ReferenceRenderTest(unittest.TestCase):
         reference_render(render_row(pose_strength=0), make(chimera, []))
         payload = chimera.calls[-1][2]["payload"]
         validate_request(payload)
-        self.assertNotIn("render.pose", [patch["target"]
-                                         for patch in payload["generation"]["patches"]])
+        targets = [patch["target"] for patch in payload["generation"]["patches"]]
+        self.assertNotIn("render.pose", targets)
+        self.assertNotIn("render.width", targets)
 
     def test_a_reference_without_a_figure_follows_only_the_tags(self):
         chimera = Chimera()
