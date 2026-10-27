@@ -11,6 +11,7 @@ patch, and queues an ordinary generate.
 from __future__ import annotations
 
 import io
+import math
 import random
 import time
 from collections.abc import Callable, Mapping
@@ -19,6 +20,7 @@ from dataclasses import dataclass, field
 from PIL import Image
 
 from ..domain.yukari import reference as rules
+from ..domain.yukari.recipe import render_spec
 from .generate import validate_request
 from .worker_channels import Management
 
@@ -27,6 +29,7 @@ RECIPE = "yukari"
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
+POSE_ASPECTS = (0.5, 2.0)
 
 
 class ReferenceImageMissing(Exception):
@@ -73,11 +76,29 @@ def pose_patch(figure: Mapping, strength: float) -> dict:
             "reason": "参考画像のポーズを写す"}
 
 
+def pose_canvas(pose: str, aspect: float) -> tuple[int, int]:
+    """The pose's default canvas area at the reference's width over height
+    (held to `POSE_ASPECTS`), each side a multiple of 16."""
+    default = render_spec(pose, 0, "")
+    pixels = default.width * default.height
+    aspect = min(max(aspect, POSE_ASPECTS[0]), POSE_ASPECTS[1])
+    return (round(math.sqrt(pixels * aspect) / 16) * 16,
+            round(math.sqrt(pixels / aspect) / 16) * 16)
+
+
+def canvas_patches(pose: str, aspect: float) -> list[dict]:
+    width, height = pose_canvas(pose, aspect)
+    return [{"target": f"render.{side}", "op": "set", "value": value,
+             "reason": "参考画像の縦横比で描く"}
+            for side, value in (("width", width), ("height", height))]
+
+
 def generate_request(plan: rules.Plan, *, seed: int, source: str,
                      figure: Mapping | None = None,
                      pose_strength: float = 0.0) -> dict:
     patches = list(plan.patches)
     if figure and pose_strength:
+        patches += canvas_patches(plan.pose, figure["aspect"])
         patches.append(pose_patch(figure, pose_strength))
     return {
         "schema_version": 1,

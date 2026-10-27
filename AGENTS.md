@@ -273,7 +273,8 @@ tracked file.
   参考画像で、worker が `reference` でタグを提案し、GUI で選ばれたタグから
   `reference_render` が `yukari_persona`（pose を持たない 3 層、`layers.py`）への
   part patch を組んで（`domain/yukari/reference.py`）、`reference` が DWPose で
-  読んだ人物の骨格を `render.pose` patch（Anima のポーズアダプタ）にして
+  読んだ人物の骨格を `render.pose` patch（Anima のポーズアダプタ）にし、
+  キャンバスを pose 既定の画素数のまま参考画像の縦横比に合わせて、
   通常の generate として積む。GUI は prompt を書かず、候補から選ぶだけ。
   元画像は解析後に捨て、残すのは骨格の座標だけ。
 - ComfyUI `/prompt` への直 POST は禁止。レシピが組めない graph は
