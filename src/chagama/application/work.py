@@ -67,6 +67,9 @@ class WorkServices:
     stage_services: StageServices
     git_metadata: Callable[[], dict]
     worker_id: str
+    # The release and commit from `release.json`; None outside a release.
+    version: str | None = None
+    commit: str | None = None
     reference_services: ReferenceServices | None = None
     generate: Callable[..., dict | None] = generate
     deliver: Callable[..., dict] = deliver
@@ -373,7 +376,8 @@ def work_once(services: WorkServices, *, dry_run: bool = False,
     try:
         row = services.management.request(
             "POST", CLAIM_PATH,
-            {"worker_id": services.worker_id, "kinds": list(services.kinds)})
+            {"worker_id": services.worker_id, "kinds": list(services.kinds),
+             "worker_version": services.version})
     except SystemExit as error:
         services.emit(f"claim failed: {error}")
         return False
