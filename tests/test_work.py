@@ -225,6 +225,8 @@ def make_hub_services(directory: Path, *, hub=None, progress_feed=None,
         stage_services="stage-services",
         git_metadata=lambda: {"branch": "dev/requests-worker"},
         worker_id="test-worker",
+        version="r9-abc1234",
+        commit="abc1234def",
         emit=(emit or (lambda message: None)),
         kinds=kinds,
         hub=hub,
@@ -635,7 +637,8 @@ class WorkOnceTest(unittest.TestCase):
             self.assertFalse(work_once(services))
             self.assertEqual(management.calls, [
                 ("POST", "/api/v1/requests/claim",
-                 {"worker_id": "test-worker", "kinds": ["generate", "deliver"]}, None)])
+                 {"worker_id": "test-worker", "kinds": ["generate", "deliver"],
+                  "worker_version": None}, None)])
 
     def test_done_row_patches_status_done_with_the_result(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1056,6 +1059,7 @@ class HeartbeatTest(unittest.TestCase):
                                     {"status": "running", "worker_id": "test-worker"}))
 
 
+
 class HubListenerTest(unittest.TestCase):
     def test_hello_sent_first_and_wake_set_after_connect(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -1070,7 +1074,8 @@ class HubListenerTest(unittest.TestCase):
                 self.assertTrue(wake.wait(2))
                 self.assertEqual(connection.sent[0], {
                     "type": "hello", "worker_id": "test-worker",
-                    "kinds": ["generate", "deliver"]})
+                    "kinds": ["generate", "deliver"], "version": "r9-abc1234",
+                    "commit": "abc1234def"})
             finally:
                 listener.stop()
             self.assertTrue(connection.closed)

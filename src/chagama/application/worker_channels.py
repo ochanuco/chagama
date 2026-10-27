@@ -123,6 +123,8 @@ class HubListener:
                 connection.send({
                     "type": "hello", "worker_id": self.services.worker_id,
                     "kinds": list(self.services.kinds),
+                    "version": self.services.version,
+                    "commit": self.services.commit,
                 })
                 self.wake.set()
                 next_ping = self.services.clock() + self.services.ping_interval

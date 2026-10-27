@@ -36,7 +36,7 @@ from ..infrastructure.imaging.palette import summarize
 from ..infrastructure.notifications.discord import DiscordNotifier
 from ..infrastructure.persistence.run_state import JsonRunState
 from ..infrastructure.locations import data_dir
-from ..infrastructure.repository import discover_repository, git_metadata
+from ..infrastructure.repository import discover_repository, git_metadata, release_info
 from ..infrastructure.worker_status import status_writer
 
 # deploy writes this file to ask for a drain and waits for it to go; the
@@ -224,6 +224,7 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
             env_provider=EnvCollector(comfyui, repository_metadata))
 
     drain_file = data_dir(repository) / DRAIN_FILE
+    release = release_info(repository) or {}
     return WorkServices(
         management=chimera,
         generate_services=build_generate_services(
@@ -243,6 +244,8 @@ def wire_work_services(chimera: ChimeraClient, comfyui: ComfyUIClient, notifier:
         reference_services=build_reference_services(chimera, comfyui, repository, emit),
         git_metadata=repository_metadata,
         worker_id=worker_id,
+        version=release.get("version"),
+        commit=release.get("commit"),
         kinds=kinds,
         hub=hub_factory,
         progress_feed=progress_factory,
