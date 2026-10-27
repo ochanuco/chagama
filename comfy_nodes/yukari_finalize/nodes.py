@@ -482,7 +482,8 @@ class YukariPoseSkeleton:
 
     def run(self, points, aspect, width, height):
         import torch
-        skeleton = pose_skeleton.draw(json.loads(points), aspect, width, height)
+        skeleton = pose_skeleton.patch_padded(
+            pose_skeleton.draw(json.loads(points), aspect, width, height))
         return (torch.from_numpy(skeleton.astype(np.float32) / 255.0)[None, ...],)
 
 

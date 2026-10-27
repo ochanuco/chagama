@@ -101,6 +101,13 @@ class SkeletonTest(unittest.TestCase):
         self.assertEqual(tuple(image[16, 32]), (255, 153, 51))
         self.assertEqual(int(np.count_nonzero(image[:4, :4])), 0)
 
+    def test_pads_black_to_whole_patches_at_the_bottom_and_right(self):
+        skeleton = np.full((1640, 1024, 3), 7, np.uint8)
+        padded = pose_skeleton.patch_padded(skeleton)
+        self.assertEqual(padded.shape, (1648, 1024, 3))
+        self.assertTrue((padded[:1640] == 7).all())
+        self.assertFalse(padded[1640:].any())
+
     def test_needs_every_point(self):
         with self.assertRaises(ValueError):
             pose_skeleton.draw(POINTS[:17], 1.0, 64, 64)
