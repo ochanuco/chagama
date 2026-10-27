@@ -17,6 +17,7 @@ KEYPOINTS = 133
 SCORE_THRESHOLD = 0.3
 RADIUS = 2
 LINE_WIDTH = 2
+PATCH_PIXELS = 16
 
 _BLUE, _GREEN, _ORANGE, _WHITE = (51, 153, 255), (0, 255, 0), (255, 128, 0), (255, 255, 255)
 _PINK, _SKY, _RED = (255, 153, 255), (102, 178, 255), (255, 51, 51)
@@ -80,3 +81,10 @@ def draw(points: Sequence[Sequence[float]], aspect: float, width: int,
         if visible[a] and visible[b]:
             cv2.line(canvas, pixels[a], pixels[b], color, thickness=LINE_WIDTH)
     return np.ascontiguousarray(canvas[..., ::-1])
+
+
+def patch_padded(skeleton: np.ndarray) -> np.ndarray:
+    """`skeleton` with black added at the bottom and right up to a multiple of
+    `PATCH_PIXELS` on each side."""
+    height, width = skeleton.shape[:2]
+    return np.pad(skeleton, ((0, -height % PATCH_PIXELS), (0, -width % PATCH_PIXELS), (0, 0)))

@@ -630,6 +630,26 @@ class GenerateApplicationTest(unittest.TestCase):
                 call[0] == "PATCH" and call[1].startswith("/api/v1/requests/")
                 for call in management.calls))
 
+    def test_generate_fails_when_no_job_is_ingested(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "request.json"
+            path.write_text(json.dumps(base_request()), encoding="utf-8")
+            comfy = ComfyFake()
+
+            def failed(prompt_id):
+                raise RuntimeError(f"comfy job {prompt_id} failed")
+
+            comfy.wait_for = failed
+            services = GenerateServices(
+                ManagementFake(), comfy,
+                StateFake({"idempotency_key": "fixed-key", "seeds": [42], "jobs": []}),
+                NullNotifier(),
+                lambda generation, seed, prefix: {"6": {"inputs": {"text": "x"}}},
+                lambda: {"commit": "commit", "dirty": False}, lambda *_: [],
+                Path(directory), lambda message: None)
+            with self.assertRaisesRegex(RuntimeError, "no job ingested: comfy job .* failed"):
+                generate(path, services)
+
     def test_generate_resume_skips_registered_output(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "request.json"

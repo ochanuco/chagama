@@ -626,6 +626,7 @@ def generate(request_path: Path, services: GenerateServices, *,
     if not character_id and params.get("character"):
         character_id = services.management.resolve_character(params["character"])
 
+    failures: list[str] = []
     for index, seed in enumerate(state["seeds"]):
         while len(state["jobs"]) <= index:
             state["jobs"].append(
@@ -756,6 +757,7 @@ def generate(request_path: Path, services: GenerateServices, *,
             job["status"] = "ingested"
         except (RuntimeError, OSError) as error:
             services.emit(f"  ! job {index} (seed {seed}): {error}")
+            failures.append(str(error))
             job["status"] = "failed"
             if "job_id" in job:
                 services.management.request(
@@ -764,6 +766,8 @@ def generate(request_path: Path, services: GenerateServices, *,
 
     done = sum(1 for job in state["jobs"] if job.get("status") == "ingested")
     services.emit(f"{done}/{len(state['seeds'])} jobs ingested")
+    if state["jobs"] and not done:
+        raise RuntimeError(f"no job ingested: {failures[0]}" if failures else "no job ingested")
     generation_ids = [gen["id"] for job in state["jobs"]
                       for gen in job.get("generations", []) if gen.get("id")]
     return {"generation_ids": generation_ids}
