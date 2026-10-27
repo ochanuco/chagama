@@ -22,6 +22,15 @@ class HiresSpec:
 
 
 @dataclass(frozen=True)
+class PoseControl:
+    """A COCO-WholeBody pose the picture follows: 133 `(x, y, score)`, x and y
+    as fractions of a source frame whose width over height is `aspect`."""
+    points: tuple[tuple[float, float, float], ...]
+    aspect: float
+    strength: float
+
+
+@dataclass(frozen=True)
 class RenderSpec:
     model_path: str
     prompts: PromptPair
@@ -46,3 +55,4 @@ class RenderSpec:
     # Legacy part name -> `positive_parts` names that composed it, for a
     # `prompt.positive.<part>` patch that still names a legacy part.
     part_groups: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    pose: PoseControl | None = None

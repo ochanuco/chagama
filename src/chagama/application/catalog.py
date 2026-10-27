@@ -15,6 +15,7 @@ from ..domain.generation.patches import (
     NUMBER_TARGETS,
     PART_TARGET_PREFIX,
     PATCH_KEYS,
+    POSE_TARGETS,
     STRING_TARGETS,
     TEXT_OP_KEYS,
     TEXT_TARGETS,
@@ -167,6 +168,7 @@ def _patches_block() -> dict:
             for target in STRING_TARGETS
         },
         "loras": {target: {"op": "set"} for target in LORAS_TARGETS},
+        "pose": {target: {"op": "set"} for target in POSE_TARGETS},
         "overrides": {
             "identity_override": (
                 "non-empty reason string; required when patches or a prompt "

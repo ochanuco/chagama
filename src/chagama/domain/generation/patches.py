@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 
-from .models import RenderSpec
+from .models import PoseControl, RenderSpec
 
 TEXT_TARGETS = ("prompt.positive", "prompt.negative",
                 "prompt.hires.positive", "prompt.hires.negative")
@@ -17,11 +17,14 @@ NUMBER_TARGETS = ("render.cfg", "render.steps", "render.width",
                   "render.height", "render.guided_steps", "hires.denoise")
 STRING_TARGETS = ("render.model", "render.sampler", "render.scheduler")
 LORAS_TARGETS = ("render.loras",)
+POSE_TARGETS = ("render.pose",)
+POSE_POINTS = 133
 TARGET_KINDS = {
     **dict.fromkeys(TEXT_TARGETS, "text"),
     **dict.fromkeys(NUMBER_TARGETS, "number"),
     **dict.fromkeys(STRING_TARGETS, "string"),
     **dict.fromkeys(LORAS_TARGETS, "loras"),
+    **dict.fromkeys(POSE_TARGETS, "pose"),
 }
 # Of `value` / `old`, the keys each text op takes. Every listed key must be a
 # non-empty string; the unlisted one is rejected.
@@ -46,7 +49,7 @@ NUMBER_CONSTRAINTS = {
 class Patch:
     target: str
     op: str
-    value: str | float | int | tuple[tuple[str, float], ...] | None
+    value: str | float | int | tuple[tuple[str, float], ...] | PoseControl | None
     old: str | None
     reason: str
 
@@ -142,6 +145,35 @@ def _parse_loras_patch(patch: dict, target: str) -> Patch:
     return Patch(target, op, tuple(parsed), None, reason)
 
 
+def _number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _parse_pose_patch(patch: dict, target: str) -> Patch:
+    op = patch.get("op")
+    if op != "set":
+        _fail(target, f"op must be 'set' for {target!r}, got {op!r}")
+    reason = _require_str(patch, "reason", target)
+    value = patch.get("value")
+    if not isinstance(value, dict) or set(value) != {"points", "aspect", "strength"}:
+        _fail(target, "value must be {points, aspect, strength}")
+    points = value["points"]
+    if (not isinstance(points, list) or len(points) != POSE_POINTS
+            or not all(isinstance(point, list) and len(point) == 3
+                       and all(_number(number) for number in point)
+                       for point in points)):
+        _fail(target, f"points must be {POSE_POINTS} [x, y, score] number triples")
+    aspect, strength = value["aspect"], value["strength"]
+    if not _number(aspect) or aspect <= 0:
+        _fail(target, f"aspect must be a number > 0, got {aspect!r}")
+    if not _number(strength) or not (0 <= strength <= 2):
+        _fail(target, f"strength must be between 0 and 2, got {strength!r}")
+    pose = PoseControl(
+        points=tuple((float(x), float(y), float(score)) for x, y, score in points),
+        aspect=float(aspect), strength=float(strength))
+    return Patch(target, op, pose, None, reason)
+
+
 def parse_patches(raw: object,
                   dials: Mapping[str, Mapping[str, float]] | None = None) -> tuple[Patch, ...]:
     """`dials` is the source recipe's `dials.patches` vocabulary (target ->
@@ -173,9 +205,12 @@ def parse_patches(raw: object,
             patches.append(_parse_string_patch(patch, target))
         elif kind == "loras":
             patches.append(_parse_loras_patch(patch, target))
+        elif kind == "pose":
+            patches.append(_parse_pose_patch(patch, target))
         else:
             allowed = (TEXT_TARGETS + (PART_TARGET_PREFIX + "<part>",)
-                      + NUMBER_TARGETS + STRING_TARGETS + LORAS_TARGETS)
+                      + NUMBER_TARGETS + STRING_TARGETS + LORAS_TARGETS
+                      + POSE_TARGETS)
             _fail(target, f"unknown target, must be one of {allowed}")
     return tuple(patches)
 
@@ -280,6 +315,8 @@ def _apply_one(spec: RenderSpec, patch: Patch) -> RenderSpec:
         return replace(spec, scheduler=patch.value)
     if patch.target == "render.loras":
         return replace(spec, loras=patch.value)
+    if patch.target == "render.pose":
+        return replace(spec, pose=patch.value)
     hires = replace(spec.hires, denoise=float(patch.value))
     return replace(spec, hires=hires)
 

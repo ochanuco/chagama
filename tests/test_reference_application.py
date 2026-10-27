@@ -67,6 +67,16 @@ class FakeVerifier:
         self.log.append("verifier closed")
 
 
+def fake_estimator(log):
+    def estimate(bgr):
+        log.append(("pose", bgr.shape))
+        height, width = bgr.shape[:2]
+        keypoints = [[[width / 2, height / 4]] * 133, [[1.0, 1.0]] * 133]
+        scores = [[0.9] * 133, [0.1] * 133]
+        return keypoints, scores
+    return estimate
+
+
 class Chimera:
     def __init__(self, image=b""):
         self.image = image or png()
@@ -89,7 +99,8 @@ def make(chimera, log, image=...):
         delete_image=chimera.deleted.append,
         free_comfyui=lambda: log.append("free"),
         analyze=lambda data: analyze(Image.open(io.BytesIO(data)),
-                                     lambda: FakeTagger(log), lambda: FakeVerifier(log)),
+                                     lambda: FakeTagger(log), lambda: FakeVerifier(log),
+                                     lambda: fake_estimator(log)),
         emit=lambda message: None,
         sleep=lambda seconds: log.append(("sleep", seconds)),
         random_seed=lambda: 42,
@@ -108,11 +119,14 @@ class ReferenceTest(unittest.TestCase):
         result = reference(row(seed=7), make(chimera, log))
         self.assertEqual(log, [
             "free", ("sleep", FREE_SETTLE_SECONDS), "tag", "tagger closed",
-            ("verify", ("looking up", "light smile")), "verifier closed"])
+            ("verify", ("looking up", "light smile")), "verifier closed",
+            ("pose", (12, 8, 3))])
         self.assertEqual(chimera.calls, [])
         self.assertEqual(chimera.deleted, ["ref-1"])
         self.assertEqual(set(result), {"generation_ids", "pose", "candidates",
-                                       "applied", "dropped"})
+                                       "applied", "dropped", "figure"})
+        self.assertEqual(result["figure"]["aspect"], 8 / 12)
+        self.assertEqual(result["figure"]["points"][0], [0.5, 0.25, 0.9])
         self.assertEqual(result["generation_ids"], [])
         self.assertEqual(result["pose"], "yukari_persona")
         self.assertIn("hand between legs", result["applied"]["gesture"])
@@ -142,12 +156,17 @@ class ReferenceTest(unittest.TestCase):
 
     def test_the_analysis_carries_only_candidate_scores(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
-                        lambda: FakeVerifier([]))
-        self.assertEqual(set(found), {"scores", "kept", "groups", "verdicts"})
+                        lambda: FakeVerifier([]), lambda: fake_estimator([]))
+        self.assertEqual(set(found), {"scores", "kept", "groups", "verdicts", "figure"})
         self.assertEqual(set(found["groups"]), set(GROUPS))
         self.assertIn("1girl", found["kept"])
         self.assertNotIn("1girl", found["scores"])
         json.dumps(found)
+
+    def test_no_figure_is_none(self):
+        found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
+                        lambda: FakeVerifier([]), lambda: lambda bgr: ([], []))
+        self.assertIsNone(found["figure"])
 
     def test_another_recipe_is_refused(self):
         with self.assertRaisesRegex(SystemExit, "recipe"):
@@ -187,14 +206,43 @@ class ReferenceRenderTest(unittest.TestCase):
         self.assertEqual(payload["generation"]["parameters"], {"pose": "yukari_persona"})
         self.assertEqual(payload["semantic"]["attributes"]["reference"], {
             "source_request": "r00001", "pose": "yukari_persona",
-            "applied": {"framing_tags": ["from above"], "gesture": ["sitting"]}})
+            "applied": {"framing_tags": ["from above"], "gesture": ["sitting"]},
+            "pose_strength": 1.0})
         patches = {patch["target"]: patch for patch in payload["generation"]["patches"]
                    if patch["op"] != "remove"}
         self.assertEqual(patches["prompt.positive.framing_tags"]["value"],
                          "(from above:1.3), ")
+        self.assertEqual(patches["render.pose"]["value"], {
+            **chimera.source["result"]["figure"], "strength": 1.0})
         self.assertEqual(result, {"generation_ids": [],
                                   "generate_request_id": "gen-req-1",
                                   "generate_request_short_id": "abc123"})
+
+    def test_pose_strength_zero_follows_only_the_tags(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        reference_render(render_row(pose_strength=0), make(chimera, []))
+        payload = chimera.calls[-1][2]["payload"]
+        validate_request(payload)
+        self.assertNotIn("render.pose", [patch["target"]
+                                         for patch in payload["generation"]["patches"]])
+
+    def test_a_reference_without_a_figure_follows_only_the_tags(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        chimera.source["result"]["figure"] = None
+        reference_render(render_row(), make(chimera, []))
+        payload = chimera.calls[-1][2]["payload"]
+        self.assertNotIn("render.pose", [patch["target"]
+                                         for patch in payload["generation"]["patches"]])
+        self.assertIsNone(payload["semantic"]["attributes"]["reference"]["pose_strength"])
+
+    def test_pose_strength_out_of_range_fails_before_queuing(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        with self.assertRaisesRegex(SystemExit, "pose_strength"):
+            reference_render(render_row(pose_strength=3), make(chimera, []))
+        self.assertEqual([call[0] for call in chimera.calls], ["GET"])
 
     def test_a_missing_seed_is_drawn(self):
         chimera = Chimera()

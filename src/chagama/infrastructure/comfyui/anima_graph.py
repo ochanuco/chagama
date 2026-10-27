@@ -2,10 +2,33 @@
 
 from __future__ import annotations
 
-from ...domain.generation.models import RenderSpec
+import json
+
+from ...domain.generation.models import PoseControl, RenderSpec
 
 CLIP_NAME = "qwen_3_06b_base.safetensors"
 VAE_NAME = "qwen_image_vae.safetensors"
+# One file carries both the adapter's LoRA deltas and its control embedder.
+POSE_ADAPTER = "anima_pose_preview2.safetensors"
+
+
+def _pose_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
+                height: int, first_id: int) -> tuple[list, int]:
+    """Add the skeleton, its latent and the adapter after `model_ref`;
+    return the controlled model and the next free node id."""
+    lora_id, skeleton_id, encode_id, apply_id = (
+        str(first_id + offset) for offset in range(4))
+    graph[lora_id] = {"class_type": "LoraLoaderModelOnly", "inputs": {
+        "model": model_ref, "lora_name": POSE_ADAPTER, "strength_model": 1.0}}
+    graph[skeleton_id] = {"class_type": "YukariPoseSkeleton", "inputs": {
+        "points": json.dumps([list(point) for point in pose.points]),
+        "aspect": pose.aspect, "width": width, "height": height}}
+    graph[encode_id] = {"class_type": "VAEEncode", "inputs": {
+        "pixels": [skeleton_id, 0], "vae": ["4", 0]}}
+    graph[apply_id] = {"class_type": "AnimaControlApply", "inputs": {
+        "model": [lora_id, 0], "control_latent": [encode_id, 0],
+        "control_embedder_path": POSE_ADAPTER, "strength": pose.strength}}
+    return [apply_id, 0], first_id + 4
 
 
 def build_graph(spec: RenderSpec) -> dict[str, dict]:
@@ -43,6 +66,12 @@ def build_graph(spec: RenderSpec) -> dict[str, dict]:
             model_ref = [node_id, 0]
             loader_id += 1
         graph["3"]["inputs"]["model"] = model_ref
+    # The control latent is the first pass's size; the hires pass samples
+    # a larger latent, so it draws on the model without the adapter.
+    free_model = graph["3"]["inputs"]["model"]
+    if spec.pose is not None and spec.pose.strength:
+        graph["3"]["inputs"]["model"], loader_id = _pose_nodes(
+            graph, free_model, spec.pose, spec.width, spec.height, loader_id)
     if spec.guided_steps and 0 < spec.guided_steps < spec.steps:
         model_ref = graph["3"]["inputs"]["model"]
         stage1_id = str(loader_id)
@@ -62,7 +91,7 @@ def build_graph(spec: RenderSpec) -> dict[str, dict]:
             "start_at_step": spec.guided_steps, "end_at_step": 10000,
             "return_with_leftover_noise": "disable"}}
     if spec.hires is not None:
-        model_ref = graph["3"]["inputs"]["model"]
+        model_ref = free_model
         upscale_id, sampler_id = str(loader_id), str(loader_id + 1)
         graph[upscale_id] = {"class_type": "LatentUpscale", "inputs": {
             "samples": ["3", 0], "upscale_method": "bicubic",

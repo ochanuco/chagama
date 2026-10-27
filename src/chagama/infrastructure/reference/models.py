@@ -13,6 +13,7 @@ MODELS_ENV = "CHAGAMA_REFERENCE_MODELS"
 TAGGER_HEAD = "reference/anima-tagger"
 TAGGER_TRUNK = "reference/caformer_b36.dbv4-full"
 VERIFIER = "reference/d1-3B"
+DWPOSE = "reference/dwpose"
 
 
 class ReferenceUnavailable(RuntimeError):
