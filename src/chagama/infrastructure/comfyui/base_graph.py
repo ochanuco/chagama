@@ -12,6 +12,8 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from .anima_graph import POSE_ADAPTER
+
 # Nodes a finished picture can pass through, unmodified, between decode and
 # SaveImage. Excludes a delivery's own matte/delivered branches, so they never
 # resolve as the picture's save.
@@ -177,6 +179,20 @@ def base_roles(graph: Mapping) -> BaseRoles:
         negative_id=sampler_inputs["negative"][0], stitched=stitched)
 
 
+def uncontrolled_model(graph: Mapping, model_ref: list) -> list:
+    """`model_ref` with the pose adapter peeled off, whose control latent
+    only fits the first pass's size."""
+    node = graph[model_ref[0]]
+    if node.get("class_type") != "AnimaControlApply":
+        return model_ref
+    lora_ref = node["inputs"]["model"]
+    lora = graph[lora_ref[0]]
+    if (lora.get("class_type") == "LoraLoaderModelOnly"
+            and lora["inputs"].get("lora_name") == POSE_ADAPTER):
+        return lora["inputs"]["model"]
+    return lora_ref
+
+
 def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
                 prefix: str) -> dict:
     """A copy of `graph` that latent-upscales the finished sampler's output
@@ -207,7 +223,7 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
         "samples": [roles.sampler_id, 0], "upscale_method": "bicubic",
         "width": target_width, "height": target_height, "crop": "disabled"}}
     result[resample_id] = {"class_type": "KSampler", "inputs": {
-        "model": sampler_inputs["model"],
+        "model": uncontrolled_model(result, sampler_inputs["model"]),
         "positive": sampler_inputs["positive"],
         "negative": sampler_inputs["negative"],
         "latent_image": [upscale_id, 0], "seed": settings["seed"],

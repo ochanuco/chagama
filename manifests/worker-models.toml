@@ -85,6 +85,27 @@ repo = "circlestone-labs/Anima"
 file = "split_files/vae/qwen_image_vae.safetensors"
 revision = "f973fc41ec7545364ac9776c2440285f43ff2a30"
 
+# The Anima pose adapter (non-commercial weights, outputs unrestricted): the
+# LoRA and control embedder the yukari graph applies under `render.pose`,
+# and the DWPose detector pair the reference env reads poses with.
+[[model]]
+dest = "loras/anima_pose_preview2.safetensors"
+repo = "Claquasse/Anima-Control-Pose"
+file = "anima_pose_preview2.safetensors"
+revision = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
+
+[[model]]
+dest = "reference/dwpose/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx"
+repo = "Claquasse/Anima-Control-Pose"
+file = "detector/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx"
+revision = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
+
+[[model]]
+dest = "reference/dwpose/rtmw-dw-x-l_simcc-cocktail14_270e-256x192_20231122.onnx"
+repo = "Claquasse/Anima-Control-Pose"
+file = "detector/rtmw-dw-x-l_simcc-cocktail14_270e-256x192_20231122.onnx"
+revision = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
+
 # The reference kind: the Anima Tagger head, its caformer trunk (GPL-3.0,
 # gated: the box's HF_TOKEN must belong to an account that accepted its terms)
 # and the d1 verifier with its remote code. Read in place by

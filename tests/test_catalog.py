@@ -157,6 +157,7 @@ class BuildCatalogTest(unittest.TestCase):
             **dict.fromkeys(patches["text"]["targets"], "text"),
             **{target: kind for kind in ("number", "string", "loras")
                for target in patches[kind]},
+            **dict.fromkeys(patches["pose"], "pose"),
         }
         self.assertEqual(published, TARGET_KINDS)
         self.assertEqual(patches["loras"],

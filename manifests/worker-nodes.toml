@@ -42,3 +42,12 @@ repo = "https://github.com/1038lab/ComfyUI-RMBG.git"
 commit = "229529e0ea63fb7085848225d74f91f6dc164956"
 install_requirements = false
 pip = ["timm", "hydra-core", "omegaconf", "iopath", "segment-anything", "triton-windows<3.9", "decord", "pycocotools"]
+
+# AnimaControlApply, the Anima pose adapter's node; it ships as a folder of
+# the model repo, which carries no code licence of its own.
+[[node]]
+name = "anima_control_lora"
+repo = "https://huggingface.co/Claquasse/Anima-Control-Pose"
+commit = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
+subdir = "comfyui/anima_control_lora"
+install_requirements = false

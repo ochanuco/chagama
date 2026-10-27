@@ -4,7 +4,8 @@
 `reference` frees ComfyUI's models and has the reference env run the Anima
 Tagger and d1 on the GPU in a subprocess; it proposes tags and
 lists every candidate. `reference_render` needs no GPU: it turns the picked
-tags into part patches and queues an ordinary generate.
+tags into part patches, and the reference's pose into a `render.pose`
+patch, and queues an ordinary generate.
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ RECIPE = "yukari"
 # ComfyUI unloads on its own prompt thread after /free returns.
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
+POSE_STRENGTH = 1.0
 
 
 class ReferenceImageMissing(Exception):
@@ -45,7 +47,8 @@ class ReferenceServices:
 
 
 def analyze(image: bytes, services: ReferenceServices) -> dict:
-    """The `reference` result: the proposed pose and tags, and every candidate."""
+    """The `reference` result: the proposed pose and tags, every candidate,
+    and the figure's detected pose (None when no figure was found)."""
     services.free_comfyui()
     services.sleep(FREE_SETTLE_SECONDS)
     found = services.analyze(image)
@@ -59,20 +62,34 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
                                            proposal),
         "applied": proposal.applied,
         "dropped": proposal.dropped,
+        "figure": found.get("figure"),
     }
 
 
-def generate_request(plan: rules.Plan, *, seed: int, source: str) -> dict:
+def pose_patch(figure: Mapping, strength: float) -> dict:
+    return {"target": "render.pose", "op": "set",
+            "value": {"points": figure["points"], "aspect": figure["aspect"],
+                      "strength": strength},
+            "reason": "参考画像のポーズを写す"}
+
+
+def generate_request(plan: rules.Plan, *, seed: int, source: str,
+                     figure: Mapping | None = None,
+                     pose_strength: float = 0.0) -> dict:
+    patches = list(plan.patches)
+    if figure and pose_strength:
+        patches.append(pose_patch(figure, pose_strength))
     return {
         "schema_version": 1,
         "request": {"instruction": "参考画像から描く", "count": 1, "seeds": [seed]},
         "generation": {"recipe": RECIPE, "parameters": {"pose": plan.pose},
-                       "patches": plan.patches},
+                       "patches": patches},
         "semantic": {
             "summary": f"参考画像から: {plan.pose}",
             "attributes": {"reference": {
                 "source_request": source, "pose": plan.pose,
-                "applied": plan.applied}},
+                "applied": plan.applied,
+                "pose_strength": pose_strength if figure else None}},
         },
     }
 
@@ -130,8 +147,14 @@ def reference_render(row: Mapping, services: ReferenceServices) -> dict:
     seed = payload.get("seed")
     if seed is None:
         seed = services.random_seed()
+    strength = payload.get("pose_strength", POSE_STRENGTH)
+    if isinstance(strength, bool) or not isinstance(strength, (int, float)) \
+            or not 0 <= strength <= 2:
+        raise SystemExit("reference_render payload.pose_strength must be between 0 and 2")
     body = generate_request(plan, seed=seed,
-                            source=source.get("short_id") or source_id)
+                            source=source.get("short_id") or source_id,
+                            figure=(source.get("result") or {}).get("figure"),
+                            pose_strength=float(strength))
     validate_request(body)
     queued = {"kind": "generate", "created_by": "system",
               "idempotency_key": f"reference_render:{row['id']}", "payload": body}
