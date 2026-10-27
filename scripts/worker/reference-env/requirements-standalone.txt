@@ -2,5 +2,5 @@
 # import its CUDA torch: torch, torchvision and what ComfyUI would have lent.
 torch==2.14.1
 torchvision==0.29.1
-pillow==12.3.0
+pillow==13.0.0
 numpy==2.5.4
