@@ -103,6 +103,35 @@ repo = "kohya-ss/Anima-LLLite"
 file = "anima-lllite-any-test-like-v2.safetensors"
 revision = "36ba7f2f498a1ca63cc77fc7a1298652f72d4524"
 
+# TaihoC's VACE depth ControlNet for Anima-Base v1.0 (non-commercial weights,
+# outputs unrestricted), read by ACN_ControlNetLoaderAdvanced when
+# `render.pose` carries a depth picture.
+[[model]]
+dest = "controlnet/anima-vace-depth.safetensors"
+repo = "TaihoC/Anima-ControlNet-VACE-Depth"
+file = "anima-vace-depth.safetensors"
+revision = "4ffaa3cf5854d5eac5b13447e043d2a8ff2cc4e7"
+
+# Depth Anything V2 Large (CC-BY-NC-4.0): the depth the reference env reads off
+# the figure, the estimator the VACE depth was trained on.
+[[model]]
+dest = "reference/depth-anything-v2-large/config.json"
+repo = "depth-anything/Depth-Anything-V2-Large-hf"
+file = "config.json"
+revision = "7581137eff8d4e94f6e796d3baea0e9fa79b22d2"
+
+[[model]]
+dest = "reference/depth-anything-v2-large/model.safetensors"
+repo = "depth-anything/Depth-Anything-V2-Large-hf"
+file = "model.safetensors"
+revision = "7581137eff8d4e94f6e796d3baea0e9fa79b22d2"
+
+[[model]]
+dest = "reference/depth-anything-v2-large/preprocessor_config.json"
+repo = "depth-anything/Depth-Anything-V2-Large-hf"
+file = "preprocessor_config.json"
+revision = "7581137eff8d4e94f6e796d3baea0e9fa79b22d2"
+
 # skytnt's anime-seg (Apache-2.0): the figure mask the reference env cuts the
 # silhouette and the lineart with.
 [[model]]

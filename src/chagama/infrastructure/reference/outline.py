@@ -1,8 +1,11 @@
-"""The figure's silhouette and lineart: control pictures for the Anima
-any-test LLLite, both black on white and cut to the figure.
+"""The figure's silhouette, lineart and depth: control pictures cut to the
+figure. The silhouette and lineart are black on white for the Anima any-test
+LLLite; the depth is white near on black for the Anima VACE depth.
 
 skytnt's anime-seg masks the figure; the lineart is the gap between the
-picture's grey and its dilation, kept inside the slightly widened mask.
+picture's grey and its dilation, kept inside the slightly widened mask; the
+depth is spread over `DEPTH_RANGE` between the figure's nearest and farthest
+percentile, so the farthest of the figure still stands off the black.
 """
 
 from __future__ import annotations
@@ -23,6 +26,8 @@ MASK_THRESHOLD = 0.5
 LINE_KERNEL = 3
 LINE_GAIN = 4.0
 MASK_MARGIN = 9
+DEPTH_RANGE = (0.15, 1.0)
+DEPTH_PERCENTILES = (1, 99)
 
 
 def load_segmenter():
@@ -57,6 +62,16 @@ def lineart(rgb: np.ndarray, mask: np.ndarray) -> np.ndarray:
     return (255 - lines * inside).astype(np.uint8)
 
 
+def depth(relative: np.ndarray, mask: np.ndarray) -> np.ndarray:
+    inside = mask >= MASK_THRESHOLD
+    if not inside.any():
+        return np.zeros(relative.shape, np.uint8)
+    far, near = np.percentile(relative[inside], DEPTH_PERCENTILES)
+    spread = np.clip((relative - far) / max(near - far, 1e-6), 0, 1)
+    low, high = DEPTH_RANGE
+    return np.where(inside, (low + spread * (high - low)) * 255, 0).astype(np.uint8)
+
+
 def png_base64(picture: np.ndarray) -> str:
     height, width = picture.shape[:2]
     scale = min(1.0, LONG_SIDE / max(height, width))
@@ -68,10 +83,12 @@ def png_base64(picture: np.ndarray) -> str:
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def outlines(image: Image.Image, segmenter) -> dict:
-    """`{silhouette, lineart}`: each a base64 greyscale PNG, the long side at
-    most `LONG_SIDE`."""
+def outlines(image: Image.Image, segmenter, estimate_depth) -> dict:
+    """`{silhouette, lineart, depth}`: each a base64 greyscale PNG, the long
+    side at most `LONG_SIDE`. `estimate_depth` maps the picture to its
+    relative depth, larger nearer."""
     rgb = np.asarray(image.convert("RGB"))
     mask = figure_mask(rgb, segmenter)
     return {"silhouette": png_base64(silhouette(mask)),
-            "lineart": png_base64(lineart(rgb, mask))}
+            "lineart": png_base64(lineart(rgb, mask)),
+            "depth": png_base64(depth(estimate_depth(image.convert("RGB")), mask))}

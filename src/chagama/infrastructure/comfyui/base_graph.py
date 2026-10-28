@@ -195,6 +195,16 @@ def uncontrolled_model(graph: Mapping, model_ref: list) -> list:
     return lora_ref
 
 
+def uncontrolled_conditioning(graph: Mapping, positive: list,
+                              negative: list) -> tuple[list, list]:
+    """`positive` and `negative` with the depth ControlNet peeled off, whose
+    control only fits the first pass's size."""
+    node = graph[positive[0]]
+    if node.get("class_type") == "ACN_AdvancedControlNetApply_v2":
+        return node["inputs"]["positive"], node["inputs"]["negative"]
+    return positive, negative
+
+
 def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
                 prefix: str) -> dict:
     """A copy of `graph` that latent-upscales the finished sampler's output
@@ -219,6 +229,8 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
             f"hires の大きさが小さすぎます: {target_width}x{target_height}")
     settings = sampler_settings(result, roles.sampler_id)
     sampler_inputs = result[roles.sampler_id]["inputs"]
+    positive, negative = uncontrolled_conditioning(
+        result, sampler_inputs["positive"], sampler_inputs["negative"])
     next_id = max(int(key) for key in result if key.isdecimal()) + 1
     upscale_id, resample_id = str(next_id), str(next_id + 1)
     result[upscale_id] = {"class_type": "LatentUpscale", "inputs": {
@@ -226,8 +238,7 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
         "width": target_width, "height": target_height, "crop": "disabled"}}
     result[resample_id] = {"class_type": "KSampler", "inputs": {
         "model": uncontrolled_model(result, sampler_inputs["model"]),
-        "positive": sampler_inputs["positive"],
-        "negative": sampler_inputs["negative"],
+        "positive": positive, "negative": negative,
         "latent_image": [upscale_id, 0], "seed": settings["seed"],
         "steps": settings["steps"], "cfg": settings["cfg"],
         "sampler_name": settings["sampler_name"],

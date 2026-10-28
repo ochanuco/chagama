@@ -90,6 +90,11 @@ class FakeSegmenter:
         return [mask]
 
 
+def fake_depth(image):
+    width, height = image.size
+    return np.ones((height, width), np.float32)
+
+
 class Chimera:
     def __init__(self, image=b""):
         self.image = image or png()
@@ -114,7 +119,8 @@ def make(chimera, log, image=...):
         analyze=lambda data: analyze(Image.open(io.BytesIO(data)),
                                      lambda: FakeTagger(log), lambda: FakeVerifier(log),
                                      lambda: fake_estimator(log),
-                                     lambda: FakeSegmenter(log)),
+                                     lambda: FakeSegmenter(log),
+                                     lambda: fake_depth),
         emit=lambda message: None,
         sleep=lambda seconds: log.append(("sleep", seconds)),
         random_seed=lambda: 42,
@@ -171,7 +177,7 @@ class ReferenceTest(unittest.TestCase):
     def test_the_analysis_carries_only_candidate_scores(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
                         lambda: FakeVerifier([]), lambda: fake_estimator([]),
-                        lambda: FakeSegmenter([]))
+                        lambda: FakeSegmenter([]), lambda: fake_depth)
         self.assertEqual(set(found), {"scores", "kept", "groups", "verdicts", "figure"})
         self.assertEqual(set(found["groups"]), set(GROUPS))
         self.assertIn("1girl", found["kept"])
@@ -181,7 +187,7 @@ class ReferenceTest(unittest.TestCase):
     def test_no_figure_is_none(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
                         lambda: FakeVerifier([]), lambda: lambda bgr: ([], []),
-                        lambda: FakeSegmenter([]))
+                        lambda: FakeSegmenter([]), lambda: fake_depth)
         self.assertIsNone(found["figure"])
 
     def test_another_recipe_is_refused(self):
@@ -253,7 +259,7 @@ class ReferenceRenderTest(unittest.TestCase):
         chimera = Chimera()
         chimera.source = analysed_source()
         with self.assertRaisesRegex(SystemExit, "pose_control"):
-            reference_render(render_row(pose_control="depth"), make(chimera, []))
+            reference_render(render_row(pose_control="normal"), make(chimera, []))
 
     def test_a_reference_read_before_outlines_has_no_silhouette(self):
         chimera = Chimera()

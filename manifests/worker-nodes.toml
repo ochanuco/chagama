@@ -60,3 +60,12 @@ name = "ComfyUI-Anima-LoRA-ControlNet-Patch"
 repo = "https://github.com/INuBq8/ComfyUI-Anima-LoRA-ControlNet-Patch.git"
 commit = "b25ae637102f2358116fe419a409f0594f61245b"
 install_requirements = false
+
+# Advanced-ControlNet with the Anima VACE ControlNet loader (PineCookie's
+# fix/anima-vace-hardening, upstream PR #260): ACN_ControlNetLoaderAdvanced and
+# ACN_AdvancedControlNetApply_v2 run the depth VACE under `render.pose`.
+[[node]]
+name = "ComfyUI-Advanced-ControlNet"
+repo = "https://github.com/PineCookie/ComfyUI-Advanced-ControlNet.git"
+commit = "18f1fc1083afb951389af601b0cce4484f62d934"
+install_requirements = false

@@ -11,6 +11,7 @@ VAE_NAME = "qwen_image_vae.safetensors"
 # One file carries both the adapter's LoRA deltas and its control embedder.
 POSE_ADAPTER = "anima_pose_preview2.safetensors"
 OUTLINE_ADAPTER = "anima-lllite-any-test-like-v2.safetensors"
+DEPTH_ADAPTER = "anima-vace-depth.safetensors"
 
 
 def _pose_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
@@ -49,6 +50,27 @@ def _outline_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
     return [apply_id, 0], first_id + 3
 
 
+def _depth_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
+                 height: int, first_id: int) -> tuple[tuple[list, list], int]:
+    """Add the depth picture and the VACE depth ControlNet, its blocks moved
+    to `model_ref`'s; return the controlled positive and negative and the
+    next free node id."""
+    picture_id, loader_id, remap_id, apply_id = (
+        str(first_id + offset) for offset in range(4))
+    graph[picture_id] = {"class_type": "YukariPoseOutline", "inputs": {
+        "picture": pose.picture, "aspect": pose.aspect,
+        "width": width, "height": height, "fill": 0}}
+    graph[loader_id] = {"class_type": "ACN_ControlNetLoaderAdvanced", "inputs": {
+        "cnet": DEPTH_ADAPTER}}
+    graph[remap_id] = {"class_type": "YukariAnimaControlRemap", "inputs": {
+        "control_net": [loader_id, 0], "model": model_ref}}
+    graph[apply_id] = {"class_type": "ACN_AdvancedControlNetApply_v2", "inputs": {
+        "positive": ["6", 0], "negative": ["7", 0], "control_net": [remap_id, 0],
+        "image": [picture_id, 0], "strength": pose.strength,
+        "start_percent": 0.0, "end_percent": pose.end, "vae_optional": ["4", 0]}}
+    return ([apply_id, 0], [apply_id, 1]), first_id + 4
+
+
 def build_graph(spec: RenderSpec) -> dict[str, dict]:
     graph = {
         "1": {"class_type": "UNETLoader", "inputs": {
@@ -85,25 +107,32 @@ def build_graph(spec: RenderSpec) -> dict[str, dict]:
             loader_id += 1
         graph["3"]["inputs"]["model"] = model_ref
     # The control is the first pass's size; the hires pass samples a larger
-    # latent, so it draws on the model without the adapter.
+    # latent, so it draws on the model and prompts without the adapter.
     free_model = graph["3"]["inputs"]["model"]
+    positive, negative = ["6", 0], ["7", 0]
     if spec.pose is not None and spec.pose.strength:
-        nodes = _pose_nodes if spec.pose.control == "skeleton" else _outline_nodes
-        graph["3"]["inputs"]["model"], loader_id = nodes(
-            graph, free_model, spec.pose, spec.width, spec.height, loader_id)
+        if spec.pose.control == "depth":
+            (positive, negative), loader_id = _depth_nodes(
+                graph, free_model, spec.pose, spec.width, spec.height, loader_id)
+            graph["3"]["inputs"]["positive"] = positive
+            graph["3"]["inputs"]["negative"] = negative
+        else:
+            nodes = _pose_nodes if spec.pose.control == "skeleton" else _outline_nodes
+            graph["3"]["inputs"]["model"], loader_id = nodes(
+                graph, free_model, spec.pose, spec.width, spec.height, loader_id)
     if spec.guided_steps and 0 < spec.guided_steps < spec.steps:
         model_ref = graph["3"]["inputs"]["model"]
         stage1_id = str(loader_id)
         loader_id += 1
         graph[stage1_id] = {"class_type": "KSamplerAdvanced", "inputs": {
-            "model": model_ref, "positive": ["6", 0], "negative": ["7", 0],
+            "model": model_ref, "positive": positive, "negative": negative,
             "latent_image": ["5", 0], "add_noise": "enable",
             "noise_seed": spec.seed, "steps": spec.steps, "cfg": spec.cfg,
             "sampler_name": spec.sampler_name, "scheduler": spec.scheduler,
             "start_at_step": 0, "end_at_step": spec.guided_steps,
             "return_with_leftover_noise": "enable"}}
         graph["3"] = {"class_type": "KSamplerAdvanced", "inputs": {
-            "model": model_ref, "positive": ["6", 0], "negative": ["7", 0],
+            "model": model_ref, "positive": positive, "negative": negative,
             "latent_image": [stage1_id, 0], "add_noise": "disable",
             "noise_seed": spec.seed, "steps": spec.steps, "cfg": 1.0,
             "sampler_name": spec.sampler_name, "scheduler": spec.scheduler,

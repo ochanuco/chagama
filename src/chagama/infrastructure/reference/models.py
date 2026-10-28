@@ -15,6 +15,7 @@ TAGGER_TRUNK = "reference/caformer_b36.dbv4-full"
 VERIFIER = "reference/d1-3B"
 DWPOSE = "reference/dwpose"
 ANIME_SEG = "reference/anime-seg"
+DEPTH = "reference/depth-anything-v2-large"
 
 
 class ReferenceUnavailable(RuntimeError):
