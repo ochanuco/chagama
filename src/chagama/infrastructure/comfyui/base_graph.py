@@ -116,14 +116,24 @@ def sampler_settings(graph: Mapping, sampler_id: str) -> dict:
     return settings
 
 
+def conditioning_text(graph: Mapping, ref: object, slot: str) -> str | None:
+    """The CLIPTextEncode text behind `ref`, through any node (a ControlNet
+    apply) that passes the `slot` conditioning on."""
+    while is_ref(ref) and ref[0] in graph:
+        inputs = graph[ref[0]].get("inputs", {})
+        if "text" in inputs:
+            return inputs["text"]
+        ref = inputs.get(slot)
+    return None
+
+
 def source_prompts(graph: Mapping) -> tuple[str, str]:
     """The source's own final positive/negative CLIPTextEncode text."""
     decode_id = find_decode(graph)
     sampler_id = find_sampler(graph, decode_id)
     inputs = graph[sampler_id]["inputs"]
-    positive = graph[inputs["positive"][0]]["inputs"]["text"]
-    negative = graph[inputs["negative"][0]]["inputs"]["text"]
-    return positive, negative
+    return (conditioning_text(graph, inputs["positive"], "positive"),
+            conditioning_text(graph, inputs["negative"], "negative"))
 
 
 @dataclass(frozen=True)

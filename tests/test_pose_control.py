@@ -12,7 +12,8 @@ from chagama.domain.generation import anima_blocks
 from chagama.domain.generation.patches import apply_patches, parse_patches
 from chagama.domain.yukari.recipe import render_spec
 from chagama.infrastructure.comfyui import anima_graph
-from chagama.infrastructure.comfyui.base_graph import base_roles, hires_graph
+from chagama.application.generate import graph_prompts
+from chagama.infrastructure.comfyui.base_graph import base_roles, hires_graph, source_prompts
 from chagama.infrastructure.imaging import pose_skeleton
 
 POINTS = [[0.5, 0.5, 0.9]] * 133
@@ -136,6 +137,12 @@ class DepthGraphTest(unittest.TestCase):
             self.assertEqual((sampler["inputs"]["positive"], sampler["inputs"]["negative"]),
                              ([apply_id, 0], [apply_id, 1]))
             self.assertEqual(sampler["inputs"]["model"], ["1", 0])
+
+    def test_the_prompts_are_read_through_the_controlnet(self):
+        graph = self.graph()
+        texts = (graph["6"]["inputs"]["text"], graph["7"]["inputs"]["text"])
+        self.assertEqual(graph_prompts(graph), texts)
+        self.assertEqual(source_prompts(graph), texts)
 
     def test_the_hires_pass_samples_the_plain_prompts(self):
         graph = self.graph(hires=2048)
