@@ -14,6 +14,7 @@ from ..domain.generation.models import PromptPair, RenderSpec
 from ..domain.generation.patches import apply_patches, parse_patches
 from ..domain.generation.prompt_lint import tags as prompt_tags
 from ..domain.yukari.dials import DIALS
+from ..infrastructure.comfyui.base_graph import conditioning_text
 from ..infrastructure.comfyui.timings import note_ingested
 from .ingest import create_job, open_request, rate_generation
 
@@ -367,14 +368,8 @@ def graph_prompts(graph: dict) -> tuple[str | None, str | None]:
     if not samplers:
         return None, None
     inputs = graph[samplers[0]].get("inputs", {})
-
-    def text(slot: str) -> str | None:
-        link = inputs.get(slot)
-        if not isinstance(link, list) or not link:
-            return None
-        return graph.get(link[0], {}).get("inputs", {}).get("text")
-
-    return text("positive"), text("negative")
+    return (conditioning_text(graph, inputs.get("positive"), "positive"),
+            conditioning_text(graph, inputs.get("negative"), "negative"))
 
 
 def resolution_payload(req: dict, git: dict, *,
