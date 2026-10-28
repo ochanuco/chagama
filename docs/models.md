@@ -16,6 +16,7 @@ The code names the files; this is where to look.
 | Pixal3D / TRELLIS.2 image-to-3D (ComfyUI core template, run by hand) | Comfy-Org Pixal3D, TRELLIS.2, MoGe and BiRefNet files | `manifests/worker-models.toml` |
 | Reading a `reference` picture into tags | `reference/anima-tagger` (sorryhyun/anima-tagger head), `reference/caformer_b36.dbv4-full` (its GPL-3.0 trunk, gated) and `reference/d1-3B` (LiquidAI d1 verifier, LFM Open License v1.0) | `infrastructure/reference/models.py` |
 | Following a reference's pose (`render.pose` patch) | `loras/anima_pose_preview2.safetensors` (Claquasse/Anima-Control-Pose Preview-2, non-commercial weights, outputs unrestricted), its `anima_control_lora` node, and the DWPose pair under `reference/dwpose` | `infrastructure/comfyui/anima_graph.py` `POSE_ADAPTER`, `infrastructure/reference/dwpose.py` |
+| Following a reference's silhouette or lineart (`render.pose` patch with `control`) | `model_patches/anima-lllite-any-test-like-v2.safetensors` (kohya-ss/Anima-LLLite, non-commercial weights, outputs unrestricted) through ComfyUI core's `AnimaLLLiteApply`, and `reference/anime-seg/isnetis.onnx` (skytnt/anime-seg, Apache-2.0) | `infrastructure/comfyui/anima_graph.py` `OUTLINE_ADAPTER`, `infrastructure/reference/outline.py` |
 
 `silvermoonmixAnimaEvolved_v2329BTurbo` is sampled with `render.guided_steps`:
 the leading steps at the recipe's own CFG, the rest at CFG 1.0 off the same

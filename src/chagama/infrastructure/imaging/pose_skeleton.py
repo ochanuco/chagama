@@ -1,4 +1,5 @@
-"""The skeleton picture the Anima pose adapter reads.
+"""The pictures the pose adapters read: the skeleton the Anima pose
+adapter reads, and the silhouette or lineart canvas for the any-test LLLite.
 
 The adapter was trained on rtmlib's `draw_skeleton(..., openpose_skeleton=False)`
 over a black BGR canvas written with OpenCV, so this draws the same COCO-WholeBody
@@ -81,6 +82,22 @@ def draw(points: Sequence[Sequence[float]], aspect: float, width: int,
         if visible[a] and visible[b]:
             cv2.line(canvas, pixels[a], pixels[b], color, thickness=LINE_WIDTH)
     return np.ascontiguousarray(canvas[..., ::-1])
+
+
+def outline(picture: bytes, aspect: float, width: int, height: int) -> np.ndarray:
+    """An RGB uint8 `height` x `width` canvas: the black-on-white `picture`
+    of the source frame fitted the way `draw` fits the skeleton, white
+    around it."""
+    decoded = cv2.imdecode(np.frombuffer(picture, np.uint8), cv2.IMREAD_GRAYSCALE)
+    if decoded is None:
+        raise ValueError("the pose picture is not a readable image")
+    left, top, frame_width, frame_height = frame(width, height, aspect)
+    x0, y0 = round(left), round(top)
+    x1, y1 = round(left + frame_width), round(top + frame_height)
+    canvas = np.full((height, width), 255, np.uint8)
+    canvas[y0:y1, x0:x1] = cv2.resize(decoded, (x1 - x0, y1 - y0),
+                                      interpolation=cv2.INTER_AREA)
+    return np.ascontiguousarray(np.repeat(canvas[..., None], 3, axis=2))
 
 
 def patch_padded(skeleton: np.ndarray) -> np.ndarray:

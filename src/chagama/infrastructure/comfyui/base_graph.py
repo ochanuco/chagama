@@ -180,9 +180,11 @@ def base_roles(graph: Mapping) -> BaseRoles:
 
 
 def uncontrolled_model(graph: Mapping, model_ref: list) -> list:
-    """`model_ref` with the pose adapter peeled off, whose control latent
-    only fits the first pass's size."""
+    """`model_ref` with the pose adapter peeled off, whose control only fits
+    the first pass's size."""
     node = graph[model_ref[0]]
+    if node.get("class_type") == "AnimaLLLiteApply":
+        return node["inputs"]["model"]
     if node.get("class_type") != "AnimaControlApply":
         return model_ref
     lora_ref = node["inputs"]["model"]

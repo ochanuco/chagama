@@ -10,6 +10,7 @@ CLIP_NAME = "qwen_3_06b_base.safetensors"
 VAE_NAME = "qwen_image_vae.safetensors"
 # One file carries both the adapter's LoRA deltas and its control embedder.
 POSE_ADAPTER = "anima_pose_preview2.safetensors"
+OUTLINE_ADAPTER = "anima-lllite-any-test-like-v2.safetensors"
 
 
 def _pose_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
@@ -29,6 +30,23 @@ def _pose_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
         "model": [lora_id, 0], "control_latent": [encode_id, 0],
         "control_embedder_path": POSE_ADAPTER, "strength": pose.strength}}
     return [apply_id, 0], first_id + 4
+
+
+def _outline_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
+                   height: int, first_id: int) -> tuple[list, int]:
+    """Add the silhouette or lineart picture and the any-test LLLite after
+    `model_ref`; return the controlled model and the next free node id."""
+    picture_id, loader_id, apply_id = (str(first_id + offset) for offset in range(3))
+    graph[picture_id] = {"class_type": "YukariPoseOutline", "inputs": {
+        "picture": pose.picture, "aspect": pose.aspect,
+        "width": width, "height": height}}
+    graph[loader_id] = {"class_type": "ModelPatchLoader", "inputs": {
+        "name": OUTLINE_ADAPTER}}
+    graph[apply_id] = {"class_type": "AnimaLLLiteApply", "inputs": {
+        "model": model_ref, "model_patch": [loader_id, 0],
+        "image": [picture_id, 0], "strength": pose.strength,
+        "start_percent": 0.0, "end_percent": 1.0}}
+    return [apply_id, 0], first_id + 3
 
 
 def build_graph(spec: RenderSpec) -> dict[str, dict]:
@@ -66,11 +84,12 @@ def build_graph(spec: RenderSpec) -> dict[str, dict]:
             model_ref = [node_id, 0]
             loader_id += 1
         graph["3"]["inputs"]["model"] = model_ref
-    # The control latent is the first pass's size; the hires pass samples
-    # a larger latent, so it draws on the model without the adapter.
+    # The control is the first pass's size; the hires pass samples a larger
+    # latent, so it draws on the model without the adapter.
     free_model = graph["3"]["inputs"]["model"]
     if spec.pose is not None and spec.pose.strength:
-        graph["3"]["inputs"]["model"], loader_id = _pose_nodes(
+        nodes = _pose_nodes if spec.pose.control == "skeleton" else _outline_nodes
+        graph["3"]["inputs"]["model"], loader_id = nodes(
             graph, free_model, spec.pose, spec.width, spec.height, loader_id)
     if spec.guided_steps and 0 < spec.guided_steps < spec.steps:
         model_ref = graph["3"]["inputs"]["model"]

@@ -23,11 +23,16 @@ class HiresSpec:
 
 @dataclass(frozen=True)
 class PoseControl:
-    """A COCO-WholeBody pose the picture follows: 133 `(x, y, score)`, x and y
-    as fractions of a source frame whose width over height is `aspect`."""
-    points: tuple[tuple[float, float, float], ...]
+    """The pose the picture follows, from a source frame whose width over
+    height is `aspect`. A `skeleton` control has 133 COCO-WholeBody
+    `(x, y, score)` in `points`, x and y as fractions of the frame; a
+    `silhouette` or `lineart` control has the frame as a base64 black-on-white
+    PNG in `picture`."""
     aspect: float
     strength: float
+    control: str = "skeleton"
+    points: tuple[tuple[float, float, float], ...] = ()
+    picture: str | None = None
 
 
 @dataclass(frozen=True)

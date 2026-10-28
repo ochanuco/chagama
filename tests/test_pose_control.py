@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import base64
+import io
 import json
 import unittest
 
 import numpy as np
+from PIL import Image
 
 from chagama.domain.generation.patches import apply_patches, parse_patches
 from chagama.domain.yukari.recipe import render_spec
@@ -12,6 +15,15 @@ from chagama.infrastructure.comfyui.base_graph import base_roles, hires_graph
 from chagama.infrastructure.imaging import pose_skeleton
 
 POINTS = [[0.5, 0.5, 0.9]] * 133
+
+
+def _black_png():
+    buffer = io.BytesIO()
+    Image.new("L", (8, 16), 0).save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+PICTURE = _black_png()
 
 
 def pose_patch(**value):
@@ -44,6 +56,64 @@ class PosePatchTest(unittest.TestCase):
                     {"points": [[0.5, 0.5]] * 133}, {"strength": True}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_patches([pose_patch(**bad)])
+
+
+def outline_patch(**value):
+    return {"target": "render.pose", "op": "set", "reason": "r",
+            "value": {"control": "silhouette", "picture": PICTURE, "aspect": 0.5,
+                      "strength": 1.0, **value}}
+
+
+class OutlinePatchTest(unittest.TestCase):
+    def test_parses_into_the_spec(self):
+        spec = apply_patches(render_spec("coffee", 7, "p"),
+                             parse_patches([outline_patch()]))
+        self.assertEqual((spec.pose.control, spec.pose.picture, spec.pose.points),
+                         ("silhouette", PICTURE, ()))
+
+    def test_rejects_a_malformed_outline(self):
+        for bad in ({"control": "depth"}, {"picture": ""}, {"points": POINTS}):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                parse_patches([outline_patch(**bad)])
+
+
+class OutlineGraphTest(unittest.TestCase):
+    def graph(self, hires=0):
+        spec = render_spec("coffee", 7, "p", hires=hires)
+        return anima_graph.build_graph(apply_patches(spec, parse_patches([outline_patch()])))
+
+    def test_the_sampler_draws_through_the_lllite(self):
+        graph = self.graph()
+        apply_id = find(graph, "AnimaLLLiteApply")
+        self.assertEqual(graph["3"]["inputs"]["model"], [apply_id, 0])
+        inputs = graph[apply_id]["inputs"]
+        self.assertEqual(inputs["model"], ["1", 0])
+        self.assertEqual(graph[inputs["model_patch"][0]]["inputs"]["name"],
+                         anima_graph.OUTLINE_ADAPTER)
+        picture = graph[inputs["image"][0]]
+        self.assertEqual(picture["class_type"], "YukariPoseOutline")
+        self.assertEqual(picture["inputs"]["picture"], PICTURE)
+        self.assertNotIn("AnimaControlApply", classes(graph).values())
+
+    def test_a_redraw_hires_peels_the_lllite_off(self):
+        graph = self.graph()
+        result = hires_graph(graph, base_roles(graph), 2048 * 2048, 0.45, "p")
+        upscale_id = find(result, "LatentUpscale")
+        (resample,) = [node for node in result.values()
+                       if node["inputs"].get("latent_image") == [upscale_id, 0]]
+        self.assertEqual(resample["inputs"]["model"], ["1", 0])
+
+
+class OutlineCanvasTest(unittest.TestCase):
+    def test_fits_the_frame_with_white_around(self):
+        canvas = pose_skeleton.outline(base64.b64decode(PICTURE), 0.5, 64, 32)
+        self.assertEqual(canvas.shape, (32, 64, 3))
+        self.assertEqual(canvas[16, 32].tolist(), [0, 0, 0])
+        self.assertEqual(canvas[16, 4].tolist(), [255, 255, 255])
+
+    def test_rejects_an_unreadable_picture(self):
+        with self.assertRaises(ValueError):
+            pose_skeleton.outline(b"nope", 0.5, 64, 32)
 
 
 class PoseGraphTest(unittest.TestCase):

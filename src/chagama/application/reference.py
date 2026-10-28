@@ -4,8 +4,9 @@
 `reference` frees ComfyUI's models and has the reference env run the Anima
 Tagger and d1 on the GPU in a subprocess; it proposes tags and
 lists every candidate. `reference_render` needs no GPU: it turns the picked
-tags into part patches, and the reference's pose into a `render.pose`
-patch, and queues an ordinary generate.
+tags into part patches, and the reference's pose (its skeleton, silhouette
+or lineart, by `pose_control`) into a `render.pose` patch, and queues an
+ordinary generate.
 """
 
 from __future__ import annotations
@@ -29,6 +30,7 @@ RECIPE = "yukari"
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
+POSE_CONTROLS = ("skeleton", "silhouette", "lineart")
 POSE_ASPECTS = (0.5, 2.0)
 
 
@@ -69,10 +71,13 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
     }
 
 
-def pose_patch(figure: Mapping, strength: float) -> dict:
+def pose_patch(figure: Mapping, strength: float, control: str = "skeleton") -> dict:
+    if control == "skeleton":
+        value = {"points": figure["points"]}
+    else:
+        value = {"control": control, "picture": figure[control]}
     return {"target": "render.pose", "op": "set",
-            "value": {"points": figure["points"], "aspect": figure["aspect"],
-                      "strength": strength},
+            "value": {**value, "aspect": figure["aspect"], "strength": strength},
             "reason": "参考画像のポーズを写す"}
 
 
@@ -95,11 +100,11 @@ def canvas_patches(pose: str, aspect: float) -> list[dict]:
 
 def generate_request(plan: rules.Plan, *, seed: int, source: str,
                      figure: Mapping | None = None,
-                     pose_strength: float = 0.0) -> dict:
+                     pose_strength: float = 0.0, pose_control: str = "skeleton") -> dict:
     patches = list(plan.patches)
     if figure and pose_strength:
         patches += canvas_patches(plan.pose, figure["aspect"])
-        patches.append(pose_patch(figure, pose_strength))
+        patches.append(pose_patch(figure, pose_strength, pose_control))
     return {
         "schema_version": 1,
         "request": {"instruction": "参考画像から描く", "count": 1, "seeds": [seed]},
@@ -110,7 +115,8 @@ def generate_request(plan: rules.Plan, *, seed: int, source: str,
             "attributes": {"reference": {
                 "source_request": source, "pose": plan.pose,
                 "applied": plan.applied,
-                "pose_strength": pose_strength if figure else None}},
+                "pose_strength": pose_strength if figure else None,
+                "pose_control": pose_control if figure else None}},
         },
     }
 
@@ -172,10 +178,16 @@ def reference_render(row: Mapping, services: ReferenceServices) -> dict:
     if isinstance(strength, bool) or not isinstance(strength, (int, float)) \
             or not 0 <= strength <= 2:
         raise SystemExit("reference_render payload.pose_strength must be between 0 and 2")
+    control = payload.get("pose_control", "skeleton")
+    if control not in POSE_CONTROLS:
+        raise SystemExit(f"reference_render payload.pose_control must be one of {POSE_CONTROLS}")
+    figure = (source.get("result") or {}).get("figure")
+    if figure and strength and control != "skeleton" and control not in figure:
+        raise SystemExit(f"reference {source_id} has no {control}; analyse the picture again")
     body = generate_request(plan, seed=seed,
                             source=source.get("short_id") or source_id,
-                            figure=(source.get("result") or {}).get("figure"),
-                            pose_strength=float(strength))
+                            figure=figure, pose_strength=float(strength),
+                            pose_control=control)
     validate_request(body)
     queued = {"kind": "generate", "created_by": "system",
               "idempotency_key": f"reference_render:{row['id']}", "payload": body}
