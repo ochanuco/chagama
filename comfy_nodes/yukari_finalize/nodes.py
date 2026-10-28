@@ -514,6 +514,28 @@ class YukariPoseOutline:
         return (torch.from_numpy(canvas.astype(np.float32) / 255.0)[None, ...],)
 
 
+class YukariPoseHeadMask:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("MASK",)
+    RETURN_NAMES = ("mask",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "points": ("STRING", {"multiline": True}),
+            "aspect": ("FLOAT", {"default": 1.0, "min": 0.01, "max": 100.0,
+                                 "step": 0.0001}),
+            "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
+            "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
+        }}
+
+    def run(self, points, aspect, width, height):
+        import torch
+        mask = pose_skeleton.head_mask(json.loads(points), aspect, width, height)
+        return (torch.from_numpy(mask)[None, ...],)
+
+
 class YukariAnimaControlRemap:
     """Moves a 28-block Anima VACE ControlNet's control layers onto `model`'s
     blocks."""
@@ -552,6 +574,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariPoseSkeleton": YukariPoseSkeleton,
     "YukariPoseOutline": YukariPoseOutline,
     "YukariAnimaControlRemap": YukariAnimaControlRemap,
+    "YukariPoseHeadMask": YukariPoseHeadMask,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -571,4 +594,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariPoseSkeleton": "Yukari Pose Skeleton",
     "YukariPoseOutline": "Yukari Pose Outline",
     "YukariAnimaControlRemap": "Yukari Anima Control Remap",
+    "YukariPoseHeadMask": "Yukari Pose Head Mask",
 }

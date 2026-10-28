@@ -150,6 +150,14 @@ def _number(value: object) -> bool:
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
+def _check_points(target: str, points: object) -> None:
+    if (not isinstance(points, list) or len(points) != POSE_POINTS
+            or not all(isinstance(point, list) and len(point) == 3
+                       and all(_number(number) for number in point)
+                       for point in points)):
+        _fail(target, f"points must be {POSE_POINTS} [x, y, score] number triples")
+
+
 def _parse_pose_patch(patch: dict, target: str) -> Patch:
     op = patch.get("op")
     if op != "set":
@@ -162,20 +170,24 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
     if control == "skeleton":
         if set(value) - {"control"} != {"points", "aspect", "strength"}:
             _fail(target, "a skeleton value must be {points, aspect, strength}")
-        points = value["points"]
-        if (not isinstance(points, list) or len(points) != POSE_POINTS
-                or not all(isinstance(point, list) and len(point) == 3
-                           and all(_number(number) for number in point)
-                           for point in points)):
-            _fail(target, f"points must be {POSE_POINTS} [x, y, score] number triples")
+        _check_points(target, value["points"])
     elif control in POSE_PICTURES:
-        if set(value) - {"end"} != {"control", "picture", "aspect", "strength"}:
-            _fail(target, f"a {control} value must be {{control, picture, aspect, strength, end?}}")
+        optional = {"end", "free_head", "points"} if control == "depth" else {"end"}
+        if set(value) - optional != {"control", "picture", "aspect", "strength"}:
+            extra = ", free_head?, points?" if control == "depth" else ""
+            _fail(target, f"a {control} value must be "
+                          f"{{control, picture, aspect, strength, end?{extra}}}")
         if not isinstance(value["picture"], str) or not value["picture"]:
             _fail(target, "picture must be a base64 PNG")
         end = value.get("end", 1.0)
         if not _number(end) or not (0 < end <= 1):
             _fail(target, f"end must be a number in (0, 1], got {end!r}")
+        if not isinstance(value.get("free_head", False), bool):
+            _fail(target, "free_head must be true or false")
+        if value.get("free_head"):
+            if "points" not in value:
+                _fail(target, "free_head needs the figure's points")
+            _check_points(target, value["points"])
     else:
         _fail(target, f"control must be skeleton, silhouette, lineart or depth, got {control!r}")
     aspect, strength = value["aspect"], value["strength"]
@@ -187,7 +199,8 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
         aspect=float(aspect), strength=float(strength), control=control,
         points=tuple((float(x), float(y), float(score))
                      for x, y, score in value.get("points", ())),
-        picture=value.get("picture"), end=float(value.get("end", 1.0)))
+        picture=value.get("picture"), end=float(value.get("end", 1.0)),
+        free_head=bool(value.get("free_head", False)))
     return Patch(target, op, pose, None, reason)
 
 

@@ -147,7 +147,7 @@ class NodeMappingTest(unittest.TestCase):
             "YukariForeground", "YukariSeeThrough", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
             "YukariStage", "YukariRelight", "YukariSaturation", "YukariPhotoDepthOfField",
-            "YukariPoseSkeleton", "YukariPoseOutline", "YukariAnimaControlRemap",
+            "YukariPoseSkeleton", "YukariPoseOutline", "YukariAnimaControlRemap", "YukariPoseHeadMask",
         })
         self.assertEqual(
             set(nodes.NODE_DISPLAY_NAME_MAPPINGS),
