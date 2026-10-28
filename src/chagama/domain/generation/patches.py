@@ -169,10 +169,13 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
                            for point in points)):
             _fail(target, f"points must be {POSE_POINTS} [x, y, score] number triples")
     elif control in POSE_PICTURES:
-        if set(value) != {"control", "picture", "aspect", "strength"}:
-            _fail(target, f"a {control} value must be {{control, picture, aspect, strength}}")
+        if set(value) - {"end"} != {"control", "picture", "aspect", "strength"}:
+            _fail(target, f"a {control} value must be {{control, picture, aspect, strength, end?}}")
         if not isinstance(value["picture"], str) or not value["picture"]:
             _fail(target, "picture must be a base64 PNG")
+        end = value.get("end", 1.0)
+        if not _number(end) or not (0 < end <= 1):
+            _fail(target, f"end must be a number in (0, 1], got {end!r}")
     else:
         _fail(target, f"control must be skeleton, silhouette or lineart, got {control!r}")
     aspect, strength = value["aspect"], value["strength"]
@@ -184,7 +187,7 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
         aspect=float(aspect), strength=float(strength), control=control,
         points=tuple((float(x), float(y), float(score))
                      for x, y, score in value.get("points", ())),
-        picture=value.get("picture"))
+        picture=value.get("picture"), end=float(value.get("end", 1.0)))
     return Patch(target, op, pose, None, reason)
 
 
