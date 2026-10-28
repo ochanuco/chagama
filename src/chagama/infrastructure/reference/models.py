@@ -14,6 +14,7 @@ TAGGER_HEAD = "reference/anima-tagger"
 TAGGER_TRUNK = "reference/caformer_b36.dbv4-full"
 VERIFIER = "reference/d1-3B"
 DWPOSE = "reference/dwpose"
+ANIME_SEG = "reference/anime-seg"
 
 
 class ReferenceUnavailable(RuntimeError):

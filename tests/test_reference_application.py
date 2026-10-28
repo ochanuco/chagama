@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 from chagama.application.generate import validate_request
@@ -78,6 +79,17 @@ def fake_estimator(log):
     return estimate
 
 
+class FakeSegmenter:
+    def __init__(self, log):
+        self.log = log
+
+    def run(self, outputs, feeds):
+        self.log.append(("segment", feeds["img"].shape))
+        mask = np.zeros((1, 1, 1024, 1024), np.float32)
+        mask[..., 256:768, 256:768] = 1.0
+        return [mask]
+
+
 class Chimera:
     def __init__(self, image=b""):
         self.image = image or png()
@@ -101,7 +113,8 @@ def make(chimera, log, image=...):
         free_comfyui=lambda: log.append("free"),
         analyze=lambda data: analyze(Image.open(io.BytesIO(data)),
                                      lambda: FakeTagger(log), lambda: FakeVerifier(log),
-                                     lambda: fake_estimator(log)),
+                                     lambda: fake_estimator(log),
+                                     lambda: FakeSegmenter(log)),
         emit=lambda message: None,
         sleep=lambda seconds: log.append(("sleep", seconds)),
         random_seed=lambda: 42,
@@ -121,7 +134,7 @@ class ReferenceTest(unittest.TestCase):
         self.assertEqual(log, [
             "free", ("sleep", FREE_SETTLE_SECONDS), "tag", "tagger closed",
             ("verify", ("looking up", "light smile")), "verifier closed",
-            ("pose", (12, 8, 3))])
+            ("pose", (12, 8, 3)), ("segment", (1, 3, 1024, 1024))])
         self.assertEqual(chimera.calls, [])
         self.assertEqual(chimera.deleted, ["ref-1"])
         self.assertEqual(set(result), {"generation_ids", "pose", "candidates",
@@ -157,7 +170,8 @@ class ReferenceTest(unittest.TestCase):
 
     def test_the_analysis_carries_only_candidate_scores(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
-                        lambda: FakeVerifier([]), lambda: fake_estimator([]))
+                        lambda: FakeVerifier([]), lambda: fake_estimator([]),
+                        lambda: FakeSegmenter([]))
         self.assertEqual(set(found), {"scores", "kept", "groups", "verdicts", "figure"})
         self.assertEqual(set(found["groups"]), set(GROUPS))
         self.assertIn("1girl", found["kept"])
@@ -166,7 +180,8 @@ class ReferenceTest(unittest.TestCase):
 
     def test_no_figure_is_none(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
-                        lambda: FakeVerifier([]), lambda: lambda bgr: ([], []))
+                        lambda: FakeVerifier([]), lambda: lambda bgr: ([], []),
+                        lambda: FakeSegmenter([]))
         self.assertIsNone(found["figure"])
 
     def test_another_recipe_is_refused(self):
@@ -208,18 +223,45 @@ class ReferenceRenderTest(unittest.TestCase):
         self.assertEqual(payload["semantic"]["attributes"]["reference"], {
             "source_request": "r00001", "pose": "yukari_persona",
             "applied": {"framing_tags": ["from above"], "gesture": ["sitting"]},
-            "pose_strength": 1.0})
+            "pose_strength": 1.0, "pose_control": "skeleton"})
         patches = {patch["target"]: patch for patch in payload["generation"]["patches"]
                    if patch["op"] != "remove"}
         self.assertEqual(patches["prompt.positive.framing_tags"]["value"],
                          "(from above:1.3), ")
+        figure = chimera.source["result"]["figure"]
         self.assertEqual(patches["render.pose"]["value"], {
-            **chimera.source["result"]["figure"], "strength": 1.0})
+            "points": figure["points"], "aspect": figure["aspect"], "strength": 1.0})
         self.assertEqual((patches["render.width"]["value"], patches["render.height"]["value"]),
                          pose_canvas("yukari_persona", 8 / 12))
         self.assertEqual(result, {"generation_ids": [],
                                   "generate_request_id": "gen-req-1",
                                   "generate_request_short_id": "abc123"})
+
+    def test_a_silhouette_control_carries_the_picture(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        reference_render(render_row(seed=9, pose_control="silhouette"), make(chimera, []))
+        payload = chimera.calls[1][2]["payload"]
+        validate_request(payload)
+        (pose,) = [patch["value"] for patch in payload["generation"]["patches"]
+                   if patch["target"] == "render.pose"]
+        figure = chimera.source["result"]["figure"]
+        self.assertEqual(pose, {"control": "silhouette", "picture": figure["silhouette"],
+                                "aspect": figure["aspect"], "strength": 1.0})
+
+    def test_an_unknown_control_is_refused(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        with self.assertRaisesRegex(SystemExit, "pose_control"):
+            reference_render(render_row(pose_control="depth"), make(chimera, []))
+
+    def test_a_reference_read_before_outlines_has_no_silhouette(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        figure = chimera.source["result"]["figure"]
+        del figure["silhouette"]
+        with self.assertRaisesRegex(SystemExit, "no silhouette"):
+            reference_render(render_row(pose_control="silhouette"), make(chimera, []))
 
     def test_the_canvas_keeps_the_pose_area_at_the_reference_aspect(self):
         self.assertEqual(pose_canvas("yukari_persona", 1.39), (1520, 1104))

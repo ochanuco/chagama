@@ -7,6 +7,7 @@ PNG bytes back to tensors. The imaging logic itself lives in
 
 from __future__ import annotations
 
+import base64
 import json
 
 import numpy as np
@@ -487,6 +488,28 @@ class YukariPoseSkeleton:
         return (torch.from_numpy(skeleton.astype(np.float32) / 255.0)[None, ...],)
 
 
+class YukariPoseOutline:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("outline",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "picture": ("STRING", {"multiline": True}),
+            "aspect": ("FLOAT", {"default": 1.0, "min": 0.01, "max": 100.0,
+                                 "step": 0.0001}),
+            "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
+            "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
+        }}
+
+    def run(self, picture, aspect, width, height):
+        import torch
+        canvas = pose_skeleton.outline(base64.b64decode(picture), aspect, width, height)
+        return (torch.from_numpy(canvas.astype(np.float32) / 255.0)[None, ...],)
+
+
 NODE_CLASS_MAPPINGS = {
     "YukariSaturation": YukariSaturation,
     "YukariMatting": YukariMatting,
@@ -502,6 +525,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariRelight": YukariRelight,
     "YukariPhotoDepthOfField": YukariPhotoDepthOfField,
     "YukariPoseSkeleton": YukariPoseSkeleton,
+    "YukariPoseOutline": YukariPoseOutline,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -519,4 +543,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariRelight": "Yukari Relight",
     "YukariPhotoDepthOfField": "Yukari Photo Depth of Field",
     "YukariPoseSkeleton": "Yukari Pose Skeleton",
+    "YukariPoseOutline": "Yukari Pose Outline",
 }

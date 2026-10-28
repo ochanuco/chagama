@@ -19,6 +19,7 @@ STRING_TARGETS = ("render.model", "render.sampler", "render.scheduler")
 LORAS_TARGETS = ("render.loras",)
 POSE_TARGETS = ("render.pose",)
 POSE_POINTS = 133
+POSE_PICTURES = ("silhouette", "lineart")
 TARGET_KINDS = {
     **dict.fromkeys(TEXT_TARGETS, "text"),
     **dict.fromkeys(NUMBER_TARGETS, "number"),
@@ -155,22 +156,35 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
         _fail(target, f"op must be 'set' for {target!r}, got {op!r}")
     reason = _require_str(patch, "reason", target)
     value = patch.get("value")
-    if not isinstance(value, dict) or set(value) != {"points", "aspect", "strength"}:
-        _fail(target, "value must be {points, aspect, strength}")
-    points = value["points"]
-    if (not isinstance(points, list) or len(points) != POSE_POINTS
-            or not all(isinstance(point, list) and len(point) == 3
-                       and all(_number(number) for number in point)
-                       for point in points)):
-        _fail(target, f"points must be {POSE_POINTS} [x, y, score] number triples")
+    if not isinstance(value, dict):
+        _fail(target, "value must be an object")
+    control = value.get("control", "skeleton")
+    if control == "skeleton":
+        if set(value) - {"control"} != {"points", "aspect", "strength"}:
+            _fail(target, "a skeleton value must be {points, aspect, strength}")
+        points = value["points"]
+        if (not isinstance(points, list) or len(points) != POSE_POINTS
+                or not all(isinstance(point, list) and len(point) == 3
+                           and all(_number(number) for number in point)
+                           for point in points)):
+            _fail(target, f"points must be {POSE_POINTS} [x, y, score] number triples")
+    elif control in POSE_PICTURES:
+        if set(value) != {"control", "picture", "aspect", "strength"}:
+            _fail(target, f"a {control} value must be {{control, picture, aspect, strength}}")
+        if not isinstance(value["picture"], str) or not value["picture"]:
+            _fail(target, "picture must be a base64 PNG")
+    else:
+        _fail(target, f"control must be skeleton, silhouette or lineart, got {control!r}")
     aspect, strength = value["aspect"], value["strength"]
     if not _number(aspect) or aspect <= 0:
         _fail(target, f"aspect must be a number > 0, got {aspect!r}")
     if not _number(strength) or not (0 <= strength <= 2):
         _fail(target, f"strength must be between 0 and 2, got {strength!r}")
     pose = PoseControl(
-        points=tuple((float(x), float(y), float(score)) for x, y, score in points),
-        aspect=float(aspect), strength=float(strength))
+        aspect=float(aspect), strength=float(strength), control=control,
+        points=tuple((float(x), float(y), float(score))
+                     for x, y, score in value.get("points", ())),
+        picture=value.get("picture"))
     return Patch(target, op, pose, None, reason)
 
 

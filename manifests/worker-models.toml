@@ -94,6 +94,23 @@ repo = "Claquasse/Anima-Control-Pose"
 file = "anima_pose_preview2.safetensors"
 revision = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
 
+# kohya-ss's Anima ControlNet-LLLite trained on mixed lineart, scribble and
+# grayscale (non-commercial weights, outputs unrestricted), read by ComfyUI
+# core's `AnimaLLLiteApply` when `render.pose` carries a silhouette or lineart.
+[[model]]
+dest = "model_patches/anima-lllite-any-test-like-v2.safetensors"
+repo = "kohya-ss/Anima-LLLite"
+file = "anima-lllite-any-test-like-v2.safetensors"
+revision = "36ba7f2f498a1ca63cc77fc7a1298652f72d4524"
+
+# skytnt's anime-seg (Apache-2.0): the figure mask the reference env cuts the
+# silhouette and the lineart with.
+[[model]]
+dest = "reference/anime-seg/isnetis.onnx"
+repo = "skytnt/anime-seg"
+file = "isnetis.onnx"
+revision = "493cb60893f47441b26ec4fb9a306bce9e342982"
+
 [[model]]
 dest = "reference/dwpose/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx"
 repo = "Claquasse/Anima-Control-Pose"
