@@ -10,6 +10,7 @@ from __future__ import annotations
 import io
 import json
 import sys
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -127,6 +128,18 @@ class BridgeTest(unittest.TestCase):
         np.testing.assert_allclose((back.array[0] * 255.0).round(), mask, atol=1)
 
 
+class AnimaControlRemapTest(unittest.TestCase):
+    def test_moves_the_layers_onto_the_model_blocks_once(self):
+        control_net = types.SimpleNamespace(
+            vace=types.SimpleNamespace(control_layers=[0, 7, 14, 21]))
+        model = types.SimpleNamespace(model=types.SimpleNamespace(
+            diffusion_model=types.SimpleNamespace(blocks=[None] * 40)))
+        node = nodes.YukariAnimaControlRemap()
+        node.run(control_net, model)
+        (out,) = node.run(control_net, model)
+        self.assertEqual(out.vace.control_layers, [0, 10, 20, 31])
+
+
 class NodeMappingTest(unittest.TestCase):
     def test_node_class_mappings_cover_every_node(self):
         self.assertEqual(set(nodes.NODE_CLASS_MAPPINGS), {
@@ -134,7 +147,7 @@ class NodeMappingTest(unittest.TestCase):
             "YukariForeground", "YukariSeeThrough", "YukariDeliver", "YukariDepthOfField",
             "YukariLight", "YukariViewfinder", "YukariLens", "YukariPhotoStage",
             "YukariStage", "YukariRelight", "YukariSaturation", "YukariPhotoDepthOfField",
-            "YukariPoseSkeleton", "YukariPoseOutline",
+            "YukariPoseSkeleton", "YukariPoseOutline", "YukariAnimaControlRemap",
         })
         self.assertEqual(
             set(nodes.NODE_DISPLAY_NAME_MAPPINGS),

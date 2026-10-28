@@ -19,7 +19,7 @@ STRING_TARGETS = ("render.model", "render.sampler", "render.scheduler")
 LORAS_TARGETS = ("render.loras",)
 POSE_TARGETS = ("render.pose",)
 POSE_POINTS = 133
-POSE_PICTURES = ("silhouette", "lineart")
+POSE_PICTURES = ("silhouette", "lineart", "depth")
 TARGET_KINDS = {
     **dict.fromkeys(TEXT_TARGETS, "text"),
     **dict.fromkeys(NUMBER_TARGETS, "number"),
@@ -177,7 +177,7 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
         if not _number(end) or not (0 < end <= 1):
             _fail(target, f"end must be a number in (0, 1], got {end!r}")
     else:
-        _fail(target, f"control must be skeleton, silhouette or lineart, got {control!r}")
+        _fail(target, f"control must be skeleton, silhouette, lineart or depth, got {control!r}")
     aspect, strength = value["aspect"], value["strength"]
     if not _number(aspect) or aspect <= 0:
         _fail(target, f"aspect must be a number > 0, got {aspect!r}")

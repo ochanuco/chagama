@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 from PIL import Image
 
+from chagama.domain.generation import anima_blocks
 from chagama.domain.generation.patches import apply_patches, parse_patches
 from chagama.domain.yukari.recipe import render_spec
 from chagama.infrastructure.comfyui import anima_graph
@@ -72,7 +73,7 @@ class OutlinePatchTest(unittest.TestCase):
                          ("silhouette", PICTURE, ()))
 
     def test_rejects_a_malformed_outline(self):
-        for bad in ({"control": "depth"}, {"picture": ""}, {"points": POINTS},
+        for bad in ({"control": "normal"}, {"picture": ""}, {"points": POINTS},
                     {"end": 0}, {"end": 1.5}, {"end": True}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_patches([outline_patch(**bad)])
@@ -112,6 +113,59 @@ class OutlineGraphTest(unittest.TestCase):
         self.assertEqual(resample["inputs"]["model"], ["1", 0])
 
 
+class DepthGraphTest(unittest.TestCase):
+    def graph(self, hires=0):
+        spec = render_spec("coffee", 7, "p", hires=hires)
+        patch = outline_patch(control="depth", end=0.8)
+        return anima_graph.build_graph(apply_patches(spec, parse_patches([patch])))
+
+    def test_the_first_pass_samples_the_controlled_prompts(self):
+        graph = self.graph()
+        apply_id = find(graph, "ACN_AdvancedControlNetApply_v2")
+        apply = graph[apply_id]["inputs"]
+        self.assertEqual((apply["positive"], apply["negative"]), (["6", 0], ["7", 0]))
+        self.assertEqual((apply["vae_optional"], apply["end_percent"]), (["4", 0], 0.8))
+        remap = graph[apply["control_net"][0]]
+        self.assertEqual(remap["class_type"], "YukariAnimaControlRemap")
+        self.assertEqual(remap["inputs"]["model"], ["1", 0])
+        self.assertEqual(graph[remap["inputs"]["control_net"][0]]["inputs"]["cnet"],
+                         anima_graph.DEPTH_ADAPTER)
+        self.assertEqual(graph[apply["image"][0]]["inputs"]["fill"], 0)
+        for sampler in [node for node in graph.values()
+                        if node["class_type"].startswith("KSampler")]:
+            self.assertEqual((sampler["inputs"]["positive"], sampler["inputs"]["negative"]),
+                             ([apply_id, 0], [apply_id, 1]))
+            self.assertEqual(sampler["inputs"]["model"], ["1", 0])
+
+    def test_the_hires_pass_samples_the_plain_prompts(self):
+        graph = self.graph(hires=2048)
+        upscale_id = find(graph, "LatentUpscale")
+        (resample,) = [node for node in graph.values()
+                       if node["inputs"].get("latent_image") == [upscale_id, 0]]
+        self.assertEqual((resample["inputs"]["positive"], resample["inputs"]["negative"]),
+                         (["6", 0], ["7", 0]))
+
+    def test_a_redraw_hires_peels_the_controlnet_off(self):
+        graph = self.graph()
+        result = hires_graph(graph, base_roles(graph), 2048 * 2048, 0.45, "p")
+        upscale_id = find(result, "LatentUpscale")
+        (resample,) = [node for node in result.values()
+                       if node["inputs"].get("latent_image") == [upscale_id, 0]]
+        self.assertEqual((resample["inputs"]["positive"], resample["inputs"]["negative"]),
+                         (["6", 0], ["7", 0]))
+
+
+class AnimaBlocksTest(unittest.TestCase):
+    def test_the_vace_layers_land_on_the_old_blocks_of_the_2_9b(self):
+        self.assertEqual(anima_blocks.remap([0, 7, 14, 21], 40), [0, 10, 20, 31])
+        self.assertEqual(anima_blocks.remap([0, 7, 14, 21], 28), [0, 7, 14, 21])
+        self.assertEqual(len(set(anima_blocks.MAP_28_40)), 28)
+
+    def test_an_unknown_size_is_refused(self):
+        with self.assertRaises(ValueError):
+            anima_blocks.remap([0], 52)
+
+
 class OutlineCanvasTest(unittest.TestCase):
     def test_fits_the_frame_with_white_around(self):
         canvas = pose_skeleton.outline(base64.b64decode(PICTURE), 0.5, 64, 32)
@@ -122,6 +176,10 @@ class OutlineCanvasTest(unittest.TestCase):
     def test_rejects_an_unreadable_picture(self):
         with self.assertRaises(ValueError):
             pose_skeleton.outline(b"nope", 0.5, 64, 32)
+
+    def test_fills_around_with_the_given_grey(self):
+        canvas = pose_skeleton.outline(base64.b64decode(PICTURE), 0.5, 64, 32, fill=0)
+        self.assertEqual(canvas[16, 4].tolist(), [0, 0, 0])
 
 
 class PoseGraphTest(unittest.TestCase):

@@ -4,8 +4,8 @@
 `reference` frees ComfyUI's models and has the reference env run the Anima
 Tagger and d1 on the GPU in a subprocess; it proposes tags and
 lists every candidate. `reference_render` needs no GPU: it turns the picked
-tags into part patches, and the reference's pose (its skeleton, silhouette
-or lineart, by `pose_control`) into a `render.pose` patch, and queues an
+tags into part patches, and the reference's pose (its skeleton, silhouette,
+lineart or depth, by `pose_control`) into a `render.pose` patch, and queues an
 ordinary generate.
 """
 
@@ -30,7 +30,7 @@ RECIPE = "yukari"
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
-POSE_CONTROLS = ("skeleton", "silhouette", "lineart")
+POSE_CONTROLS = ("skeleton", "silhouette", "lineart", "depth")
 POSE_ASPECTS = (0.5, 2.0)
 
 

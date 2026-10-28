@@ -12,6 +12,7 @@ import json
 
 import numpy as np
 
+from chagama.domain.generation import anima_blocks
 from chagama.infrastructure.imaging import (
     delivery,
     depth_blur,
@@ -502,12 +503,36 @@ class YukariPoseOutline:
                                  "step": 0.0001}),
             "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
             "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
+        }, "optional": {
+            "fill": ("INT", {"default": 255, "min": 0, "max": 255}),
         }}
 
-    def run(self, picture, aspect, width, height):
+    def run(self, picture, aspect, width, height, fill=255):
         import torch
-        canvas = pose_skeleton.outline(base64.b64decode(picture), aspect, width, height)
+        canvas = pose_skeleton.outline(base64.b64decode(picture), aspect, width,
+                                       height, fill)
         return (torch.from_numpy(canvas.astype(np.float32) / 255.0)[None, ...],)
+
+
+class YukariAnimaControlRemap:
+    """Moves a 28-block Anima VACE ControlNet's control layers onto `model`'s
+    blocks."""
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("CONTROL_NET",)
+    RETURN_NAMES = ("control_net",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"control_net": ("CONTROL_NET",), "model": ("MODEL",)}}
+
+    def run(self, control_net, model):
+        vace = control_net.vace
+        base = getattr(vace, "yukari_base_layers", None) or list(vace.control_layers)
+        vace.yukari_base_layers = base
+        vace.control_layers = anima_blocks.remap(
+            base, len(model.model.diffusion_model.blocks))
+        return (control_net,)
 
 
 NODE_CLASS_MAPPINGS = {
@@ -526,6 +551,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariPhotoDepthOfField": YukariPhotoDepthOfField,
     "YukariPoseSkeleton": YukariPoseSkeleton,
     "YukariPoseOutline": YukariPoseOutline,
+    "YukariAnimaControlRemap": YukariAnimaControlRemap,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -544,4 +570,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariPhotoDepthOfField": "Yukari Photo Depth of Field",
     "YukariPoseSkeleton": "Yukari Pose Skeleton",
     "YukariPoseOutline": "Yukari Pose Outline",
+    "YukariAnimaControlRemap": "Yukari Anima Control Remap",
 }
