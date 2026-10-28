@@ -229,7 +229,7 @@ class ReferenceRenderTest(unittest.TestCase):
         self.assertEqual(payload["semantic"]["attributes"]["reference"], {
             "source_request": "r00001", "pose": "yukari_persona",
             "applied": {"framing_tags": ["from above"], "gesture": ["sitting"]},
-            "pose_strength": 1.0, "pose_control": "skeleton"})
+            "pose_follow": "loose"})
         patches = {patch["target"]: patch for patch in payload["generation"]["patches"]
                    if patch["op"] != "remove"}
         self.assertEqual(patches["prompt.positive.framing_tags"]["value"],
@@ -243,41 +243,45 @@ class ReferenceRenderTest(unittest.TestCase):
                                   "generate_request_id": "gen-req-1",
                                   "generate_request_short_id": "abc123"})
 
-    def test_a_silhouette_control_carries_the_picture(self):
-        chimera = Chimera()
-        chimera.source = analysed_source()
-        reference_render(render_row(seed=9, pose_control="silhouette"), make(chimera, []))
-        payload = chimera.calls[1][2]["payload"]
+    def pose_of(self, chimera):
+        payload = chimera.calls[-1][2]["payload"]
         validate_request(payload)
         (pose,) = [patch["value"] for patch in payload["generation"]["patches"]
                    if patch["target"] == "render.pose"]
-        figure = chimera.source["result"]["figure"]
-        self.assertEqual(pose, {"control": "silhouette", "picture": figure["silhouette"],
-                                "aspect": figure["aspect"], "strength": 1.0})
+        return pose
 
-    def test_an_unknown_control_is_refused(self):
+    def test_firm_follows_the_depth_with_the_head_free(self):
         chimera = Chimera()
         chimera.source = analysed_source()
-        with self.assertRaisesRegex(SystemExit, "pose_control"):
-            reference_render(render_row(pose_control="normal"), make(chimera, []))
+        reference_render(render_row(seed=9, pose_follow="firm"), make(chimera, []))
+        figure = chimera.source["result"]["figure"]
+        self.assertEqual(self.pose_of(chimera), {
+            "control": "depth", "picture": figure["depth"], "free_head": True,
+            "points": figure["points"], "aspect": figure["aspect"], "strength": 1.0})
 
-    def test_a_reference_read_before_outlines_has_no_silhouette(self):
+    def test_firm_on_a_reference_read_before_depth_follows_the_skeleton(self):
         chimera = Chimera()
         chimera.source = analysed_source()
-        figure = chimera.source["result"]["figure"]
-        del figure["silhouette"]
-        with self.assertRaisesRegex(SystemExit, "no silhouette"):
-            reference_render(render_row(pose_control="silhouette"), make(chimera, []))
+        del chimera.source["result"]["figure"]["depth"]
+        reference_render(render_row(pose_follow="firm"), make(chimera, []))
+        self.assertNotIn("control", self.pose_of(chimera))
+
+    def test_an_unknown_follow_is_refused(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        with self.assertRaisesRegex(SystemExit, "pose_follow"):
+            reference_render(render_row(pose_follow="hard"), make(chimera, []))
+        self.assertEqual([call[0] for call in chimera.calls], ["GET"])
 
     def test_the_canvas_keeps_the_pose_area_at_the_reference_aspect(self):
         self.assertEqual(pose_canvas("yukari_persona", 1.39), (1520, 1104))
         self.assertEqual(pose_canvas("yukari_persona", 1024 / 1640), (1024, 1632))
         self.assertEqual(pose_canvas("yukari_persona", 5.0), pose_canvas("yukari_persona", 2.0))
 
-    def test_pose_strength_zero_follows_only_the_tags(self):
+    def test_off_follows_only_the_tags(self):
         chimera = Chimera()
         chimera.source = analysed_source()
-        reference_render(render_row(pose_strength=0), make(chimera, []))
+        reference_render(render_row(pose_follow="off"), make(chimera, []))
         payload = chimera.calls[-1][2]["payload"]
         validate_request(payload)
         targets = [patch["target"] for patch in payload["generation"]["patches"]]
@@ -292,14 +296,7 @@ class ReferenceRenderTest(unittest.TestCase):
         payload = chimera.calls[-1][2]["payload"]
         self.assertNotIn("render.pose", [patch["target"]
                                          for patch in payload["generation"]["patches"]])
-        self.assertIsNone(payload["semantic"]["attributes"]["reference"]["pose_strength"])
-
-    def test_pose_strength_out_of_range_fails_before_queuing(self):
-        chimera = Chimera()
-        chimera.source = analysed_source()
-        with self.assertRaisesRegex(SystemExit, "pose_strength"):
-            reference_render(render_row(pose_strength=3), make(chimera, []))
-        self.assertEqual([call[0] for call in chimera.calls], ["GET"])
+        self.assertIsNone(payload["semantic"]["attributes"]["reference"]["pose_follow"])
 
     def test_a_missing_seed_is_drawn(self):
         chimera = Chimera()
