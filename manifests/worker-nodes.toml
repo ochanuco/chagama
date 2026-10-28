@@ -51,3 +51,12 @@ repo = "https://huggingface.co/Claquasse/Anima-Control-Pose"
 commit = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
 subdir = "comfyui/anima_control_lora"
 install_requirements = false
+
+# No nodes: at import it remaps the transformer blocks of 28-block Anima LoRAs
+# (the pose adapter) and Anima LLLite patches (any-test) onto the 40-block
+# SilvermoonMix 2.9B, through comfy.lora.load_lora and the core AnimaLLLite.
+[[node]]
+name = "ComfyUI-Anima-LoRA-ControlNet-Patch"
+repo = "https://github.com/INuBq8/ComfyUI-Anima-LoRA-ControlNet-Patch.git"
+commit = "b25ae637102f2358116fe419a409f0594f61245b"
+install_requirements = false
