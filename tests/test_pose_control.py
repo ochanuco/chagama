@@ -162,6 +162,47 @@ class DepthGraphTest(unittest.TestCase):
                          (["6", 0], ["7", 0]))
 
 
+class FreeHeadTest(unittest.TestCase):
+    def graph(self, **value):
+        spec = render_spec("coffee", 7, "p")
+        patch = outline_patch(control="depth", **value)
+        return anima_graph.build_graph(apply_patches(spec, parse_patches([patch])))
+
+    def test_a_free_head_masks_the_controlnet(self):
+        graph = self.graph(free_head=True, points=POINTS)
+        apply = graph[find(graph, "ACN_AdvancedControlNetApply_v2")]["inputs"]
+        mask = graph[apply["mask_optional"][0]]
+        self.assertEqual(mask["class_type"], "YukariPoseHeadMask")
+        self.assertEqual(json.loads(mask["inputs"]["points"]), POINTS)
+
+    def test_a_held_head_has_no_mask(self):
+        graph = self.graph()
+        apply = graph[find(graph, "ACN_AdvancedControlNetApply_v2")]["inputs"]
+        self.assertNotIn("mask_optional", apply)
+
+    def test_a_free_head_needs_points_and_only_depth_takes_it(self):
+        for bad in ({"control": "depth", "free_head": True},
+                    {"control": "depth", "free_head": "yes", "points": POINTS},
+                    {"control": "silhouette", "free_head": True, "points": POINTS}):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                parse_patches([outline_patch(**bad)])
+
+    def test_the_mask_clears_a_disc_around_the_head(self):
+        points = [[0.0, 0.0, 0.0]] * 133
+        points[0] = [0.5, 0.25, 0.9]
+        points[3] = [0.45, 0.25, 0.9]
+        points[4] = [0.55, 0.25, 0.9]
+        mask = pose_skeleton.head_mask(points, 1.0, 200, 200)
+        self.assertEqual(mask.shape, (200, 200))
+        self.assertEqual(mask[50, 100], 0.0)
+        self.assertEqual(mask[50, 100 + 15], 0.0)
+        self.assertEqual(mask[150, 100], 1.0)
+
+    def test_no_head_point_masks_nothing(self):
+        mask = pose_skeleton.head_mask([[0.5, 0.5, 0.1]] * 133, 1.0, 64, 64)
+        self.assertEqual(mask.min(), 1.0)
+
+
 class AnimaBlocksTest(unittest.TestCase):
     def test_the_vace_layers_land_on_the_old_blocks_of_the_2_9b(self):
         self.assertEqual(anima_blocks.remap([0, 7, 14, 21], 40), [0, 10, 20, 31])

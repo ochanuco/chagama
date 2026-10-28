@@ -20,6 +20,9 @@ SCORE_THRESHOLD = 0.3
 RADIUS = 2
 LINE_WIDTH = 2
 PATCH_PIXELS = 16
+HEAD_POINTS = tuple(range(0, 5)) + tuple(range(23, 91))
+HEAD_SCALE = 2.2
+HEAD_LIFT = 0.2
 
 _BLUE, _GREEN, _ORANGE, _WHITE = (51, 153, 255), (0, 255, 0), (255, 128, 0), (255, 255, 255)
 _PINK, _SKY, _RED = (255, 153, 255), (102, 178, 255), (255, 51, 51)
@@ -99,6 +102,26 @@ def outline(picture: bytes, aspect: float, width: int, height: int,
     canvas[y0:y1, x0:x1] = cv2.resize(decoded, (x1 - x0, y1 - y0),
                                       interpolation=cv2.INTER_AREA)
     return np.ascontiguousarray(np.repeat(canvas[..., None], 3, axis=2))
+
+
+def head_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
+              height: int) -> np.ndarray:
+    """A float32 `height` x `width` mask, 0 over a disc around the head (its
+    face and ear points spread by `HEAD_SCALE` and the centre raised by
+    `HEAD_LIFT` of the radius, to take the hair above the face in) and 1
+    elsewhere; all 1 when no head point is seen."""
+    left, top, frame_width, frame_height = frame(width, height, aspect)
+    head = np.array([(left + points[index][0] * frame_width,
+                      top + points[index][1] * frame_height)
+                     for index in HEAD_POINTS if points[index][2] >= SCORE_THRESHOLD])
+    mask = np.ones((height, width), np.float32)
+    if len(head) == 0:
+        return mask
+    centre = head.mean(axis=0)
+    radius = max(np.linalg.norm(head - centre, axis=1).max() * HEAD_SCALE, 1.0)
+    cv2.circle(mask, (int(round(centre[0])), int(round(centre[1] - radius * HEAD_LIFT))),
+               int(round(radius)), 0.0, -1)
+    return mask
 
 
 def patch_padded(skeleton: np.ndarray) -> np.ndarray:
