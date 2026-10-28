@@ -72,7 +72,8 @@ class OutlinePatchTest(unittest.TestCase):
                          ("silhouette", PICTURE, ()))
 
     def test_rejects_a_malformed_outline(self):
-        for bad in ({"control": "depth"}, {"picture": ""}, {"points": POINTS}):
+        for bad in ({"control": "depth"}, {"picture": ""}, {"points": POINTS},
+                    {"end": 0}, {"end": 1.5}, {"end": True}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_patches([outline_patch(**bad)])
 
@@ -94,6 +95,13 @@ class OutlineGraphTest(unittest.TestCase):
         self.assertEqual(picture["class_type"], "YukariPoseOutline")
         self.assertEqual(picture["inputs"]["picture"], PICTURE)
         self.assertNotIn("AnimaControlApply", classes(graph).values())
+        self.assertEqual(inputs["end_percent"], 1.0)
+
+    def test_end_stops_the_lllite_partway(self):
+        spec = apply_patches(render_spec("coffee", 7, "p"),
+                             parse_patches([outline_patch(end=0.5)]))
+        graph = anima_graph.build_graph(spec)
+        self.assertEqual(graph[find(graph, "AnimaLLLiteApply")]["inputs"]["end_percent"], 0.5)
 
     def test_a_redraw_hires_peels_the_lllite_off(self):
         graph = self.graph()

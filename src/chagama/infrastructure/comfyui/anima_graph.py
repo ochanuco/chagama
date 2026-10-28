@@ -45,7 +45,7 @@ def _outline_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
     graph[apply_id] = {"class_type": "AnimaLLLiteApply", "inputs": {
         "model": model_ref, "model_patch": [loader_id, 0],
         "image": [picture_id, 0], "strength": pose.strength,
-        "start_percent": 0.0, "end_percent": 1.0}}
+        "start_percent": 0.0, "end_percent": pose.end}}
     return [apply_id, 0], first_id + 3
 
 

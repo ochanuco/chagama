@@ -27,12 +27,13 @@ class PoseControl:
     height is `aspect`. A `skeleton` control has 133 COCO-WholeBody
     `(x, y, score)` in `points`, x and y as fractions of the frame; a
     `silhouette` or `lineart` control has the frame as a base64 black-on-white
-    PNG in `picture`."""
+    PNG in `picture`, followed until `end` of the sampling (a fraction)."""
     aspect: float
     strength: float
     control: str = "skeleton"
     points: tuple[tuple[float, float, float], ...] = ()
     picture: str | None = None
+    end: float = 1.0
 
 
 @dataclass(frozen=True)
