@@ -59,7 +59,7 @@ def _depth_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
         str(first_id + offset) for offset in range(5))
     graph[picture_id] = {"class_type": "YukariPoseOutline", "inputs": {
         "picture": pose.picture, "aspect": pose.aspect,
-        "width": width, "height": height, "fill": 0}}
+        "width": width, "height": height, "fill": 0, "blur": pose.blur}}
     graph[loader_id] = {"class_type": "ACN_ControlNetLoaderAdvanced", "inputs": {
         "cnet": DEPTH_ADAPTER}}
     graph[remap_id] = {"class_type": "YukariAnimaControlRemap", "inputs": {

@@ -132,6 +132,7 @@ class DepthGraphTest(unittest.TestCase):
         self.assertEqual(graph[remap["inputs"]["control_net"][0]]["inputs"]["cnet"],
                          anima_graph.DEPTH_ADAPTER)
         self.assertEqual(graph[apply["image"][0]]["inputs"]["fill"], 0)
+        self.assertEqual(graph[apply["image"][0]]["inputs"]["blur"], 0.0)
         for sampler in [node for node in graph.values()
                         if node["class_type"].startswith("KSampler")]:
             self.assertEqual((sampler["inputs"]["positive"], sampler["inputs"]["negative"]),
@@ -251,6 +252,31 @@ class OutlineCanvasTest(unittest.TestCase):
     def test_rejects_an_unreadable_picture(self):
         with self.assertRaises(ValueError):
             pose_skeleton.outline(b"nope", 0.5, 64, 32)
+
+    def test_a_blur_smooths_a_step_inside_the_figure_and_keeps_its_edge(self):
+        frame = np.zeros((100, 100), np.uint8)
+        frame[20:80, 20:50], frame[20:80, 50:80] = 200, 100
+        picture = Image.fromarray(frame)
+        buffer = io.BytesIO()
+        picture.save(buffer, format="PNG")
+        sharp = pose_skeleton.outline(buffer.getvalue(), 1.0, 100, 100, fill=0)[..., 0]
+        soft = pose_skeleton.outline(buffer.getvalue(), 1.0, 100, 100, fill=0,
+                                     blur=0.05)[..., 0]
+        self.assertEqual((sharp[50, 48], sharp[50, 52]), (200, 100))
+        self.assertLess(abs(int(soft[50, 48]) - int(soft[50, 52])), 40)
+        self.assertEqual((soft[50, 10], soft[10, 50]), (0, 0))
+        self.assertGreater(soft[50, 21], 150)
+
+    def test_a_depth_blur_reaches_the_canvas_and_is_bounded(self):
+        patch = outline_patch(control="depth", blur=0.015)
+        graph = anima_graph.build_graph(apply_patches(render_spec("coffee", 7, "p"),
+                                                      parse_patches([patch])))
+        outline_id = find(graph, "YukariPoseOutline")
+        self.assertEqual(graph[outline_id]["inputs"]["blur"], 0.015)
+        for bad in ({"control": "depth", "blur": -0.1}, {"control": "depth", "blur": "x"},
+                    {"control": "silhouette", "blur": 0.01}):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                parse_patches([outline_patch(**bad)])
 
     def test_fills_around_with_the_given_grey(self):
         canvas = pose_skeleton.outline(base64.b64decode(PICTURE), 0.5, 64, 32, fill=0)

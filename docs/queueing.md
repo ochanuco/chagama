@@ -38,7 +38,7 @@ Options, defaults and ranges live here:
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
 | `photo` | `{generation_id, options}` | stand a delivery's figure in a photo like an acrylic stand and blur the scene by depth |
 | `reference` | `{recipe}`, the picture uploaded on chimera | read the picture into tags: the proposed tags and every candidate; draws nothing |
-| `reference_render` | `{reference_request_id, pose, seed?, applied, pose_follow?}` | queue one `generate` that draws the tags picked from a done `reference` on `yukari_persona`, the layers with no pose (`pose` is always `yukari_persona`); `pose_follow` is `off` (the tags only), `loose` (the default: the skeleton) or `firm` (the depth with the head and the chest left to the tags; the skeleton for a reference read before depth was kept); no GPU |
+| `reference_render` | `{reference_request_id, pose, seed?, applied, pose_follow?}` | queue one `generate` that draws the tags picked from a done `reference` on `yukari_persona`, the layers with no pose (`pose` is always `yukari_persona`); `pose_follow` is `off` (the tags only), `loose` (the default: the skeleton) or `firm` (the depth, smoothed of hems and folds, with the head and the chest left to the tags; the skeleton for a reference read before depth was kept); no GPU |
 
 A `finalize`, `repair` or `masked_redraw` row is refused. `redraw` leaves a
 picture on the green key; `deliver` makes the delivered picture, and

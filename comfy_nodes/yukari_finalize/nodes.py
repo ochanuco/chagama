@@ -505,12 +505,13 @@ class YukariPoseOutline:
             "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
         }, "optional": {
             "fill": ("INT", {"default": 255, "min": 0, "max": 255}),
+            "blur": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 0.2, "step": 0.001}),
         }}
 
-    def run(self, picture, aspect, width, height, fill=255):
+    def run(self, picture, aspect, width, height, fill=255, blur=0.0):
         import torch
         canvas = pose_skeleton.outline(base64.b64decode(picture), aspect, width,
-                                       height, fill)
+                                       height, fill, blur)
         return (torch.from_numpy(canvas.astype(np.float32) / 255.0)[None, ...],)
 
 

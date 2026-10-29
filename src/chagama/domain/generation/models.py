@@ -30,7 +30,8 @@ class PoseControl:
     PNG in `picture`, a `depth` control as a white-near-on-black one; either
     is followed until `end` of the sampling (a fraction). A `free_head` or
     `free_chest` depth leaves the head or the chest, found from `points`, to
-    the prompt."""
+    the prompt; a `blur` depth is smoothed inside the figure by that fraction
+    of its short side."""
     aspect: float
     strength: float
     control: str = "skeleton"
@@ -39,6 +40,7 @@ class PoseControl:
     end: float = 1.0
     free_head: bool = False
     free_chest: bool = False
+    blur: float = 0.0
 
 
 @dataclass(frozen=True)

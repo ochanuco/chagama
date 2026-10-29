@@ -257,7 +257,7 @@ class ReferenceRenderTest(unittest.TestCase):
         figure = chimera.source["result"]["figure"]
         self.assertEqual(self.pose_of(chimera), {
             "control": "depth", "picture": figure["depth"], "free_head": True,
-            "free_chest": True, "points": figure["points"], "aspect": figure["aspect"], "strength": 1.0})
+            "free_chest": True, "blur": 0.015, "points": figure["points"], "aspect": figure["aspect"], "strength": 1.0})
 
     def test_firm_on_a_reference_read_before_depth_follows_the_skeleton(self):
         chimera = Chimera()
