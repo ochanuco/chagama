@@ -29,8 +29,9 @@ RECIPE = "yukari"
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
-# off: the tags only. loose: the skeleton. firm: the depth with the head left
-# to the tags, or the skeleton for a reference read before depth was kept.
+DEPTH_BLUR = 0.015
+# off: the tags only. loose: the skeleton. firm: the depth, smoothed of its
+# hems and folds, with the head and chest left to the tags, or the skeleton for a reference read before depth was kept.
 POSE_FOLLOWS = ("off", "loose", "firm")
 POSE_ASPECTS = (0.5, 2.0)
 
@@ -75,7 +76,8 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
 def pose_patch(figure: Mapping, follow: str) -> dict:
     if follow == "firm" and "depth" in figure:
         value = {"control": "depth", "picture": figure["depth"],
-                 "free_head": True, "free_chest": True, "points": figure["points"]}
+                 "free_head": True, "free_chest": True, "points": figure["points"],
+                 "blur": DEPTH_BLUR}
     else:
         value = {"points": figure["points"]}
     return {"target": "render.pose", "op": "set",

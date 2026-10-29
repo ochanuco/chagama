@@ -94,9 +94,12 @@ def draw(points: Sequence[Sequence[float]], aspect: float, width: int,
 
 
 def outline(picture: bytes, aspect: float, width: int, height: int,
-            fill: int = 255) -> np.ndarray:
+            fill: int = 255, blur: float = 0.0) -> np.ndarray:
     """An RGB uint8 `height` x `width` canvas: the greyscale `picture` of the
-    source frame fitted the way `draw` fits the skeleton, `fill` around it."""
+    source frame fitted the way `draw` fits the skeleton, `fill` around it.
+    A `blur` (a fraction of the frame's short side) smooths the picture inside
+    its non-black figure, keeping the figure's edge: on a depth, it flattens
+    small steps such as hems and folds while limbs keep their shape."""
     decoded = cv2.imdecode(np.frombuffer(picture, np.uint8), cv2.IMREAD_GRAYSCALE)
     if decoded is None:
         raise ValueError("the pose picture is not a readable image")
@@ -104,9 +107,19 @@ def outline(picture: bytes, aspect: float, width: int, height: int,
     x0, y0 = round(left), round(top)
     x1, y1 = round(left + frame_width), round(top + frame_height)
     canvas = np.full((height, width), fill, np.uint8)
-    canvas[y0:y1, x0:x1] = cv2.resize(decoded, (x1 - x0, y1 - y0),
-                                      interpolation=cv2.INTER_AREA)
+    fitted = cv2.resize(decoded, (x1 - x0, y1 - y0), interpolation=cv2.INTER_AREA)
+    if blur > 0:
+        fitted = _smooth_inside(fitted, blur * min(fitted.shape))
+    canvas[y0:y1, x0:x1] = fitted
     return np.ascontiguousarray(np.repeat(canvas[..., None], 3, axis=2))
+
+
+def _smooth_inside(picture: np.ndarray, sigma: float) -> np.ndarray:
+    figure = (picture > 0).astype(np.float32)
+    total = cv2.GaussianBlur(picture.astype(np.float32) * figure, (0, 0), sigma)
+    weight = cv2.GaussianBlur(figure, (0, 0), sigma)
+    smoothed = np.where(figure > 0, total / np.maximum(weight, 1e-3), 0.0)
+    return np.clip(np.rint(smoothed), 0, 255).astype(np.uint8)
 
 
 def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
