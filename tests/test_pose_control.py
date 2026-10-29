@@ -211,16 +211,17 @@ class FreeHeadTest(unittest.TestCase):
         mask = pose_skeleton.free_mask([[0.5, 0.5, 0.1]] * 133, 1.0, 64, 64)
         self.assertEqual(mask.min(), 1.0)
 
-    def test_the_chest_disc_sits_below_the_shoulders(self):
+    def test_the_chest_ellipse_spans_the_breasts_below_the_shoulders(self):
         points = [[0.0, 0.0, 0.0]] * 133
         points[0] = [0.5, 0.1, 0.9]
         points[5], points[6] = [0.6, 0.3, 0.9], [0.4, 0.3, 0.9]
         points[11], points[12] = [0.58, 0.7, 0.9], [0.42, 0.7, 0.9]
         mask = pose_skeleton.free_mask(points, 1.0, 200, 200, head=False, chest=True)
-        self.assertEqual(mask[72, 100], 0.0)
-        self.assertEqual(mask[72, 100 + 20], 0.0)
+        self.assertEqual(mask[82, 100], 0.0)
+        self.assertEqual(mask[82, 100 + 35], 0.0)
+        self.assertEqual(mask[82, 100 + 45], 1.0)
         self.assertEqual(mask[20, 100], 1.0)
-        self.assertEqual(mask[150, 100], 1.0)
+        self.assertEqual(mask[130, 100], 1.0)
 
     def test_no_hip_point_frees_no_chest(self):
         points = [[0.0, 0.0, 0.0]] * 133
