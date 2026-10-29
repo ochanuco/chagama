@@ -24,9 +24,10 @@ HEAD_POINTS = tuple(range(0, 5)) + tuple(range(23, 91))
 HEAD_SCALE = 2.2
 HEAD_LIFT = 0.2
 SHOULDERS, HIPS = (5, 6), (11, 12)
-CHEST_DROP = 0.15
-CHEST_WIDTH_SCALE = 0.55
-CHEST_TORSO_SCALE = 0.32
+CHEST_DROP = 0.27
+CHEST_ALONG = 0.33
+CHEST_ACROSS_WIDTH = 0.95
+CHEST_ACROSS_TORSO = 0.4
 
 _BLUE, _GREEN, _ORANGE, _WHITE = (51, 153, 255), (0, 255, 0), (255, 128, 0), (255, 255, 255)
 _PINK, _SKY, _RED = (255, 153, 255), (102, 178, 255), (255, 51, 51)
@@ -113,10 +114,11 @@ def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
     """A float32 `height` x `width` mask, 1 where the control holds and 0 over
     the discs it leaves to the prompt. The head disc spreads the face and ear
     points by `HEAD_SCALE` and raises the centre by `HEAD_LIFT` of the radius,
-    to take the hair above the face in. The chest disc sits `CHEST_DROP` of the
-    way from the shoulders to the hips, wide enough for the shoulder span seen
-    from the front and the torso seen from the side. A disc whose points are
-    not seen is left out."""
+    to take the hair above the face in. The chest ellipse is centred
+    `CHEST_DROP` of the way from the shoulders to the hips and lies along that
+    line, `CHEST_ALONG` of the torso long and, across, wide enough for the
+    breasts past the shoulder span from the front and past the torso's depth
+    from the side. A shape whose points are not seen is left out."""
     left, top, frame_width, frame_height = frame(width, height, aspect)
 
     def seen(indices):
@@ -134,11 +136,14 @@ def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
     shoulders, hips = seen(SHOULDERS), seen(HIPS)
     if chest and len(shoulders) == 2 and len(hips) == 2:
         top_mid, bottom_mid = shoulders.mean(axis=0), hips.mean(axis=0)
-        centre = top_mid + (bottom_mid - top_mid) * CHEST_DROP
-        radius = max(np.linalg.norm(shoulders[0] - shoulders[1]) * CHEST_WIDTH_SCALE,
-                     np.linalg.norm(bottom_mid - top_mid) * CHEST_TORSO_SCALE, 1.0)
-        cv2.circle(mask, (int(round(centre[0])), int(round(centre[1]))),
-                   int(round(radius)), 0.0, -1)
+        axis = bottom_mid - top_mid
+        torso = np.linalg.norm(axis)
+        centre = top_mid + axis * CHEST_DROP
+        across = max(np.linalg.norm(shoulders[0] - shoulders[1]) * CHEST_ACROSS_WIDTH,
+                     torso * CHEST_ACROSS_TORSO, 1.0)
+        cv2.ellipse(mask, (int(round(centre[0])), int(round(centre[1]))),
+                    (int(round(max(torso * CHEST_ALONG, 1.0))), int(round(across))),
+                    float(np.degrees(np.arctan2(axis[1], axis[0]))), 0, 360, 0.0, -1)
     return mask
 
 
