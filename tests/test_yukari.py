@@ -88,7 +88,9 @@ COFFEE_POSITIVE = (
     "background:1.3), (large eyes:1.2), (round face:1.3), (tareme:1.2), "
     "(thick eyelashes:1.3), (long eyelashes:1.15), (flat color:1.3), "
     "(sketch:1.3), "
-    "(traditional media:1.2)"
+    "(traditional media:1.2), "
+    "(front lighting:1.3), (flat lighting:1.3), (even lighting:1.3), "
+    "(no shadow:1.2), (bright lighting:1.1), (light purple hair shadows:1.2)"
 )
 
 COFFEE_NEGATIVE = (
@@ -135,7 +137,9 @@ AMAE_POSITIVE = (
     "coloring:1.2), simple background, (green background:1.3), (large "
     "eyes:1.2), (round face:1.3), (tareme:1.2), (thick eyelashes:1.3), "
     "(long eyelashes:1.15), (flat color:1.3), (sketch:1.3), "
-    "(traditional media:1.2)"
+    "(traditional media:1.2), "
+    "(front lighting:1.3), (flat lighting:1.3), (even lighting:1.3), "
+    "(no shadow:1.2), (bright lighting:1.1), (light purple hair shadows:1.2)"
 )
 
 AMAE_NEGATIVE = COFFEE_NEGATIVE.replace(
@@ -164,7 +168,9 @@ STAND_POSITIVE = (
     "background:1.3), (large eyes:1.2), (round face:1.3), (tareme:1.2), "
     "(thick eyelashes:1.3), (long eyelashes:1.15), (flat color:1.3), "
     "(sketch:1.3), "
-    "(traditional media:1.2)"
+    "(traditional media:1.2), "
+    "(front lighting:1.3), (flat lighting:1.3), (even lighting:1.3), "
+    "(no shadow:1.2), (bright lighting:1.1), (light purple hair shadows:1.2)"
 )
 
 STAND_NEGATIVE = (
@@ -208,7 +214,9 @@ BUST_POSITIVE = (
     "simple background, (green background:1.3), "
     "(large eyes:1.2), (round face:1.3), (tareme:1.2), (thick eyelashes:1.3), "
     "(long eyelashes:1.15), "
-    "(flat color:1.3), (sketch:1.3), (traditional media:1.2)"
+    "(flat color:1.3), (sketch:1.3), (traditional media:1.2), "
+    "(front lighting:1.3), (flat lighting:1.3), (even lighting:1.3), "
+    "(no shadow:1.2), (bright lighting:1.1), (light purple hair shadows:1.2)"
 )
 
 # The accepted render's negative, with the missing ", " between "(aged
@@ -252,7 +260,9 @@ GAO_POSITIVE = (
     "simple background, (green background:1.3), (large "
     "eyes:1.15), (mature face:1.2), (tareme:1.2), "
     "(thick eyelashes:1.3), (long eyelashes:1.15), (flat color:1.3), "
-    "(sketch:1.3), (traditional media:1.2)"
+    "(sketch:1.3), (traditional media:1.2), "
+    "(front lighting:1.3), (flat lighting:1.3), (even lighting:1.3), "
+    "(no shadow:1.2), (bright lighting:1.1), (light purple hair shadows:1.2)"
 )
 
 GAO_NEGATIVE = (

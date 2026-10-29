@@ -29,7 +29,9 @@ BACKGROUND = "simple background, (green background:1.3), "
 EYE_SHAPE = "(jitome:2.0), (tareme:1.2), (long eyes:1.25), "
 FACE = ("(large eyes:1.2), (round face:1.3), (tareme:1.2), "
         "(thick eyelashes:1.3), (long eyelashes:1.15), ")
-STYLE = "(flat color:1.3), (sketch:1.3), (traditional media:1.2)"
+STYLE = ("(flat color:1.3), (sketch:1.3), (traditional media:1.2), "
+         "(front lighting:1.3), (flat lighting:1.3), (even lighting:1.3), "
+         "(no shadow:1.2), (bright lighting:1.1), (light purple hair shadows:1.2)")
 
 DIGIT_BAN = "(extra digits:1.5), bad anatomy, bad hands, "
 DETAIL_BAN = ("(detailed:1.3), (intricate:1.3), (highly detailed:1.3), "
