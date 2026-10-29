@@ -528,11 +528,15 @@ class YukariPoseHeadMask:
                                  "step": 0.0001}),
             "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
             "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
+        }, "optional": {
+            "head": ("BOOLEAN", {"default": True}),
+            "chest": ("BOOLEAN", {"default": False}),
         }}
 
-    def run(self, points, aspect, width, height):
+    def run(self, points, aspect, width, height, head=True, chest=False):
         import torch
-        mask = pose_skeleton.head_mask(json.loads(points), aspect, width, height)
+        mask = pose_skeleton.free_mask(json.loads(points), aspect, width, height,
+                                       head, chest)
         return (torch.from_numpy(mask)[None, ...],)
 
 

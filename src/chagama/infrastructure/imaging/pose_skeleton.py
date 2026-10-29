@@ -23,6 +23,10 @@ PATCH_PIXELS = 16
 HEAD_POINTS = tuple(range(0, 5)) + tuple(range(23, 91))
 HEAD_SCALE = 2.2
 HEAD_LIFT = 0.2
+SHOULDERS, HIPS = (5, 6), (11, 12)
+CHEST_DROP = 0.15
+CHEST_WIDTH_SCALE = 0.55
+CHEST_TORSO_SCALE = 0.32
 
 _BLUE, _GREEN, _ORANGE, _WHITE = (51, 153, 255), (0, 255, 0), (255, 128, 0), (255, 255, 255)
 _PINK, _SKY, _RED = (255, 153, 255), (102, 178, 255), (255, 51, 51)
@@ -104,23 +108,37 @@ def outline(picture: bytes, aspect: float, width: int, height: int,
     return np.ascontiguousarray(np.repeat(canvas[..., None], 3, axis=2))
 
 
-def head_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
-              height: int) -> np.ndarray:
-    """A float32 `height` x `width` mask, 0 over a disc around the head (its
-    face and ear points spread by `HEAD_SCALE` and the centre raised by
-    `HEAD_LIFT` of the radius, to take the hair above the face in) and 1
-    elsewhere; all 1 when no head point is seen."""
+def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
+              height: int, head: bool = True, chest: bool = False) -> np.ndarray:
+    """A float32 `height` x `width` mask, 1 where the control holds and 0 over
+    the discs it leaves to the prompt. The head disc spreads the face and ear
+    points by `HEAD_SCALE` and raises the centre by `HEAD_LIFT` of the radius,
+    to take the hair above the face in. The chest disc sits `CHEST_DROP` of the
+    way from the shoulders to the hips, wide enough for the shoulder span seen
+    from the front and the torso seen from the side. A disc whose points are
+    not seen is left out."""
     left, top, frame_width, frame_height = frame(width, height, aspect)
-    head = np.array([(left + points[index][0] * frame_width,
-                      top + points[index][1] * frame_height)
-                     for index in HEAD_POINTS if points[index][2] >= SCORE_THRESHOLD])
+
+    def seen(indices):
+        return np.array([(left + points[index][0] * frame_width,
+                          top + points[index][1] * frame_height)
+                         for index in indices if points[index][2] >= SCORE_THRESHOLD])
+
     mask = np.ones((height, width), np.float32)
-    if len(head) == 0:
-        return mask
-    centre = head.mean(axis=0)
-    radius = max(np.linalg.norm(head - centre, axis=1).max() * HEAD_SCALE, 1.0)
-    cv2.circle(mask, (int(round(centre[0])), int(round(centre[1] - radius * HEAD_LIFT))),
-               int(round(radius)), 0.0, -1)
+    face = seen(HEAD_POINTS)
+    if head and len(face):
+        centre = face.mean(axis=0)
+        radius = max(np.linalg.norm(face - centre, axis=1).max() * HEAD_SCALE, 1.0)
+        cv2.circle(mask, (int(round(centre[0])), int(round(centre[1] - radius * HEAD_LIFT))),
+                   int(round(radius)), 0.0, -1)
+    shoulders, hips = seen(SHOULDERS), seen(HIPS)
+    if chest and len(shoulders) == 2 and len(hips) == 2:
+        top_mid, bottom_mid = shoulders.mean(axis=0), hips.mean(axis=0)
+        centre = top_mid + (bottom_mid - top_mid) * CHEST_DROP
+        radius = max(np.linalg.norm(shoulders[0] - shoulders[1]) * CHEST_WIDTH_SCALE,
+                     np.linalg.norm(bottom_mid - top_mid) * CHEST_TORSO_SCALE, 1.0)
+        cv2.circle(mask, (int(round(centre[0])), int(round(centre[1]))),
+                   int(round(radius)), 0.0, -1)
     return mask
 
 

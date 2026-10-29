@@ -28,8 +28,9 @@ class PoseControl:
     `(x, y, score)` in `points`, x and y as fractions of the frame; a
     `silhouette` or `lineart` control has the frame as a base64 black-on-white
     PNG in `picture`, a `depth` control as a white-near-on-black one; either
-    is followed until `end` of the sampling (a fraction). A `free_head` depth
-    leaves the head, found from `points`, to the prompt."""
+    is followed until `end` of the sampling (a fraction). A `free_head` or
+    `free_chest` depth leaves the head or the chest, found from `points`, to
+    the prompt."""
     aspect: float
     strength: float
     control: str = "skeleton"
@@ -37,6 +38,7 @@ class PoseControl:
     picture: str | None = None
     end: float = 1.0
     free_head: bool = False
+    free_chest: bool = False
 
 
 @dataclass(frozen=True)
