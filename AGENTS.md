@@ -46,9 +46,10 @@ at all are the user's decisions. To change one: ask, then change the recipe defa
 and this section in the same PR.
 
 A new picture starts from the recipe, not from yesterday's render. Render
-the pose at its defaults (`plain_render`, or `derive_request` with
-`replace_patches: true` and only the patches this request asks for) and
-build the round from there.
+the pose at its defaults with `derive_request` from the pin,
+`replace_patches: true`, the draft canvas patches below and only the
+patches this request asks for, and build the round from there.
+`plain_render` draws the default canvas, so it only reproduces a pin.
 
 A new picture an agent queues is a draft: patch `render.width` /
 `render.height` to about 1.3 megapixels at the pose's default aspect ratio,
