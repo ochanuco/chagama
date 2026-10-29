@@ -75,7 +75,7 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
 def pose_patch(figure: Mapping, follow: str) -> dict:
     if follow == "firm" and "depth" in figure:
         value = {"control": "depth", "picture": figure["depth"],
-                 "free_head": True, "points": figure["points"]}
+                 "free_head": True, "free_chest": True, "points": figure["points"]}
     else:
         value = {"points": figure["points"]}
     return {"target": "render.pose", "op": "set",

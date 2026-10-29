@@ -174,6 +174,13 @@ class FreeHeadTest(unittest.TestCase):
         mask = graph[apply["mask_optional"][0]]
         self.assertEqual(mask["class_type"], "YukariPoseHeadMask")
         self.assertEqual(json.loads(mask["inputs"]["points"]), POINTS)
+        self.assertEqual((mask["inputs"]["head"], mask["inputs"]["chest"]), (True, False))
+
+    def test_a_free_chest_masks_the_controlnet(self):
+        graph = self.graph(free_chest=True, points=POINTS)
+        apply = graph[find(graph, "ACN_AdvancedControlNetApply_v2")]["inputs"]
+        mask = graph[apply["mask_optional"][0]]["inputs"]
+        self.assertEqual((mask["head"], mask["chest"]), (False, True))
 
     def test_a_held_head_has_no_mask(self):
         graph = self.graph()
@@ -183,6 +190,8 @@ class FreeHeadTest(unittest.TestCase):
     def test_a_free_head_needs_points_and_only_depth_takes_it(self):
         for bad in ({"control": "depth", "free_head": True},
                     {"control": "depth", "free_head": "yes", "points": POINTS},
+                    {"control": "depth", "free_chest": True},
+                    {"control": "silhouette", "free_chest": True, "points": POINTS},
                     {"control": "silhouette", "free_head": True, "points": POINTS}):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 parse_patches([outline_patch(**bad)])
@@ -192,14 +201,31 @@ class FreeHeadTest(unittest.TestCase):
         points[0] = [0.5, 0.25, 0.9]
         points[3] = [0.45, 0.25, 0.9]
         points[4] = [0.55, 0.25, 0.9]
-        mask = pose_skeleton.head_mask(points, 1.0, 200, 200)
+        mask = pose_skeleton.free_mask(points, 1.0, 200, 200)
         self.assertEqual(mask.shape, (200, 200))
         self.assertEqual(mask[50, 100], 0.0)
         self.assertEqual(mask[50, 100 + 15], 0.0)
         self.assertEqual(mask[150, 100], 1.0)
 
     def test_no_head_point_masks_nothing(self):
-        mask = pose_skeleton.head_mask([[0.5, 0.5, 0.1]] * 133, 1.0, 64, 64)
+        mask = pose_skeleton.free_mask([[0.5, 0.5, 0.1]] * 133, 1.0, 64, 64)
+        self.assertEqual(mask.min(), 1.0)
+
+    def test_the_chest_disc_sits_below_the_shoulders(self):
+        points = [[0.0, 0.0, 0.0]] * 133
+        points[0] = [0.5, 0.1, 0.9]
+        points[5], points[6] = [0.6, 0.3, 0.9], [0.4, 0.3, 0.9]
+        points[11], points[12] = [0.58, 0.7, 0.9], [0.42, 0.7, 0.9]
+        mask = pose_skeleton.free_mask(points, 1.0, 200, 200, head=False, chest=True)
+        self.assertEqual(mask[72, 100], 0.0)
+        self.assertEqual(mask[72, 100 + 20], 0.0)
+        self.assertEqual(mask[20, 100], 1.0)
+        self.assertEqual(mask[150, 100], 1.0)
+
+    def test_no_hip_point_frees_no_chest(self):
+        points = [[0.0, 0.0, 0.0]] * 133
+        points[5], points[6] = [0.6, 0.3, 0.9], [0.4, 0.3, 0.9]
+        mask = pose_skeleton.free_mask(points, 1.0, 64, 64, head=False, chest=True)
         self.assertEqual(mask.min(), 1.0)
 
 

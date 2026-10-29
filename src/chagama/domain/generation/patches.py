@@ -172,9 +172,10 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
             _fail(target, "a skeleton value must be {points, aspect, strength}")
         _check_points(target, value["points"])
     elif control in POSE_PICTURES:
-        optional = {"end", "free_head", "points"} if control == "depth" else {"end"}
+        optional = ({"end", "free_head", "free_chest", "points"} if control == "depth"
+                    else {"end"})
         if set(value) - optional != {"control", "picture", "aspect", "strength"}:
-            extra = ", free_head?, points?" if control == "depth" else ""
+            extra = ", free_head?, free_chest?, points?" if control == "depth" else ""
             _fail(target, f"a {control} value must be "
                           f"{{control, picture, aspect, strength, end?{extra}}}")
         if not isinstance(value["picture"], str) or not value["picture"]:
@@ -182,11 +183,12 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
         end = value.get("end", 1.0)
         if not _number(end) or not (0 < end <= 1):
             _fail(target, f"end must be a number in (0, 1], got {end!r}")
-        if not isinstance(value.get("free_head", False), bool):
-            _fail(target, "free_head must be true or false")
-        if value.get("free_head"):
-            if "points" not in value:
-                _fail(target, "free_head needs the figure's points")
+        for free in ("free_head", "free_chest"):
+            if not isinstance(value.get(free, False), bool):
+                _fail(target, f"{free} must be true or false")
+            if value.get(free) and "points" not in value:
+                _fail(target, f"{free} needs the figure's points")
+        if "points" in value:
             _check_points(target, value["points"])
     else:
         _fail(target, f"control must be skeleton, silhouette, lineart or depth, got {control!r}")
@@ -200,7 +202,8 @@ def _parse_pose_patch(patch: dict, target: str) -> Patch:
         points=tuple((float(x), float(y), float(score))
                      for x, y, score in value.get("points", ())),
         picture=value.get("picture"), end=float(value.get("end", 1.0)),
-        free_head=bool(value.get("free_head", False)))
+        free_head=bool(value.get("free_head", False)),
+        free_chest=bool(value.get("free_chest", False)))
     return Patch(target, op, pose, None, reason)
 
 

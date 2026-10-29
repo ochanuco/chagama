@@ -53,7 +53,7 @@ def _outline_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
 def _depth_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
                  height: int, first_id: int) -> tuple[tuple[list, list], int]:
     """Add the depth picture and the VACE depth ControlNet, its blocks moved
-    to `model_ref`'s and, for a free head, kept off the head; return the
+    to `model_ref`'s and kept off a free head or chest; return the
     controlled positive and negative and the next free node id."""
     picture_id, loader_id, remap_id, apply_id, mask_id = (
         str(first_id + offset) for offset in range(5))
@@ -68,11 +68,12 @@ def _depth_nodes(graph: dict, model_ref: list, pose: PoseControl, width: int,
         "positive": ["6", 0], "negative": ["7", 0], "control_net": [remap_id, 0],
         "image": [picture_id, 0], "strength": pose.strength,
         "start_percent": 0.0, "end_percent": pose.end, "vae_optional": ["4", 0]}}
-    if not pose.free_head:
+    if not (pose.free_head or pose.free_chest):
         return ([apply_id, 0], [apply_id, 1]), first_id + 4
     graph[mask_id] = {"class_type": "YukariPoseHeadMask", "inputs": {
         "points": json.dumps([list(point) for point in pose.points]),
-        "aspect": pose.aspect, "width": width, "height": height}}
+        "aspect": pose.aspect, "width": width, "height": height,
+        "head": pose.free_head, "chest": pose.free_chest}}
     graph[apply_id]["inputs"]["mask_optional"] = [mask_id, 0]
     return ([apply_id, 0], [apply_id, 1]), first_id + 5
 
