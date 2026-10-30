@@ -235,6 +235,19 @@ class BuildCatalogTest(unittest.TestCase):
                 joined = "".join(part["text"] for part in pose["parts"])
                 self.assertEqual(joined, pose["positive"])
 
+    def test_yukari_publishes_the_persona_as_a_base_pose_not_a_look(self):
+        catalog = build_catalog(GIT)
+        yukari = {recipe["name"]: recipe for recipe in catalog["recipes"]}["yukari"]
+        base = yukari["base_pose"]
+        self.assertEqual(base["name"], "yukari_persona")
+        self.assertNotIn(base["name"], [pose["name"] for pose in yukari["poses"]])
+        self.assertEqual([part["name"] for part in base["parts"]], yukari["parts"])
+        self.assertEqual("".join(part["text"] for part in base["parts"]), base["positive"])
+        blank = {part["name"] for part in base["parts"] if not part["text"]}
+        self.assertTrue({"framing_tags", "action", "mood", "gesture"} <= blank)
+        width, height = base["canvas"]
+        self.assertEqual((width % 8, height % 8), (0, 0))
+
     def test_recipe_level_parts_and_identity_tags(self):
         catalog = build_catalog(GIT)
         by_name = {recipe["name"]: recipe for recipe in catalog["recipes"]}

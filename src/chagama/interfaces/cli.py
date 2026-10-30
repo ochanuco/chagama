@@ -52,7 +52,7 @@ from ..domain.yukari.delivery_style import (
     Light,
 )
 from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.poses import POSES
+from ..domain.yukari.poses import PERSONA_POSE, POSES
 from ..domain.yukari.recipe import negative, positive
 from ..infrastructure.chimera.client import ChimeraClient
 from ..infrastructure.comfyui.client import ComfyUIClient
@@ -492,7 +492,7 @@ def parser() -> argparse.ArgumentParser:
     yukari_parser = commands.add_parser("yukari", help="inspect the Yukari domain")
     yukari_commands = yukari_parser.add_subparsers(dest="yukari_command", required=True)
     yukari_prompt = yukari_commands.add_parser("prompt")
-    yukari_prompt.add_argument("--pose", required=True, choices=sorted(POSES))
+    yukari_prompt.add_argument("--pose", required=True, choices=sorted(POSES) + [PERSONA_POSE])
     yukari_prompt.add_argument("--costume", choices=sorted(COSTUMES))
     yukari_prompt.add_argument("--expression", choices=sorted(EXPRESSIONS))
     yukari_prompt.add_argument("--legwear", choices=LEGWEARS, default=None)
