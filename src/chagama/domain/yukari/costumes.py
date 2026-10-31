@@ -19,19 +19,17 @@ COSTUMES = {
                   "(knee-length skirt:1.8), (pleated skirt:1.1), "),
 }
 
-# A costume's tags when the request's angle shows her back. From behind the
-# official halter is only a thin cord around the neck; any halter word draws
-# crossed straps or a bow on the back.
+# A costume's tags when the request's angle shows her back. The official
+# halter crosses on the chest only; from behind it is a bow at the nape.
 BEHIND_COSTUMES = {
     "standard": COSTUMES["standard"].replace(
         "(criss-cross halter:1.2), halterneck, ",
-        "(strapless dress:1.3), (thin black cord around neck:1.3), "
-        "(choker:1.1), (bare back:1.2), "),
+        "(halterneck:1.3), (halter tied at nape:1.2), "
+        "(backless dress:1.3), (bare back:1.2), "),
 }
 BEHIND_COSTUME_BAN = {
-    "standard": ("(halterneck:1.3), (criss-cross straps:1.4), "
-                 "(crossed straps:1.4), (back straps:1.3), (bow:1.2), "
-                 "(ribbon:1.2), "),
+    "standard": ("(criss-cross straps:1.4), (crossed straps:1.4), "
+                 "(back straps:1.3), (x-shaped straps:1.3), "),
 }
 
 # Negative tags a costume adds on top of the recipe's shared bans.

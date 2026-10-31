@@ -1129,10 +1129,10 @@ class AngleFramingOverrideTest(unittest.TestCase):
                 self.assertTrue(parts["framing_tags"].startswith(
                     "(from above:1.35), (dutch angle:1.3), "))
 
-    def test_from_behind_draws_only_a_cord_around_the_neck(self):
+    def test_from_behind_ties_the_halter_at_the_nape(self):
         parts = dict(positive_parts("bust", angle="from_behind"))
         self.assertNotIn("criss-cross", parts["costume"])
-        self.assertIn("(thin black cord around neck:1.3), ", parts["costume"])
+        self.assertIn("(halter tied at nape:1.2), ", parts["costume"])
         self.assertIn("(crossed straps:1.4), ",
                       negative("bust", angle="from_behind"))
 
