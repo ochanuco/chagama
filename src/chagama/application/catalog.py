@@ -66,7 +66,7 @@ from ..domain.yukari.delivery_style import (
 from ..domain.yukari.dials import DIALS
 from ..domain.yukari.expressions import EXPRESSIONS
 from ..domain.yukari.framing import FRAMING_LABELS
-from ..domain.yukari.poses import POSE_LABELS, POSES
+from ..domain.yukari.poses import PERSONA_POSE, POSE_LABELS, POSES
 from ..domain.yukari.recipe import PART_GROUPS, identity_tags, render_spec
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
@@ -87,6 +87,18 @@ def _parameters(recipe: str) -> dict:
     return {
         "allowed": sorted(KNOWN_PARAMETERS - rejected),
         "rejected": sorted(rejected),
+    }
+
+
+def _base_pose() -> dict:
+    spec = render_spec(PERSONA_POSE, _SEED, _PREFIX)
+    return {
+        "name": PERSONA_POSE,
+        "canvas": [spec.width, spec.height],
+        "positive": spec.prompts.positive,
+        "negative": spec.prompts.negative,
+        "parts": [{"name": part_name, "text": text}
+                  for part_name, text in spec.positive_parts],
     }
 
 
@@ -128,6 +140,7 @@ def _yukari_recipe() -> dict:
                            for framing in Framing},
         "expressions": sorted(EXPRESSIONS),
         "poses": poses,
+        "base_pose": _base_pose(),
         "parts": [name for name, _ in
                  render_spec(sorted(POSES)[0], _SEED, _PREFIX).positive_parts],
         "part_groups": {name: list(members)
