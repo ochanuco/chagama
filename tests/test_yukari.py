@@ -1129,6 +1129,25 @@ class AngleFramingOverrideTest(unittest.TestCase):
                 self.assertTrue(parts["framing_tags"].startswith(
                     "(from above:1.35), (dutch angle:1.3), "))
 
+    def test_from_behind_draws_only_a_cord_around_the_neck(self):
+        parts = dict(positive_parts("bust", angle="from_behind"))
+        self.assertNotIn("criss-cross", parts["costume"])
+        self.assertIn("(thin black cord around neck:1.3), ", parts["costume"])
+        self.assertIn("(crossed straps:1.4), ",
+                      negative("bust", angle="from_behind"))
+
+    def test_other_angles_keep_the_chest_cross(self):
+        for angle in (None, "from_side", "from_above"):
+            with self.subTest(angle=angle):
+                self.assertIn("(criss-cross halter:1.2), ",
+                              dict(positive_parts("bust", angle=angle))["costume"])
+                self.assertNotIn("crossed straps",
+                                 negative("bust", angle=angle))
+
+    def test_a_pose_drawn_from_behind_keeps_its_costume(self):
+        self.assertIn("(criss-cross halter:1.2), ",
+                      dict(positive_parts("gao"))["costume"])
+
     def test_two_words_on_one_axis_are_rejected(self):
         with self.assertRaisesRegex(ValueError, "軸ごとに 1 語"):
             positive("stand", angle="from_above,from_below")

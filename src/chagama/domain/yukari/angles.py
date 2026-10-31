@@ -58,6 +58,10 @@ def angle_names(value: str | list[str]) -> tuple[str, ...]:
     return names
 
 
+def shows_back(value: str | list[str] | None) -> bool:
+    return value is not None and "from_behind" in angle_names(value)
+
+
 def angle_text(value: str | list[str]) -> str:
     names = angle_names(value)
     return "".join(ANGLES[name].text for axis in AngleAxis

@@ -7,10 +7,12 @@ from dataclasses import replace
 
 from ..generation.models import HiresSpec, PromptPair, RenderSpec
 from ..generation.prompt_lint import tags as prompt_tags
-from .angles import angle_text
+from .angles import angle_text, shows_back
 from .components import (Component, Framing, Priority, Section, assemble,
                          part_groups)
 from .costumes import (
+    BEHIND_COSTUME_BAN,
+    BEHIND_COSTUMES,
     COSTUME_BAN,
     COSTUMES,
     HOODED_COSTUMES,
@@ -89,6 +91,12 @@ def _expression(pose: Pose, expression: str | None) -> Expression:
     return EXPRESSIONS[name] if name is not None else BLANK
 
 
+def _costume_text(costume: str, angle: str | list[str] | None) -> str:
+    if shows_back(angle):
+        return BEHIND_COSTUMES.get(costume, COSTUMES[costume])
+    return COSTUMES[costume]
+
+
 def _own(override: str | None, layer: str) -> str:
     return override if override is not None else layer
 
@@ -121,7 +129,7 @@ def _components(pose: str, costume: str | None = None,
         Component("eye_quality", G, L, EYE_QUALITY[e.eye_quality] + e.eyes),
         Component("gesture", G, M, p.gesture),
         Component("nails", G, M, CUSTOMIZATION.nails),
-        Component("costume", G, M, COSTUMES[c]),
+        Component("costume", G, M, _costume_text(c, angle)),
         Component("legwear", G, M, legwear_positive),
         Component("framing_tags", G, L,
                   (angle_text(angle) if angle is not None else p.angle)
@@ -176,7 +184,8 @@ def negative(pose: str, costume: str | None = None,
             expression: str | None = None,
             legwear: str | None = None,
             legwear_state: str | None = None,
-            framing: str | None = None) -> str:
+            framing: str | None = None,
+            angle: str | list[str] | None = None) -> str:
     p = pose_record(pose)
     if framing is not None and _framing(p, framing) is not p.framing:
         p = replace(p, negative=_without_framing_tags(p.negative),
@@ -205,7 +214,9 @@ def negative(pose: str, costume: str | None = None,
     result = (DIGIT_BAN + DETAIL_BAN + COLORED_LINE_BAN + THIN_BODY_BAN
              + p.negative + shine_ban + GRADIENT_BAN
              + NEGATIVE_TAIL + VIVID_BAN + hood_ban + garment_black_ban
-             + COSTUME_BAN.get(c, "") + sheer_ban + legwear_state_ban
+             + COSTUME_BAN.get(c, "")
+             + (BEHIND_COSTUME_BAN.get(c, "") if shows_back(angle) else "")
+             + sheer_ban + legwear_state_ban
              + SCORE_BAN + PROPORTION_BAN + TEXT_BAN)
     # `sheer-gloss` only, tacked on after TEXT_BAN so it is the last
     # thing in the negative prompt.
@@ -234,7 +245,7 @@ def render_spec(pose: str, seed: int, prefix: str, hires: int = 0,
     parts = positive_parts(pose, costume, expression, legwear, legwear_state,
                            angle, framing)
     base_negative = negative(pose, costume, expression, legwear, legwear_state,
-                             framing)
+                             framing, angle)
     hires_spec = None
     if hires:
         longest = max(width, height)
