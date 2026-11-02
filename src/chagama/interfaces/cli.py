@@ -45,7 +45,6 @@ from ..domain.yukari.delivery_style import (
     SATURATION_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
-    PHOTO_CARD,
     PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     STROKE_CHOICES,
@@ -154,12 +153,6 @@ def _photo_options_from_args(args) -> dict:
         options["bokeh"] = args.bokeh
     if args.focal_length is not None:
         options["focal_length"] = args.focal_length
-    if args.card is not None:
-        options["card"] = args.card
-    if args.reshoot:
-        options["reshoot"] = True
-    if args.seed is not None:
-        options["seed"] = args.seed
     return options
 
 
@@ -405,16 +398,6 @@ def parser() -> argparse.ArgumentParser:
         "--focal-length", choices=PHOTO_FOCAL_LENGTH["values"], default=None,
         help="the full-frame lens the photo is shot through; a longer lens "
              f"blurs the scene more (default {PHOTO_FOCAL_LENGTH['default']})")
-    photo_parser.add_argument(
-        "--card", choices=PHOTO_CARD["values"], default=None,
-        help="print: the delivery with its outline bands as a flat card; acrylic: "
-             f"the figure on a clear acrylic stand (default {PHOTO_CARD['default']})")
-    photo_parser.add_argument(
-        "--reshoot", action="store_true",
-        help="re-shoot the composite as a photo with an image edit model, keeping "
-             "the drawing as delivered")
-    photo_parser.add_argument(
-        "--seed", type=int, default=None, help="the reshoot's seed (default 0)")
 
     stage_parser = commands.add_parser(
         "stage", help="set one delivered picture on a backdrop pattern or in a photo")
@@ -460,11 +443,6 @@ def parser() -> argparse.ArgumentParser:
         "--strength", type=float, default=None,
         help=f"{LIGHTING_STRENGTH['min']}..{LIGHTING_STRENGTH['max']} "
              f"(default {LIGHTING_STRENGTH['default']})")
-    lighting_parser.add_argument(
-        "--acrylic", action="store_true",
-        help="make the outline a clear acrylic plate, re-rendered by an image edit model")
-    lighting_parser.add_argument("--seed", type=int, default=None,
-                                 help="the acrylic re-render's seed (default 0)")
 
     saturation_parser = commands.add_parser(
         "saturation", help="compress a delivery's layers' saturation")
@@ -668,9 +646,7 @@ def main(argv: list[str] | None = None) -> None:
         services = build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata)
         options = {"direction": args.direction, "scene": args.scene,
-                   **({"strength": args.strength} if args.strength is not None else {}),
-                   **({"acrylic": True} if args.acrylic else {}),
-                   **({"seed": args.seed} if args.seed is not None else {})}
+                   **({"strength": args.strength} if args.strength is not None else {})}
         try:
             arguments = lighting_arguments(options)
         except ValueError as error:

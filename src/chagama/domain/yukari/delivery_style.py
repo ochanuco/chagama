@@ -480,21 +480,6 @@ PHOTO_FOCAL_LENGTH = {"values": list(PHOTO_FOCAL_LENGTHS), "default": "85mm"}
 # seated or cropped figure is smaller, so it blurs a little less than the
 # same framing would through a real lens.
 PHOTO_SUBJECT_MM = 1500.0
-# What stands in the photo: `print`, the delivery's figure and outline bands
-# as one flat card, or `acrylic`, the figure alone on a clear acrylic stand
-# with its cut edge, base and glare. An acrylic stand is drawn upright and in
-# focus, so it takes no tilt and no focus point.
-PHOTO_CARD = {"values": ["print", "acrylic"], "default": "print"}
-# `reshoot` passes the composite through an image edit model asked for this,
-# then lays the drawing itself back over the result, so the model relights
-# the stand and the scene while the picture stays the delivered one.
-PHOTO_RESHOOT_PROMPT = (
-    "Turn this into a real photograph of the clear acrylic stand standing on the "
-    "table, taken with a camera. Keep the printed character, the stand's outline, "
-    "its base and the background exactly where they are. Make the acrylic look "
-    "real: the polished cut edge catching the room light, faint reflections of the "
-    "room on the glossy surface, the scene refracted through the clear margin, and "
-    "a soft natural shadow under the base.")
 # A stage request sets a delivery's figure and outline layers on a backdrop of
 # their own: a pattern (or #RRGGBB) at the delivery's canvas, optionally with
 # the drop shadow thrown away from `shadow_from`, or a photo, the card's base
@@ -552,15 +537,6 @@ class Light(NamedTuple):
 
 
 LIGHT_FROM_DEFAULT = "nw"
-# `acrylic` lighting: the outline turned into a clear plate is re-rendered by
-# an image edit model asked for this, then the figure is laid back as
-# delivered, so only the acrylic and its light come from the model.
-LIGHTING_ACRYLIC_PROMPT = (
-    "Make the clear border around the character a real, thick, polished clear "
-    "acrylic plate, like a high quality acrylic stand photographed in this scene: "
-    "glossy reflections on its surface, light caught inside its cut edges, the "
-    "background refracted through the clear acrylic, and a faint soft shadow. Keep "
-    "the character artwork, the plate's outline and the background exactly as they are.")
 LIGHT_ELEVATION = 0.15
 LIGHT_REACH = 0.12
 LIGHT_GRADIENT = 0.9

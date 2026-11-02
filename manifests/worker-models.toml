@@ -6,32 +6,6 @@
 # (`<dest>.sha256` records it). The "fetch worker models" workflow runs it
 # on the box. Files not listed here are fetched by hand (docs/remote.md).
 
-# Qwen-Image 2.1 edit in ComfyUI core, with the 8-step LoRA: a picture is
-# re-shot from an image and a prompt in about 18 seconds.
-[[model]]
-dest = "diffusion_models/qwen_image_2.1_int8_convrot.safetensors"
-repo = "Comfy-Org/Qwen-Image-2.1"
-file = "diffusion_models/qwen_image_2.1_int8_convrot.safetensors"
-revision = "aacf31a6d48e707f352ecba714cee0680da3479b"
-
-[[model]]
-dest = "text_encoders/qwen3vl_8b_int8_convrot.safetensors"
-repo = "Comfy-Org/Qwen-Image-2.1"
-file = "text_encoders/qwen3vl_8b_int8_convrot.safetensors"
-revision = "aacf31a6d48e707f352ecba714cee0680da3479b"
-
-[[model]]
-dest = "vae/qwen_image_2.1_vae_bf16.safetensors"
-repo = "Comfy-Org/Qwen-Image-2.1"
-file = "vae/qwen_image_2.1_vae_bf16.safetensors"
-revision = "aacf31a6d48e707f352ecba714cee0680da3479b"
-
-[[model]]
-dest = "loras/p_q_image_2.1_8_steps_v0.1_comfyui_bf16.safetensors"
-repo = "Comfy-Org/Qwen-Image-2.1"
-file = "loras/p_q_image_2.1_8_steps_v0.1_comfyui_bf16.safetensors"
-revision = "aacf31a6d48e707f352ecba714cee0680da3479b"
-
 # Pixal3D image-to-3D in ComfyUI core: the native template loads both the
 # Pixal3D and the TRELLIS.2 diffusion model, so both are listed. Comfy-Org
 # repackages each model in its own repo; the TRELLIS.2 VAEs ship with Pixal3D.

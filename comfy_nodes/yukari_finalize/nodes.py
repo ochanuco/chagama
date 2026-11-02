@@ -14,7 +14,6 @@ import numpy as np
 
 from chagama.domain.generation import anima_blocks
 from chagama.infrastructure.imaging import (
-    acrylic_plate,
     delivery,
     depth_blur,
     lens,
@@ -251,8 +250,8 @@ class YukariLens:
 
 class YukariPhotoStage:
     CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE", "MASK")
-    RETURN_NAMES = ("image", "print_mask")
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
     FUNCTION = "run"
 
     @classmethod
@@ -282,28 +281,22 @@ class YukariPhotoStage:
             "tilt": ("FLOAT", {"default": 0.0, "min": -1.0, "max": 1.0, "step": 0.01}),
             "bokeh": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
             "focal_mm": _focal_mm(),
-            "card": ([photo_stage.PRINT, photo_stage.ACRYLIC], {"default": photo_stage.PRINT}),
         }}
 
     def run(self, photo, depth, figure, figure_mask, outline, outline_mask,
             place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
             focus_x, focus_y, f_number, tilt=0.0, bokeh=0.0,
-            focal_mm=photo_stage.DEFAULT_FOCAL_MM, card=photo_stage.PRINT):
-        photo_png = bridge.image_to_png(photo)
-        figure_png = bridge.loaded_rgba_png(figure, figure_mask)
-        outline_png = bridge.loaded_rgba_png(outline, outline_mask)
-        mask = photo_stage.print_mask_png(photo_png, figure_png, outline_png,
-                                          place=(place_x, place_y), height=height,
-                                          card_style=card)
+            focal_mm=photo_stage.DEFAULT_FOCAL_MM):
         data = photo_stage.stage_png(
-            photo_png, bridge.image_to_png(depth), figure_png, outline_png,
+            bridge.image_to_png(photo), bridge.image_to_png(depth),
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
             place=(place_x, place_y), height=height,
             stand_at=(stand_x, stand_y) if stand == "point" else None,
             nearer=nearer,
             focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
-            f_number=f_number, tilt=tilt, bokeh=bokeh, focal_mm=focal_mm,
-            card_style=card)
-        return (bridge.png_to_image(data), bridge.png_to_mask(mask))
+            f_number=f_number, tilt=tilt, bokeh=bokeh, focal_mm=focal_mm)
+        return (bridge.png_to_image(data),)
 
 
 def _focal_mm():
@@ -386,28 +379,6 @@ class YukariSaturation:
         return (bridge.png_to_image(picture, "RGB" if backdrop is not None else "RGBA"),
                 bridge.png_to_image(figure_png, "RGBA"),
                 bridge.png_to_image(outline_png, "RGBA"))
-
-
-class YukariAcrylicPlate:
-    CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE", "MASK")
-    RETURN_NAMES = ("image", "print_mask")
-    FUNCTION = "run"
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {
-            "backdrop": ("IMAGE",),
-            "figure": ("IMAGE",),
-            "outline": ("IMAGE",),
-            "direction": ("STRING", {"default": "nw"}),
-        }}
-
-    def run(self, backdrop, figure, outline, direction="nw"):
-        guide, mask = acrylic_plate.plate_pngs(
-            bridge.image_to_png(backdrop), bridge.image_to_png(figure),
-            bridge.image_to_png(outline), direction)
-        return (bridge.png_to_image(guide), bridge.png_to_mask(mask))
 
 
 class YukariRelight:
@@ -602,7 +573,6 @@ NODE_CLASS_MAPPINGS = {
     "YukariViewfinder": YukariViewfinder,
     "YukariLens": YukariLens,
     "YukariPhotoStage": YukariPhotoStage,
-    "YukariAcrylicPlate": YukariAcrylicPlate,
     "YukariStage": YukariStage,
     "YukariRelight": YukariRelight,
     "YukariPhotoDepthOfField": YukariPhotoDepthOfField,
@@ -623,7 +593,6 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariViewfinder": "Yukari Viewfinder",
     "YukariLens": "Yukari Lens",
     "YukariPhotoStage": "Yukari Photo Stage",
-    "YukariAcrylicPlate": "Yukari Acrylic Plate",
     "YukariStage": "Yukari Stage",
     "YukariRelight": "Yukari Relight",
     "YukariPhotoDepthOfField": "Yukari Photo Depth of Field",

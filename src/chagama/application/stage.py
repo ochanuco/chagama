@@ -4,13 +4,10 @@ layers it now stands in."""
 
 from __future__ import annotations
 
-import io
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-
-from PIL import Image
 
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
 from ..infrastructure.comfyui.stage_graph import lighting_graph, saturation_graph, stage_graph
@@ -46,7 +43,6 @@ LIGHTING_SOURCE = ("光を当てられるのは stage の出力、deliver / satu
 LIGHTING_NOTHING = ("背景の無い絵に当てられるのは direction か scene の光だけです。"
                     "どちらかを指定してください")
 LIGHTING_TWICE = "この絵にはもう光が当たっています。stage の出力からかけ直してください"
-LIGHTING_ACRYLIC_NEEDS_BACKDROP = "アクリルの板は背景を透かして描くので、背景のある絵にだけ当てられます"
 NO_LAYERS = "この絵には層が無いので、作り直してください"
 FIGURE_ROLES = ("layer-figure", "layer-outline")
 LAYER_ROLES = (*FIGURE_ROLES, "layer-backdrop")
@@ -253,7 +249,6 @@ def stage(generation_id: str, services: StageServices, *,
 
 def lighting(generation_id: str, services: StageServices, *,
              direction: str | None, strength: float, scene: str | None = None,
-             acrylic: bool = False, seed: int = 0,
              key_prefix: str | None = None, request_id: str | None = None,
              context: dict | None = None) -> dict:
     """Light the staged picture `generation_id`'s figure and outline by its
@@ -276,8 +271,6 @@ def lighting(generation_id: str, services: StageServices, *,
     roles = LAYER_ROLES if has_backdrop_layer(management, context) else FIGURE_ROLES
     if len(roles) == len(FIGURE_ROLES) and direction is None and scene is None:
         raise SystemExit(LIGHTING_NOTHING)
-    if acrylic and len(roles) == len(FIGURE_ROLES):
-        raise SystemExit(LIGHTING_ACRYLIC_NEEDS_BACKDROP)
     _require_layers(services, generation_id, context, roles)
 
     tint_backdrop = scene is not None and not (kind == "stage" and parameters.get("photo"))
@@ -289,8 +282,7 @@ def lighting(generation_id: str, services: StageServices, *,
     graph = services.lighting_graph(
         uploaded["layer-figure"], uploaded["layer-outline"], uploaded.get("layer-backdrop"),
         prefix, direction=direction, strength=strength, scene=scene,
-        tint_backdrop=tint_backdrop, acrylic=acrylic, seed=seed,
-        size=Image.open(io.BytesIO(layers["layer-figure"])).size if acrylic else None)
+        tint_backdrop=tint_backdrop)
     prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
                      state_path=state_path)
     outputs = classify_lighting_outputs(services.comfyui.wait_for(prompt_id))
@@ -302,8 +294,7 @@ def lighting(generation_id: str, services: StageServices, *,
         layers=layers,
         raw_instruction=f"{generation_id} に背景の光",
         parameters={"kind": "lighting", "base_generation": generation_id,
-                    "direction": direction, "strength": strength, "scene": scene,
-                    "acrylic": acrylic, "seed": seed},
+                    "direction": direction, "strength": strength, "scene": scene},
         references=[{"source_generation_id": generation_id, "purpose": "rebuild",
                      "aspect": "composition", "instruction": "この絵を背景の光で照らす"}],
         title="lighting")

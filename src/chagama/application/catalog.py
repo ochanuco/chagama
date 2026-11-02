@@ -50,7 +50,6 @@ from ..domain.yukari.delivery_style import (
     LENS_STRENGTH,
     LIGHTING_STRENGTH,
     PHOTO_BOKEH,
-    PHOTO_CARD,
     PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
@@ -259,16 +258,6 @@ def _photo_block() -> dict:
         "bokeh": {**PHOTO_BOKEH, "help": "how strongly the photo's out-of-focus "
                                          "highlights (street lamps) open into bright "
                                          "discs; 0 leaves them as they blur"},
-        "card": {**PHOTO_CARD, "help": "print stands the delivery with its outline "
-                                       "bands as one flat card; acrylic prints the "
-                                       "figure alone on a clear acrylic stand with "
-                                       "its cut edge, base and glare, upright and in "
-                                       "focus (no tilt, no focus point)"},
-        "reshoot": {"default": False,
-                    "help": "re-shoot the composite as a photo with Qwen-Image edit "
-                            "so the stand and scene are lit as a camera sees them; "
-                            "the drawing is laid back over it as delivered"},
-        "seed": {"default": 0, "help": "the reshoot's seed"},
     }
 
 
@@ -327,11 +316,6 @@ def _lighting_block() -> dict:
         "scene": {"values": sorted(LIGHT_SCENES), "default": None,
                   "help": "light the figure as this scene (default direction nw) and "
                           "tint a pattern backdrop to it; a photo stays as it is"},
-        "acrylic": {"default": False,
-                    "help": "make the outline a clear acrylic plate over the backdrop, "
-                            "re-rendered by Qwen-Image edit and lit from `direction` "
-                            "(default nw); the figure stays as delivered. Needs a backdrop"},
-        "seed": {"default": 0, "help": "the acrylic re-render's seed"},
     }
 
 

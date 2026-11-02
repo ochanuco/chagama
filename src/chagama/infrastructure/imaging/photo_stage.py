@@ -25,12 +25,10 @@ import numpy as np
 from PIL import Image
 
 from ...domain.yukari.delivery_style import (
-    PHOTO_CARD,
     PHOTO_FOCAL_LENGTH,
     PHOTO_FOCAL_LENGTHS,
     PHOTO_SUBJECT_MM,
 )
-from . import acrylic_stand
 from .depth_blur import (
     ALPHA_EPSILON,
     DEPTH_PERCENTILES,
@@ -57,7 +55,6 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
 # blur over what stands behind it instead of keeping a hard silhouette.
 DEPTH_SLICES = 24
 SUBJECT = "subject"
-PRINT, ACRYLIC = PHOTO_CARD["values"]
 # A focus this far back or farther counts as this far, so a card standing at
 # the far end does not blow the near scene up without bound.
 FOCUS_DEPTH_FLOOR = 0.1
@@ -221,44 +218,11 @@ def blur_card(photo: np.ndarray, depth: np.ndarray, placed: np.ndarray, *,
 
 def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
           outline: np.ndarray, *, place: tuple[float, float], height: float,
-          card_style: str = PRINT, **blur) -> np.ndarray:
+          **blur) -> np.ndarray:
     """`blur_card` with the card made from a delivery's straight RGBA
-    `figure` and `outline` layers and placed on `photo` first. An ACRYLIC
-    card is the figure alone printed on a clear stand, drawn in focus over
-    the scene blurred for its base."""
-    if card_style == ACRYLIC:
-        empty = np.zeros((*photo.shape[:2], 4), np.float32)
-        scene = blur_card(photo, depth, empty, place=place, height=height, **blur) / 255.0
-        return acrylic_stand.stand(scene.astype(np.float32), figure,
-                                   place=place, height=height) * 255.0
-    if card_style != PRINT:
-        raise ValueError(f"unknown card style {card_style!r}")
+    `figure` and `outline` layers and placed on `photo` first."""
     placed = place_card(card(figure, outline), photo.shape[1::-1], place, height)
     return blur_card(photo, depth, placed, place=place, height=height, **blur)
-
-
-def print_mask(figure: np.ndarray, outline: np.ndarray, size: tuple[int, int], *,
-               place: tuple[float, float], height: float,
-               card_style: str = PRINT) -> np.ndarray:
-    """Where the drawing itself lands in the photo (HxW 0..1): the acrylic
-    print, or the whole flat card."""
-    if card_style == ACRYLIC:
-        return acrylic_stand.print_mask(figure, size, place=place, height=height)
-    return place_card(card(figure, outline), size, place, height)[..., 3]
-
-
-def print_mask_png(photo_png: bytes, figure_png: bytes, outline_png: bytes, *,
-                   place: tuple[float, float], height: float,
-                   card_style: str = PRINT) -> bytes:
-    """`print_mask` over PNG bytes, as an L PNG at the photo's size."""
-    size = Image.open(io.BytesIO(photo_png)).size
-    def decode(data: bytes) -> np.ndarray:
-        return np.asarray(Image.open(io.BytesIO(data)).convert("RGBA"), dtype=np.float32)
-    mask = print_mask(decode(figure_png), decode(outline_png), size, place=place,
-                      height=height, card_style=card_style)
-    output = io.BytesIO()
-    Image.fromarray(np.clip(np.rint(mask * 255), 0, 255).astype(np.uint8), "L").save(output, "PNG")
-    return output.getvalue()
 
 
 def stage_png(photo_png: bytes, depth_png: bytes, figure_png: bytes,

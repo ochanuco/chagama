@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
-from ...domain.yukari.delivery_style import LIGHT_FROM_DEFAULT, LIGHTING_ACRYLIC_PROMPT
-from .qwen_edit_graph import edit_nodes
 from .refinement_graph import (
     DELIVERED_SUFFIX,
     LAYER_BACKDROP_SUFFIX,
@@ -74,15 +72,11 @@ def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
 
 def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
                    prefix: str, *, direction: str | None, strength: float,
-                   scene: str | None = None, tint_backdrop: bool = False,
-                   acrylic: bool = False, seed: int = 0,
-                   size: tuple[int, int] | None = None) -> dict:
+                   scene: str | None = None, tint_backdrop: bool = False) -> dict:
     """Light the uploaded layer images by their uploaded backdrop, in the
     light `scene` when one is given (tinting the backdrop when
     `tint_backdrop`). The picture is saved under `prefix` + LIT_SUFFIX and
-    the layers beside it (no backdrop layer without a backdrop). With
-    `acrylic` the outline becomes a clear plate that an image edit model
-    re-renders, the lit figure laid back over it, at the canvas `size`."""
+    the layers beside it (no backdrop layer without a backdrop)."""
     graph, allocate, load = _builder()
     figure_id, outline_id = load(figure_image), load(outline_image)
     backdrop_id = load(backdrop_image) if backdrop_image is not None else None
@@ -95,25 +89,7 @@ def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str | 
     if backdrop_id is not None:
         inputs["backdrop"] = [backdrop_id, 0]
     graph[light_id] = {"class_type": "YukariRelight", "inputs": inputs}
-    picture = [light_id, 0]
-    if acrylic:
-        if backdrop_id is None or size is None:
-            raise ValueError("an acrylic plate needs a backdrop and the canvas size")
-        plate_id = allocate()
-        graph[plate_id] = {"class_type": "YukariAcrylicPlate", "inputs": {
-            "backdrop": [light_id, 3], "figure": [light_id, 1], "outline": [light_id, 2],
-            "direction": direction or LIGHT_FROM_DEFAULT}}
-        edited = edit_nodes(graph, allocate, [plate_id, 0], LIGHTING_ACRYLIC_PROMPT, seed)
-        scaled = allocate()
-        graph[scaled] = {"class_type": "ImageScale", "inputs": {
-            "image": edited, "upscale_method": "lanczos", "width": size[0],
-            "height": size[1], "crop": "disabled"}}
-        kept = allocate()
-        graph[kept] = {"class_type": "ImageCompositeMasked", "inputs": {
-            "destination": [scaled, 0], "source": [plate_id, 0], "x": 0, "y": 0,
-            "resize_source": False, "mask": [plate_id, 1]}}
-        picture = [kept, 0]
-    _save(graph, allocate, picture, prefix + LIT_SUFFIX)
+    _save(graph, allocate, [light_id, 0], prefix + LIT_SUFFIX)
     _save(graph, allocate, [light_id, 1], prefix + LAYER_FIGURE_SUFFIX)
     _save(graph, allocate, [light_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
     if backdrop_id is not None:
