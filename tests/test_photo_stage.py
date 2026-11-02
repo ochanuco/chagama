@@ -199,8 +199,8 @@ class AcrylicTest(unittest.TestCase):
 
     def test_the_stand_spans_its_height_from_the_base(self):
         image = self.stage(photo_stage.ACRYLIC)
-        changed = (image - self.photo).max(-1) > 6
-        rows = np.nonzero(changed.any(1))[0]
+        changed = (image - self.photo).max(-1) > 12
+        rows = np.nonzero(changed.mean(1) > 0.02)[0]
         self.assertAlmostEqual(rows.max(), round(0.95 * self.h), delta=4)
         self.assertAlmostEqual(rows.max() - rows.min(), 0.8 * self.h, delta=0.06 * self.h)
 

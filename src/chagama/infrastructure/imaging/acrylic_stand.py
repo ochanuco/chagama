@@ -43,9 +43,18 @@ class Geometry:
 @dataclass(frozen=True)
 class Finish:
     absorb: float = 0.05
-    sheen: float = 0.14
-    glare: float = 0.42
+    sheen: float = 0.10
+    glare: float = 0.30
     shadow: float = 0.45
+    reflection: float = 0.14
+    # The print as a camera sees it: taken toward the scene's exposure and
+    # colour, its blacks lifted to ink on white and its whites rolled off.
+    relight: float = 0.8
+    ink_black: float = 0.010
+    print_white: float = 0.90
+    softness: float = 0.45
+    grain: float = 0.006
+    halation: float = 0.18
 
 
 GEOMETRY = Geometry()
@@ -85,6 +94,90 @@ def contour(mask: np.ndarray, width: float) -> np.ndarray:
     slope = np.hypot(gx, gy) + 1e-6
     distance = np.abs(soft - 0.5) / slope
     return np.clip(1.0 - distance / (width * 0.5 + 0.5), 0.0, 1.0) * (slope > 1e-3)
+
+
+def _rounded(mask: np.ndarray, radius: float) -> np.ndarray:
+    soft = cv2.GaussianBlur(mask.astype(np.float32), (0, 0), max(radius, 0.5))
+    return np.clip((soft - 0.5) * 2.5 + 0.5, 0.0, 1.0)
+
+
+def _variation(shape: tuple[int, int], scale: float, seed: int) -> np.ndarray:
+    """Smooth noise in 0..1 whose blobs are about `scale` px across."""
+    noise = np.random.default_rng(seed).standard_normal(shape).astype(np.float32)
+    noise = cv2.GaussianBlur(noise, (0, 0), max(scale, 1.0))
+    low, high = np.percentile(noise, (2, 98))
+    return np.clip((noise - low) / max(high - low, 1e-6), 0.0, 1.0)
+
+
+def _photographed_print(printed: np.ndarray, scene: np.ndarray, plate: np.ndarray,
+                        finish: Finish, softness: float) -> np.ndarray:
+    """The print's colour as the camera records it in this scene."""
+    from . import relight  # relight reaches photo_stage through stage
+    gain = relight.adjustment(relight.ambient(scene * 255.0, plate > 0), finish.relight)
+    linear = np.clip(printed[..., :3], 0.0, 1.0) ** 2.2 * gain
+    linear = finish.ink_black + (finish.print_white - finish.ink_black) * linear
+    linear = linear / (1.0 + 0.25 * linear)
+    colour = np.clip(linear / (1.0 / 1.25), 0.0, 1.0) ** (1 / 2.2)
+    alpha = printed[..., 3:4]
+    blurred = cv2.GaussianBlur(colour * alpha, (0, 0), softness)
+    cover = cv2.GaussianBlur(alpha, (0, 0), softness)[..., None]
+    return np.where(cover > 1e-3, blurred / np.maximum(cover, 1e-3), colour)
+
+
+def _cast_shadow(image: np.ndarray, plate: np.ndarray, printed: np.ndarray,
+                 base: np.ndarray, floor_y: int, unit: int, scale: float,
+                 finish: Finish) -> np.ndarray:
+    """The stand's shadow on the surface it stands on, thrown back and to the
+    right, away from the light: dark under the print, faint under the clear
+    acrylic with light gathered at its edge, its penumbra widening with
+    distance from the base."""
+    run, rise = 0.32, 0.14
+    matrix = np.float32([[1, -run, run * floor_y], [0, rise, floor_y * (1 - rise)]])
+    size = (image.shape[1], image.shape[0])
+    plate_shadow = cv2.warpAffine(np.maximum(plate, base), matrix, size)
+    print_shadow = cv2.warpAffine(printed, matrix, size)
+    near = cv2.GaussianBlur(np.stack([plate_shadow, print_shadow], -1), (0, 0), 1.5 * scale)
+    far = cv2.GaussianBlur(np.stack([plate_shadow, print_shadow], -1), (0, 0), 10.0 * scale)
+    rows = np.arange(image.shape[0], dtype=np.float32)
+    reach = np.clip((floor_y - rows) / max(rise * unit, 1.0), 0.0, 1.0)[:, None, None]
+    soft = near * (1 - reach) + far * reach
+    fade = (1 - 0.6 * reach[..., 0])
+    darkness = (0.12 * soft[..., 0] + (finish.shadow - 0.12) * soft[..., 1]) * fade
+    caustic = contour(plate_shadow, 2.0 * scale) * (1 - soft[..., 1]) * 0.10 * fade
+    image = _darken(image, darkness * (rows <= floor_y + 2)[:, None])
+    return _screen(image, caustic * (rows <= floor_y)[:, None])
+
+
+def _window(along: np.ndarray, across: np.ndarray, span: float) -> np.ndarray:
+    """A window's reflection on the flat plate: a pane with a crisp edge
+    toward the light and a soft one away from it, crossed by a mullion."""
+    def pane(centre, half, crisp, soft):
+        d = along - centre
+        return (np.clip((half - d) / crisp, 0, 1) * np.clip((d + half) / soft, 0, 1))
+    glass = pane(0.30, 0.10, 0.004, 0.08) + 0.5 * pane(0.08, 0.025, 0.003, 0.03)
+    mullion = 1 - 0.75 * np.exp(-((across + 0.05) / 0.008) ** 2)
+    return np.clip(glass, 0, 1) * mullion
+
+
+def _glints(edge: np.ndarray, facing: np.ndarray, shape: tuple[int, int],
+            span: float, scale: float, seed: int = 11) -> np.ndarray:
+    """Short, hard highlights where a polished edge turns to the light."""
+    sparkle = _variation(shape, max(span * 0.006, 2.0 * scale), seed)
+    sparse = np.clip((sparkle - 0.55) / 0.12, 0.0, 1.0)
+    return np.clip(edge * np.clip(facing, 0, 1) ** 4 * sparse * 1.2, 0.0, 1.0)
+
+
+def _camera(image: np.ndarray, finish: Finish, scale: float, seed: int) -> np.ndarray:
+    """One camera over the whole frame: highlights bloom a little and the
+    sensor grain covers stand and scene alike."""
+    bright = np.clip(image - 0.72, 0.0, 1.0)
+    image = image + finish.halation * cv2.GaussianBlur(bright, (0, 0), 6.0 * scale)
+    rng = np.random.default_rng(seed)
+    luma = rng.standard_normal(image.shape[:2]).astype(np.float32)
+    chroma = rng.standard_normal(image.shape).astype(np.float32) * 0.15
+    grain = cv2.GaussianBlur(luma[..., None] + chroma, (0, 0), 0.55 * scale)
+    grain = grain / (grain.std() + 1e-6)
+    return np.clip(image + finish.grain * grain, 0.0, 1.0)
 
 
 def _normals(mask: np.ndarray, sigma: float) -> tuple[np.ndarray, np.ndarray]:
@@ -205,31 +298,37 @@ def stand(scene: np.ndarray, figure: np.ndarray, *, place: tuple[float, float],
                                       [right_x, mid_y], [left_x, mid_y]], np.int32)], 1)
     front_face = np.zeros_like(top_face)
     cv2.rectangle(front_face, (left_x, mid_y), (right_x, bottom_y), 1, -1)
+    corner = max(1.0, base_front * 0.12)
+    top_face, front_face = _rounded(top_face, corner), _rounded(front_face, corner)
     base = np.maximum(top_face, front_face)
     bnx, bny = _normals(base > 0.5, 2.0)
+    scale = photo_height / 1920
+    prow, pcol = np.nonzero(plate)
+    span = float(max(np.ptp(pcol), np.ptp(prow), 1))
+    vary = 0.45 + 0.55 * _variation((photo_height, width), span * 0.04, 5)
 
     image = scene.astype(np.float32).copy()
-    shadow = np.zeros_like(top_face)
-    offset = -light * base_front * 0.6
-    cv2.ellipse(shadow, (round(cx + offset[0]), round(bottom_y + abs(offset[1]) * 0.3)),
-                (round(base_w * 0.58), max(2, base_front // 3)), 0, 0, 360, 1, -1)
-    image = _darken(image, finish.shadow * cv2.GaussianBlur(shadow, (0, 0), max(1.0, base_front * 0.5)))
+    image = _cast_shadow(image, plate_alpha, alpha, base, bottom_y, unit, scale, finish)
 
     clear = {"bevel": bevel, "refraction": refraction}
-    image = _clear(image, cv2.GaussianBlur(front_face, (0, 0), 0.7), bnx, bny, light,
-                   absorb=0.16, **clear)
-    image = _clear(image, cv2.GaussianBlur(top_face, (0, 0), 0.7), bnx, bny, light,
-                   absorb=0.08, **clear)
-    image = _screen(image, top_face * 0.10)
+    image = _clear(image, front_face, bnx, bny, light, absorb=0.16, **clear)
+    image = _clear(image, top_face, bnx, bny, light, absorb=0.08, **clear)
+    image = _screen(image, top_face * 0.06)
+    ys, xs = np.mgrid[0:photo_height, 0:width].astype(np.float32)
+    mirrored = cv2.remap(printed, xs, 2 * top_y - ys, cv2.INTER_LINEAR,
+                         borderMode=cv2.BORDER_CONSTANT)
+    mirrored = cv2.GaussianBlur(mirrored, (0, 0), 1.5 * max(scale, 0.5))
+    seen = mirrored[..., 3] * top_face * 0.22
+    image = image * (1 - seen[..., None]) + mirrored[..., :3] * seen[..., None]
     tab_seen = np.zeros_like(top_face)
     cv2.rectangle(tab_seen, (cx - tab_w // 2, top_y + base_top // 3),
                   (cx + tab_w // 2, mid_y + base_front // 3), 1, -1)
     image = _darken(image, 0.10 * cv2.GaussianBlur(tab_seen, (0, 0), 1.0))
     seam = np.zeros_like(top_face)
     cv2.line(seam, (left_x, mid_y), (right_x, mid_y), 1, max(1, int(line)))
-    image = _screen(image, cv2.GaussianBlur(seam, (0, 0), 0.6) * 0.75)
+    image = _screen(image, cv2.GaussianBlur(seam, (0, 0), 0.6) * 0.55 * vary)
     base_facing = np.clip(bnx * light[0] + bny * light[1], -1.0, 1.0)
-    image = _screen(image, contour(base, line) * (0.55 + 0.30 * base_facing))
+    image = _screen(image, contour(base, line) * (0.40 + 0.30 * base_facing) * vary)
     slot = np.zeros_like(top_face)
     cv2.rectangle(slot, (cx - tab_w // 2 - 2, top_y + base_top // 3),
                   (cx + tab_w // 2 + 2, top_y + base_top * 2 // 3), 1, -1)
@@ -245,32 +344,36 @@ def stand(scene: np.ndarray, figure: np.ndarray, *, place: tuple[float, float],
     image = image * (1 - side[..., None]) + cut_face * side[..., None]
     middle = np.maximum(_shift(plate_alpha, *(view * thickness * 0.45)),
                         _shift(plate_alpha, *(view * thickness * 0.55)))
-    image = _screen(image, contour(middle, line * 0.8) * side
-                    * (0.10 + 0.85 * np.clip(facing, 0, 1) ** 1.5))
+    image = _screen(image, contour(middle, line * 0.8) * side * vary
+                    * (0.08 + 0.80 * np.clip(facing, 0, 1) ** 1.5))
     back_rim = contour(_shift(plate_alpha, *(view * thickness)), line) * (1 - plate_alpha)
-    image = _screen(image, back_rim * (0.20 + 0.55 * np.clip(-facing, 0, 1)),
+    image = _screen(image, back_rim * vary * (0.15 + 0.55 * np.clip(-facing, 0, 1)),
                     (0.95, 0.98, 1.0))
 
     image = _clear(image, plate_alpha, nx, ny, light, absorb=finish.absorb, **clear)
-    image = image * (1 - alpha[..., None]) + (printed[..., :3] * 0.97 + 0.01) * alpha[..., None]
-
-    ys, xs = np.mgrid[0:photo_height, 0:width].astype(np.float32)
-    prow, pcol = np.nonzero(plate)
     centre_x, centre_y = pcol.mean(), prow.mean()
-    span = float(max(np.ptp(pcol), np.ptp(prow), 1))
     along = ((xs - centre_x) * light[0] + (ys - centre_y) * light[1]) / span
     across = ((xs - centre_x) * -light[1] + (ys - centre_y) * light[0]) / span
-    sheen = np.clip(along + 0.15, 0, 1) ** 1.5 * finish.sheen
-    wobble = cv2.GaussianBlur(np.random.default_rng(3).standard_normal(
-        (photo_height, width)).astype(np.float32), (0, 0), span * 0.02)
-    wobble /= np.abs(wobble).max() + 1e-6
-    glare = (np.exp(-((along - 0.10 + 0.01 * wobble) / 0.035) ** 2)
-             + 0.6 * np.exp(-((along - 0.01) / 0.010) ** 2)) * finish.glare
-    glare *= np.clip(1 - np.abs(across) * 1.3, 0, 1)
-    image = _screen(image, plate_alpha * (sheen + glare))
+    colour = _photographed_print(printed, scene, plate, finish,
+                                 finish.softness * max(scale, 0.5))
+    colour = colour * (1.0 + 0.06 * np.clip(along, -1, 1))[..., None]
+    image = image * (1 - alpha[..., None]) + colour * alpha[..., None]
+    environment = cv2.GaussianBlur(scene[::-1], (0, 0), span * 0.03)
+    image = _screen(image, plate_alpha * finish.reflection
+                    * (0.5 + 0.5 * np.clip(along + 0.3, 0, 1)), environment)
+    from . import relight
+    light_colour = 0.4 + 0.6 * relight.highlight(scene * 255.0) / 255.0
+    image = _screen(image, plate_alpha * _window(along, across, span) * finish.glare,
+                    light_colour)
 
-    image = _screen(image, contour(plate_alpha, line)
-                    * (0.18 + 0.75 * np.clip(facing, 0, 1) ** 1.2))
+    image = _screen(image, contour(plate_alpha, line) * vary
+                    * (0.06 + 0.30 * np.clip(facing, 0, 1) ** 2))
+    glints = _glints(contour(plate_alpha, line * 1.2) + contour(middle, line) * side,
+                     facing, (photo_height, width), span, scale)
+    glints = np.maximum(glints, _glints(contour(base, line), base_facing,
+                                        (photo_height, width), span, scale, seed=13))
+    image = _screen(image, glints, light_colour)
+    image = _screen(image, cv2.GaussianBlur(glints, (0, 0), 3.0 * scale) * 0.8, light_colour)
     inner = contour(cv2.erode(plate, _disc(line * 1.5)).astype(np.float32), line) * plate_alpha
     image = _darken(image, inner * 0.10 * (0.5 + 0.5 * np.clip(-facing, 0, 1)))
-    return np.clip(image, 0.0, 1.0)
+    return _camera(np.clip(image, 0.0, 1.0), finish, max(scale, 0.5), 7)
