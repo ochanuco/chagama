@@ -333,15 +333,18 @@ class NodeRunTest(unittest.TestCase):
         node = nodes.YukariPhotoStage()
         photo = np.full((48, 80, 3), 120, np.uint8)
         depth = np.tile(np.linspace(0, 255, 48, dtype=np.uint8)[:, None], (1, 80))
-        (image,) = node.run(
-            image_tensor(photo), image_tensor(np.dstack([depth] * 3)),
-            image_tensor(swatch()), mask_tensor(255 - matte_array()),
-            image_tensor(np.zeros((64, 64, 3), np.uint8)),
-            mask_tensor(np.full((64, 64), 255, np.uint8)),
-            place_x=0.5, place_y=0.95, height=0.6, stand="base", stand_x=0.5,
-            stand_y=0.5, nearer=0.0, focus="subject", focus_x=0.5, focus_y=0.5,
-            f_number=2.8)
-        self.assertEqual(image.array.shape, (1, 48, 80, 3))
+        for card in ("print", "acrylic"):
+            image, mask = node.run(
+                image_tensor(photo), image_tensor(np.dstack([depth] * 3)),
+                image_tensor(swatch()), mask_tensor(255 - matte_array()),
+                image_tensor(np.zeros((64, 64, 3), np.uint8)),
+                mask_tensor(np.full((64, 64), 255, np.uint8)),
+                place_x=0.5, place_y=0.95, height=0.6, stand="base", stand_x=0.5,
+                stand_y=0.5, nearer=0.0, focus="subject", focus_x=0.5, focus_y=0.5,
+                f_number=2.8, card=card)
+            self.assertEqual(image.array.shape, (1, 48, 80, 3))
+            self.assertEqual(mask.array.shape, (1, 48, 80))
+            self.assertGreater(mask.array.max(), 0.5)
 
     def test_stage_sets_layers_on_a_pattern_or_a_photo(self):
         node = nodes.YukariStage()

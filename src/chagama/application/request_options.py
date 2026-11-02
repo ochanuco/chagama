@@ -68,7 +68,7 @@ _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 
 _KNOWN_PHOTO_OPTIONS = frozenset({
     "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh",
-    "focal_length", "card"})
+    "focal_length", "card", "reshoot", "seed"})
 
 _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from",
                                   "light", "frame"})
@@ -531,6 +531,12 @@ def photo_arguments(options: Mapping) -> dict:
         focus = _point(options, "focus", None)
         if focus is None:
             raise ValueError('focus must be "subject" or [x, y]')
+    reshoot = options.get("reshoot", False)
+    if not isinstance(reshoot, bool):
+        raise ValueError(f"reshoot must be true or false, got {reshoot!r}")
+    seed = options.get("seed", 0)
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2 ** 32:
+        raise ValueError(f"seed must be an integer 0..2^32-1, got {seed!r}")
     card = options.get("card", PHOTO_CARD["default"])
     if card not in PHOTO_CARD["values"]:
         raise ValueError(f"card must be one of {PHOTO_CARD['values']}, got {card!r}")
@@ -550,6 +556,8 @@ def photo_arguments(options: Mapping) -> dict:
         "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH),
         "focal_length": _focal_length(options),
         "card": card,
+        "reshoot": reshoot,
+        "seed": seed,
     }
 
 

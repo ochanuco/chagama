@@ -192,9 +192,8 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 - A picture whose lineage (through `saturation`, `lighting` and `stage`) set it in a
   photo is blurred as the photo kind blurs: the photo's depth, the card's
   `place` and `height` from the stage, and the options `stand_at`,
-  `nearer`, `tilt`, `bokeh` and `focal_length` with the photo kind's
-  defaults and meanings; `scope` does not apply. Those options are refused
-  elsewhere; a pattern stage (or a delivery) takes its source depth as above.
+  `nearer`, `tilt`, `bokeh` and `focal_length` as the photo kind takes them;
+  `scope` does not apply. Elsewhere they are refused.
 - The output Generation (`-dof`; `both` adds `-viewfinder`) refines the
   delivery, is itself a delivered picture, and records `kind: "dof"`,
   `base_generation` and the resolved options (the photo options in place of
@@ -237,8 +236,10 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   middle of its bottom edge goes; `height` (0.05..1.5 of the photo height, default
   0.7) its size. The output is the photo's size.
 - `card` (default `print`): `acrylic` prints the figure alone on a clear plate
-  with a tab in a clear base (`height` spans the whole stand), lit from the upper
-  left; it stands upright and in focus, so `tilt` and a `focus` point are refused.
+  with a tab in a clear base (`height` spans the whole stand), upright and in
+  focus, so `tilt` and a `focus` point are refused. `reshoot: true` (`seed`,
+  default 0) re-shoots the composite with Qwen-Image 2.1 edit and lays the
+  drawing back over it as delivered, so the model lights stand and scene.
 - The photo's depth is the `depth` asset of the photo Generation, reused
   under the `cut` rule, or built in the graph and attached to it. The card
   takes one depth: the photo's at `stand_at` (`[x, y]`; null, the default,

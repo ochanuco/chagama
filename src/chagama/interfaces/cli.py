@@ -156,6 +156,10 @@ def _photo_options_from_args(args) -> dict:
         options["focal_length"] = args.focal_length
     if args.card is not None:
         options["card"] = args.card
+    if args.reshoot:
+        options["reshoot"] = True
+    if args.seed is not None:
+        options["seed"] = args.seed
     return options
 
 
@@ -405,6 +409,12 @@ def parser() -> argparse.ArgumentParser:
         "--card", choices=PHOTO_CARD["values"], default=None,
         help="print: the delivery with its outline bands as a flat card; acrylic: "
              f"the figure on a clear acrylic stand (default {PHOTO_CARD['default']})")
+    photo_parser.add_argument(
+        "--reshoot", action="store_true",
+        help="re-shoot the composite as a photo with an image edit model, keeping "
+             "the drawing as delivered")
+    photo_parser.add_argument(
+        "--seed", type=int, default=None, help="the reshoot's seed (default 0)")
 
     stage_parser = commands.add_parser(
         "stage", help="set one delivered picture on a backdrop pattern or in a photo")

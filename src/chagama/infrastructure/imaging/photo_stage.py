@@ -237,6 +237,30 @@ def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
     return blur_card(photo, depth, placed, place=place, height=height, **blur)
 
 
+def print_mask(figure: np.ndarray, outline: np.ndarray, size: tuple[int, int], *,
+               place: tuple[float, float], height: float,
+               card_style: str = PRINT) -> np.ndarray:
+    """Where the drawing itself lands in the photo (HxW 0..1): the acrylic
+    print, or the whole flat card."""
+    if card_style == ACRYLIC:
+        return acrylic_stand.print_mask(figure, size, place=place, height=height)
+    return place_card(card(figure, outline), size, place, height)[..., 3]
+
+
+def print_mask_png(photo_png: bytes, figure_png: bytes, outline_png: bytes, *,
+                   place: tuple[float, float], height: float,
+                   card_style: str = PRINT) -> bytes:
+    """`print_mask` over PNG bytes, as an L PNG at the photo's size."""
+    size = Image.open(io.BytesIO(photo_png)).size
+    def decode(data: bytes) -> np.ndarray:
+        return np.asarray(Image.open(io.BytesIO(data)).convert("RGBA"), dtype=np.float32)
+    mask = print_mask(decode(figure_png), decode(outline_png), size, place=place,
+                      height=height, card_style=card_style)
+    output = io.BytesIO()
+    Image.fromarray(np.clip(np.rint(mask * 255), 0, 255).astype(np.uint8), "L").save(output, "PNG")
+    return output.getvalue()
+
+
 def stage_png(photo_png: bytes, depth_png: bytes, figure_png: bytes,
               outline_png: bytes, **options) -> bytes:
     """`stage` over PNG bytes; the result is an RGB PNG at the photo's size."""

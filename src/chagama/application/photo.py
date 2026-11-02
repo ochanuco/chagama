@@ -61,14 +61,15 @@ def _request_parameters(generation_id: str, photo_id: str, *,
                         stand_at: tuple[float, float] | None, nearer: float,
                         focus: tuple[float, float] | str, f_number: float,
                         tilt: float, bokeh: float, focal_length: str,
-                        card: str) -> dict:
+                        card: str, reshoot: bool, seed: int) -> dict:
     return {"kind": "photo", "base_generation": generation_id, "photo": photo_id,
             "place": list(place), "height": height,
             "stand_at": list(stand_at) if stand_at is not None else None,
             "nearer": nearer,
             "focus": focus if isinstance(focus, str) else list(focus),
             "f_number": f_number, "tilt": tilt, "bokeh": bokeh,
-            "focal_length": focal_length, "card": card}
+            "focal_length": focal_length, "card": card, "reshoot": reshoot,
+            "seed": seed}
 
 
 def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
@@ -76,7 +77,8 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
           stand_at: tuple[float, float] | None, nearer: float,
           focus: tuple[float, float] | str, f_number: float, tilt: float = 0.0,
           bokeh: float = 0.0, focal_length: str = PHOTO_FOCAL_LENGTH["default"],
-          card: str = PHOTO_CARD["default"], key_prefix: str | None = None, request_id: str | None = None,
+          card: str = PHOTO_CARD["default"], reshoot: bool = False, seed: int = 0,
+          key_prefix: str | None = None, request_id: str | None = None,
           context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "photo", key_prefix)
     if state_path:
@@ -110,7 +112,7 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
         depth_image=depth_image, photo_size=services.image_size(photo_bytes),
         place=place, height=height, stand_at=stand_at,
         nearer=nearer, focus=focus, f_number=f_number, tilt=tilt, bokeh=bokeh,
-        focal_length=focal_length, card=card)
+        focal_length=focal_length, card=card, reshoot=reshoot, seed=seed)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -147,7 +149,8 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
             "parameters": _request_parameters(
                 generation_id, photo_id, place=place, height=height,
                 stand_at=stand_at, nearer=nearer, focus=focus, f_number=f_number,
-                tilt=tilt, bokeh=bokeh, focal_length=focal_length, card=card),
+                tilt=tilt, bokeh=bokeh, focal_length=focal_length, card=card,
+                reshoot=reshoot, seed=seed),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [
                 {"source_generation_id": generation_id, "purpose": "rebuild",
@@ -156,11 +159,11 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
                  "aspect": "composition", "instruction": "背景の写真"}],
         })
     job = record_job(management, request["id"], key_prefix=key_prefix, index=0,
-                     seed=0, prompt_id=prompt_id, graph=graph,
+                     seed=seed, prompt_id=prompt_id, graph=graph,
                      source_generation_id=generation_id if request_id else None)
     name, data = fetched["staged"]
     rendered = upload_generation(
-        management, services.emit, job["id"], seed=0, name=name, data=data,
+        management, services.emit, job["id"], seed=seed, name=name, data=data,
         index=0, idempotency_key=generation_key(key_prefix, 0, 0))
 
     attach_cut(management, services.emit, photo_id, key_prefix=key_prefix,

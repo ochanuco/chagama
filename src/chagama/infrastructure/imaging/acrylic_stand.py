@@ -253,6 +253,16 @@ def _layout(figure: np.ndarray, size: tuple[int, int], place: tuple[float, float
     return placed, unit
 
 
+def print_mask(figure: np.ndarray, size: tuple[int, int], *, place: tuple[float, float],
+               height: float, geometry: Geometry = GEOMETRY) -> np.ndarray:
+    """Where the printed figure sits in the photo (HxW 0..1), pulled a pixel
+    inside its edge and feathered, so a redrawn frame can take the print back
+    without its rim."""
+    printed, _ = _layout(figure, size, place, height, geometry)
+    inside = cv2.erode(printed[..., 3], _disc(1))
+    return np.clip(cv2.GaussianBlur(inside, (0, 0), 1.0), 0.0, 1.0)
+
+
 def stand(scene: np.ndarray, figure: np.ndarray, *, place: tuple[float, float],
           height: float, geometry: Geometry = GEOMETRY,
           finish: Finish = FINISH) -> np.ndarray:
