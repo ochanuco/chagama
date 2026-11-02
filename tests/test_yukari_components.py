@@ -132,6 +132,7 @@ class FramingTest(unittest.TestCase):
             "step": Framing.FULL, "stand": Framing.FULL, "dance": Framing.FULL,
             "bust": Framing.BUST, "anyo": Framing.FULL,
             "pillow": Framing.CLOSE, "avatar": Framing.FACE,
+            "nomakeup": Framing.BUST, "nomakeup-bangs-up": Framing.BUST,
         }
         self.assertEqual({pose: spec.framing for pose, spec in POSES.items()},
                          expected)
@@ -168,13 +169,13 @@ class FramingTagsComponentTest(unittest.TestCase):
         self.assertEqual(FRAMING[Framing.UPPER].text, "(upper body:1.3), ")
         self.assertEqual(FRAMING[Framing.LYING].text,
                          "(lying:1.3), (full body:1.35), ")
-        self.assertEqual(FRAMING[Framing.CLOSE].text,
-                         "(close-up:1.15), (cropped:1.2), ")
+        self.assertEqual(FRAMING[Framing.CLOSE].text, "(close-up:1.15), ")
 
-    def test_only_bust_framing_carries_a_canvas(self):
+    def test_only_bust_and_close_framings_carry_a_canvas(self):
         self.assertEqual(FRAMING[Framing.BUST].canvas, (1280, 2048))
+        self.assertEqual(FRAMING[Framing.CLOSE].canvas, (1152, 1152))
         for framing in (Framing.COWBOY, Framing.FULL, Framing.UPPER,
-                        Framing.LYING, Framing.CLOSE):
+                        Framing.LYING):
             with self.subTest(framing=framing):
                 self.assertIsNone(FRAMING[framing].canvas)
 

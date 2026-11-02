@@ -64,15 +64,16 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 
 - A young-looking face is the canvas first: a square bust draws a short
   round face, 1280x2048 a longer one. A 896x1440 bust draft also reads
-  younger (less face detail at that size) and face words do not fix it.
+  younger and face words do not fix it, so a bust drafts at 1280x2048.
   `[Anima]`
 - Even light on a bust: `(front lighting:1.3), (flat lighting:1.3), (even
   lighting:1.3), (no shadow:1.2), (bright lighting:1.1), (light purple hair
   shadows:1.2)`; not `id photo`. `[Anima]`
-- A closer framing needs a square canvas (1152x1152) and the leg words gone
-  (legwear and body-build legs, negative legs / thighs / pantyhose). `cropped`
-  / `out of frame` call a small inset figure; `slightly from below` drifts to
-  the crotch, so a chest close-up goes `from above`. `[Anima]`
+- A closer framing is framing `close`: a 1152x1152 canvas, no leg words
+  (legwear, leg display, body-build legs; negative legs / thighs /
+  pantyhose). `cropped` / `out of frame` call a small inset figure;
+  `slightly from below` drifts to the crotch, so a chest close-up goes
+  `from above`. `[Anima]`
 - Foot close-up: `(extreme foreshortening:1.5), (foot in foreground:1.5),
   (close-up:1.2), (foot focus:1.5), (toes:1.3), (soles:1.2)` + a sentence that
   the toes hide part of the body. Some seeds add face stamps in the

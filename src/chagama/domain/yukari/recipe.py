@@ -23,7 +23,7 @@ from .costumes import (
     legwear_text,
 )
 from .expressions import BLANK, EXPRESSIONS, EYE_QUALITY, Expression
-from .framing import FRAMING
+from .framing import FRAMING, LEG_BAN, LEG_TAG_NAMES
 from .layers import CHARACTER, CUSTOMIZATION, PRODUCTION
 from .poses import Pose, pose_record
 from .prompt_style import (
@@ -101,6 +101,20 @@ def _own(override: str | None, layer: str) -> str:
     return override if override is not None else layer
 
 
+def _drop_tags(text: str, names: frozenset[str]) -> str:
+    if not names:
+        return text
+    return "".join(chunk + ", " for chunk in text.split(", ")
+                   if chunk and not set(prompt_tags(chunk)) & names)
+
+
+def _drops_legs(pose: Pose, requested: str | None) -> bool:
+    # A pose that declares the framing itself has already chosen its leg words.
+    if requested is None or Framing(requested) is pose.framing:
+        return False
+    return FRAMING[Framing(requested)].drops_legs
+
+
 def _components(pose: str, costume: str | None = None,
                 expression: str | None = None,
                 legwear: str | None = None,
@@ -112,7 +126,10 @@ def _components(pose: str, costume: str | None = None,
     c = costume if costume is not None else p.costume
     lw = legwear if legwear is not None else p.legwear_kind
     ls = _legwear_state(p, legwear_state)
-    legwear_positive = legwear_text(c, lw, ls) if p.legwear else ""
+    fr = _framing(p, framing)
+    no_legs = _drops_legs(p, framing)
+    legwear_positive = legwear_text(c, lw, ls) if p.legwear and not no_legs else ""
+    body = _own(p.body, CUSTOMIZATION.body)
     G, M = Section.GENERAL, Priority.MAIN
     L, T = Priority.LEAD, Priority.TAIL
     declared = (
@@ -121,23 +138,25 @@ def _components(pose: str, costume: str | None = None,
         Component("character", Section.CHARACTER, M, CHARACTER.character),
         Component("series", Section.SERIES, M, CHARACTER.series),
         Component("artist", Section.ARTIST, M, CUSTOMIZATION.artist),
-        Component("identity", G, L, CHARACTER.identity),
+        Component("identity", G, L, _own(p.identity, CHARACTER.identity)),
         Component("action", G, M, p.action),
         Component("mouth", G, M, e.mouth),
         Component("mood", G, M, p.mood),
-        Component("eye_base", G, L, CUSTOMIZATION.eye_shape),
+        Component("eye_base", G, L, _own(e.eye_base, CUSTOMIZATION.eye_shape)),
         Component("eye_quality", G, L, EYE_QUALITY[e.eye_quality] + e.eyes),
         Component("gesture", G, M, p.gesture),
-        Component("nails", G, M, CUSTOMIZATION.nails),
+        Component("nails", G, M, _own(p.nails, CUSTOMIZATION.nails)),
         Component("costume", G, M, _costume_text(c, angle)),
         Component("legwear", G, M, legwear_positive),
         Component("framing_tags", G, L,
                   (angle_text(angle) if angle is not None else p.angle)
-                  + p.angle_action + _framing_text(_framing(p, framing))),
-        Component("leg_display", G, L, p.leg_display),
-        Component("body_build", G, L, _own(p.body, CUSTOMIZATION.body)),
+                  + p.angle_action + _framing_text(fr)),
+        Component("leg_display", G, L, "" if no_legs else p.leg_display),
+        Component("body_build", G, L,
+                  _drop_tags(body, LEG_TAG_NAMES) if no_legs else body),
         Component("cutout", G, M, _own(p.background, PRODUCTION.background)),
-        Component("face", G, T, _own(p.face, CUSTOMIZATION.face)),
+        Component("face", G, T,
+                  _drop_tags(_own(p.face, CUSTOMIZATION.face), e.face_drop)),
         Component("style", G, T, _own(p.style, CUSTOMIZATION.style)),
     )
     return assemble(declared)
@@ -166,8 +185,9 @@ def positive(pose: str, costume: str | None = None,
                        angle, framing))
 
 
-def identity_tags(pose: str, costume: str | None = None) -> frozenset[str]:
-    bare = set(prompt_tags(positive(pose, costume)))
+def identity_tags(pose: str, costume: str | None = None,
+                  expression: str | None = None) -> frozenset[str]:
+    bare = set(prompt_tags(positive(pose, costume, expression)))
     return frozenset(IDENTITY_TAG_NAMES & bare)
 
 
@@ -224,6 +244,8 @@ def negative(pose: str, costume: str | None = None,
         result += SHEER_GLOSS_BAN
     if p.negative_tail:
         result += ", " + p.negative_tail
+    if _drops_legs(p, framing):
+        result += ", " + LEG_BAN.rstrip(", ")
     return result
 
 

@@ -451,7 +451,9 @@ class PromptTest(unittest.TestCase):
         for expression in EXPRESSIONS:
             with self.subTest(expression=expression):
                 parts = dict(positive_parts("stand", expression=expression))
-                self.assertEqual(parts["eye_base"], ps.EYE_SHAPE)
+                own = EXPRESSIONS[expression].eye_base
+                self.assertEqual(parts["eye_base"],
+                                 ps.EYE_SHAPE if own is None else own)
                 self.assertNotIn("jitome", parts["face"])
 
     def test_face_carries_no_big_eyes(self):
@@ -470,7 +472,8 @@ class EyeQualityTest(unittest.TestCase):
         "dubious": EyeQuality.BLANK, "neutral": EyeQuality.BLANK,
         "joy": EyeQuality.BLANK, "amused": EyeQuality.BLANK,
         "anger": EyeQuality.BLANK, "sorrow": EyeQuality.BLANK,
-        "surprised": EyeQuality.BLANK,
+        "surprised": EyeQuality.BLANK, "annoyed": EyeQuality.BLANK,
+        "closed": EyeQuality.BLANK,
     }
 
     def test_eye_quality_mapping_per_expression(self):
@@ -614,8 +617,10 @@ class PoseTableTest(unittest.TestCase):
         self.assertEqual(POSES["pillow"].costume, "standard")
         spec = render_spec("pillow", 3333, "x")
         self.assertEqual((spec.width, spec.height), (896, 1440))
-        self.assertIn("(from above:1.35), (dutch angle:1.3), (close-up:1.15), "
-                      "(cropped:1.2), ", spec.prompts.positive)
+        self.assertIn("(from above:1.35), (dutch angle:1.3), (close-up:1.15), ",
+                      spec.prompts.positive)
+        self.assertNotIn("cropped", spec.prompts.positive)
+        self.assertIn(SHEER_LEGWEAR, spec.prompts.positive)
         self.assertNotIn("full body", spec.prompts.positive)
         self.assertTrue(spec.prompts.negative.endswith(
             "watermark, (standing:1.4), (sneakers:1.2), (panties:1.3), "
@@ -1200,3 +1205,55 @@ class AngleFramingOverrideTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LeverDefaultsTest(unittest.TestCase):
+    def test_requested_close_framing_is_square_and_drops_the_legs(self):
+        spec = render_spec("stand", 1, "x", framing="close")
+        self.assertEqual((spec.width, spec.height), (1152, 1152))
+        parts = dict(spec.positive_parts)
+        self.assertEqual(parts["legwear"], "")
+        self.assertEqual(parts["leg_display"], "")
+        for tag in ("thick thighs", "soft thighs", "long legs"):
+            self.assertNotIn(tag, parts["body_build"])
+        self.assertNotIn("cropped", spec.prompts.positive)
+        self.assertTrue(spec.prompts.negative.endswith(
+            "legs, thighs, pantyhose"))
+
+    def test_closed_expression_drops_the_open_eye_tags(self):
+        parts = dict(positive_parts("bust", expression="closed"))
+        self.assertEqual(parts["eye_base"], "")
+        self.assertIn("(closed eyes:1.6), ", parts["eye_quality"])
+        for tag in ("large eyes", "tareme"):
+            self.assertNotIn(tag, parts["face"])
+
+    def test_annoyed_expression_softens_the_jitome(self):
+        parts = dict(positive_parts("bust", expression="annoyed"))
+        self.assertTrue(parts["eye_base"].startswith("(jitome:1.2), "))
+        self.assertIn("(furrowed brow:1.25), ", parts["mouth"])
+
+    def test_identity_tags_follow_the_requested_expression(self):
+        from chagama.domain.yukari.recipe import identity_tags
+        self.assertIn("jitome", identity_tags("bust"))
+        self.assertNotIn("jitome", identity_tags("bust", expression="closed"))
+
+    def test_nomakeup_poses_bake_the_preset_patches(self):
+        for pose in ("nomakeup", "nomakeup-bangs-up"):
+            with self.subTest(pose=pose):
+                parts = dict(positive_parts(pose))
+                self.assertIn(ps.NO_HAIR_ORNAMENT, parts["identity"])
+                self.assertNotIn("hair ornament, ", parts["identity"]
+                                 .replace("no hair ornament", ""))
+                self.assertEqual(parts["nails"], "(natural nails:1.2), ")
+                self.assertNotIn("eyelashes", parts["face"])
+                self.assertIn(ps.HAIR_ORNAMENT_BAN,
+                              render_spec(pose, 1, "x").prompts.negative)
+        self.assertIn("(bangs pinned back:1.2), ",
+                      dict(positive_parts("nomakeup-bangs-up"))["identity"])
+
+
+class IdentityGuardExpressionTest(unittest.TestCase):
+    def test_closed_expression_needs_no_identity_override(self):
+        from chagama.interfaces.agent import _identity_tags
+        self.assertIn("tareme", _identity_tags("yukari", "bust", None))
+        self.assertNotIn("tareme", _identity_tags("yukari", "bust", None, "closed"))

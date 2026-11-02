@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
+from .prompt_style import EYE_SHAPE_SOFT
+
 
 class EyeQuality(Enum):
     COLD = "cold"
@@ -24,6 +26,11 @@ class Expression:
     mouth: str
     eyes: str = ""
     eye_quality: EyeQuality = EyeQuality.COLD
+    # None keeps the layer's eye shape; jitome 2.0 holds the eyes open and
+    # flattens a strong emotion.
+    eye_base: str | None = None
+    # Bare tags taken out of the face part.
+    face_drop: frozenset[str] = frozenset()
 
 
 # No expression at all: `yukari_persona` leaves the face to its reference's tags.
@@ -74,6 +81,13 @@ EXPRESSIONS = {
     "sorrow": Expression(
         mouth="(closed mouth:1.1), (frown:1.25), (sad:1.4), (tearing up:1.2), ",
         eyes="(upturned eyebrows:1.35), ", eye_quality=EyeQuality.BLANK),
+    "annoyed": Expression(
+        mouth="(closed mouth:1.2), (furrowed brow:1.25), (frown:1.25), ",
+        eyes="(annoyed:1.3), ", eye_quality=EyeQuality.BLANK,
+        eye_base=EYE_SHAPE_SOFT),
+    "closed": Expression(
+        mouth="", eyes="(closed eyes:1.6), ", eye_quality=EyeQuality.BLANK,
+        eye_base="", face_drop=frozenset({"large eyes", "big eyes", "tareme"})),
     "surprised": Expression(
         mouth="(open mouth:1.35), (:o:1.3), (surprised:1.4), ",
         eyes="(raised eyebrows:1.3), ", eye_quality=EyeQuality.BLANK),

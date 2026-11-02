@@ -3,11 +3,12 @@ on top of the layers in `layers.py`."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .components import Framing
 from .costumes import LegwearState
 from .layers import CHARACTER, CUSTOMIZATION
+from .prompt_style import FACE, HAIR_ORNAMENT_BAN, NO_HAIR_ORNAMENT
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,8 @@ class Pose:
     body: str | None = None
     style: str | None = None
     face: str | None = None
+    identity: str | None = None
+    nails: str | None = None
     background: str | None = None
     loras: tuple[tuple[str, float], ...] = ()
     angle: str = ""
@@ -189,6 +192,26 @@ POSES = {
               "(thick eyelashes:1.3), (long eyelashes:1.15), ")),
 }
 
+# Lowering the eyelash weights does nothing; only removing them and banning
+# eyeliner reads as bare. The double eyelid does not move by any word.
+_NOMAKEUP = replace(
+    POSES["bust"],
+    costume="roomwear",
+    identity=CHARACTER.identity.replace("hair ornament, ", NO_HAIR_ORNAMENT),
+    nails="(natural nails:1.2), ",
+    face=FACE.replace(
+        "(thick eyelashes:1.3), (long eyelashes:1.15), ",
+        "(no makeup:1.4), (bare face:1.3), (natural lips:1.2), "
+        "(beautiful face:1.2), (pale skin:1.2), (pale lips:1.15), "),
+    negative=(POSES["bust"].negative
+              + "(lipstick:1.3), (eyeshadow:1.3), (makeup:1.3), (blush:1.1), "
+              "(thick eyelashes:1.2), (eyeliner:1.2), " + HAIR_ORNAMENT_BAN))
+POSES["nomakeup"] = _NOMAKEUP
+POSES["nomakeup-bangs-up"] = replace(
+    _NOMAKEUP,
+    identity=(_NOMAKEUP.identity + "(parted bangs:1.3), "
+              "(bangs pinned back:1.2), (bobby pin:1.2), forehead, "))
+
 # The layers alone, for a reference render: no pose, framing, angle or
 # expression of its own, so the reference's tags decide them; the tights come
 # from `CUSTOMIZATION` until a reference's legwear tag replaces them. Kept out
@@ -211,6 +234,8 @@ POSE_LABELS = {
     "coffee": "アイスコーヒー",
     "dance": "ダンス",
     "gao": "がおー",
+    "nomakeup": "すっぴん",
+    "nomakeup-bangs-up": "すっぴん前髪上げ",
     "pillow": "抱き枕",
     "stand": "立ち",
     "step": "大股",

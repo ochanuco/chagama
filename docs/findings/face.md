@@ -67,12 +67,13 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   eyelids`) and English sentences draw a round, wide-open eye; dropping
   `jitome` gives a childish one. Narrow eyes come from `half-closed eyes`.
   `[Anima]`
-- Closed eyes: remove `eye_base`, drop `large eyes` / `big eyes` / `tareme`
-  from the face part, `closed eyes` 1.6. While jitome and large eyes stay,
-  the eyes open whatever the negative says. Needs `identity_override`. `[Anima]`
+- Closed eyes are expression `closed` (no `eye_base`, no `large eyes` /
+  `big eyes` / `tareme` in the face, `closed eyes` 1.6). While jitome and
+  large eyes stay, the eyes open whatever the negative says. `[Anima]`
 - Strong emotion (annoyed, glaring, scolding) loses to the default jitome 2.0
-  and lid words: lower `eye_base` jitome to about 1.2 and add brow words
-  (`furrowed brow`, `frown`); bust damps emotion most. `[Anima]`
+  and lid words: expression `annoyed` lowers `eye_base` jitome to 1.2 and
+  puts brow words (`furrowed brow`, `frown`) in the mouth part; bust damps
+  emotion most. `[Anima]`
 - Brow words are hidden by the bangs except in the mouth part at about 1.25;
   `v-shaped eyebrows` at 1.35 reads as anger. `[Anima]`
 - Exasperation: mood `(exasperated:1.3), (sigh:1.1)` (draws a sigh mark).
@@ -89,14 +90,13 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   mouth:1.2)`. `blue face` draws a blue band. `[Anima]`
 - Fine mouth shapes (・v・) are unreachable by words; offer `light smile`. A
   grin reads better as `clenched teeth` + `grin` than `sharp teeth`. `[Anima]`
-- No makeup: remove the two eyelash words and add negative `(thick
-  eyelashes:1.2), (eyeliner:1.2)`; lowering their weight does nothing. The
-  double eyelid does not move by any word. `[Anima]`
-- No hair ornament: identity `hair ornament` → `(no hair ornament:1.5), (tied
-  sidelocks:1.3), (sidelocks tied with orange hair tie:1.3), (orange hair
-  tie:1.2)`, negative `(hair ornament:1.4), (hairclip:1.3), (hair
-  bobbles:1.2)`. The sidelock tube goes only when another tie fills its place.
-  Needs `identity_override`. `[Anima]`
+- No makeup is pose `nomakeup` / `nomakeup-bangs-up`: the two eyelash words
+  removed, negative `(thick eyelashes:1.2), (eyeliner:1.2)`; lowering their
+  weight does nothing. The double eyelid does not move by any word. `[Anima]`
+- No hair ornament (`NO_HAIR_ORNAMENT` / `HAIR_ORNAMENT_BAN`, worn by the
+  nomakeup poses): the sidelock tube goes only when another tie (the orange
+  hair tie) fills its place. On another pose it is an identity patch and
+  needs `identity_override`. `[Anima]`
 - One sidelock: identity `very long sidelocks` → `(single sidelock:1.4), very
   long sidelock`; seed-dependent. `[Anima]`
 - Hair cut off the head: name the part plus `detached hair`; `cut-off hair`

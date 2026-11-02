@@ -89,7 +89,8 @@ class GenerateServices:
     pose_fingerprint: Callable[[str, str], str | None] | None = None
     # (recipe, pose, costume) -> identity tags, bare (weight/parens
     # stripped). None, or the field left unset, skips the identity guard.
-    identity_tags: Callable[[str, str, str | None], frozenset[str] | None] | None = None
+    identity_tags: Callable[[str, str, str | None, str | None],
+                            frozenset[str] | None] | None = None
 
 
 def _pins_pose(generation: Mapping) -> bool:
@@ -501,7 +502,8 @@ def _check_identity(generation: dict, services: GenerateServices) -> list[str]:
     if not pose:
         return []
     required = services.identity_tags(
-        generation["recipe"], pose, params.get("costume"))
+        generation["recipe"], pose, params.get("costume"),
+        params.get("expression"))
     if not required:
         return []
     probe = services.graph_builder(generation, 0, "chimera-identity-probe")
