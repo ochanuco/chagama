@@ -378,22 +378,11 @@ class LightingArgumentsTest(unittest.TestCase):
 
 
 class PhotoArgumentsTest(unittest.TestCase):
-    def test_an_acrylic_card_stands_upright_and_in_focus(self):
-        self.assertEqual(photo_arguments({"photo": "p", "card": "acrylic"})["card"], "acrylic")
-        arguments = photo_arguments({"photo": "p", "reshoot": True, "seed": 7})
-        self.assertEqual((arguments["reshoot"], arguments["seed"]), (True, 7))
-        for bad in ({"card": "paper"}, {"card": "acrylic", "tilt": 0.2}, {"reshoot": 1},
-                    {"seed": -1}, {"seed": 1.5},
-                    {"card": "acrylic", "focus": [0.5, 0.5]}):
-            with self.subTest(bad=bad), self.assertRaises(ValueError):
-                photo_arguments({"photo": "p", **bad})
-
     def test_defaults_take_the_catalog_values(self):
         self.assertEqual(photo_arguments({"photo": "pic"}), {
             "photo_id": "pic", "place": (0.5, 0.95), "height": 0.7,
             "stand_at": None, "nearer": 0.0, "focus": "subject", "f_number": 2.8,
-            "tilt": 0.0, "bokeh": 0.0, "focal_length": "85mm", "card": "print",
-            "reshoot": False, "seed": 0})
+            "tilt": 0.0, "bokeh": 0.0, "focal_length": "85mm"})
         arguments = photo_arguments({"photo": "pic", "focus": [0.2, 0.3],
                                      "stand_at": [0.8, 0.4], "nearer": 0.5})
         self.assertEqual((arguments["focus"], arguments["stand_at"], arguments["nearer"]),
