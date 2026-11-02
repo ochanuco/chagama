@@ -122,6 +122,30 @@ def _smooth_inside(picture: np.ndarray, sigma: float) -> np.ndarray:
     return np.clip(np.rint(smoothed), 0, 255).astype(np.uint8)
 
 
+def _head_disc(face: np.ndarray,
+               least: float = 1.0) -> tuple[tuple[float, float], float] | None:
+    if not len(face):
+        return None
+    centre = face.mean(axis=0)
+    radius = max(float(np.linalg.norm(face - centre, axis=1).max()) * HEAD_SCALE, least)
+    return (float(centre[0]), float(centre[1] - radius * HEAD_LIFT)), radius
+
+
+def head_overflow(points: Sequence[Sequence[float]],
+                  aspect: float) -> tuple[float, float, float, float]:
+    """How far the head disc `free_mask` frees runs past each side of the
+    source frame, `(left, top, right, bottom)` as fractions of the frame's
+    width and height; zeros when the face is not seen."""
+    face = np.array([(x * aspect, y) for x, y, score in
+                     (points[index] for index in HEAD_POINTS) if score >= SCORE_THRESHOLD])
+    disc = _head_disc(face, 0.0)
+    if disc is None:
+        return 0.0, 0.0, 0.0, 0.0
+    (x, y), radius = disc
+    return (max(radius - x, 0.0) / aspect, max(radius - y, 0.0),
+            max(x + radius - aspect, 0.0) / aspect, max(y + radius - 1.0, 0.0))
+
+
 def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
               height: int, head: bool = True, chest: bool = False) -> np.ndarray:
     """A float32 `height` x `width` mask, 1 where the control holds and 0 over
@@ -140,12 +164,10 @@ def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
                          for index in indices if points[index][2] >= SCORE_THRESHOLD])
 
     mask = np.ones((height, width), np.float32)
-    face = seen(HEAD_POINTS)
-    if head and len(face):
-        centre = face.mean(axis=0)
-        radius = max(np.linalg.norm(face - centre, axis=1).max() * HEAD_SCALE, 1.0)
-        cv2.circle(mask, (int(round(centre[0])), int(round(centre[1] - radius * HEAD_LIFT))),
-                   int(round(radius)), 0.0, -1)
+    disc = _head_disc(seen(HEAD_POINTS)) if head else None
+    if disc is not None:
+        (x, y), radius = disc
+        cv2.circle(mask, (int(round(x)), int(round(y))), int(round(radius)), 0.0, -1)
     shoulders, hips = seen(SHOULDERS), seen(HIPS)
     if chest and len(shoulders) == 2 and len(hips) == 2:
         top_mid, bottom_mid = shoulders.mean(axis=0), hips.mean(axis=0)

@@ -10,6 +10,7 @@ by `pose_follow` (`POSE_FOLLOWS`), and queues an ordinary generate.
 
 from __future__ import annotations
 
+import base64
 import io
 import math
 import random
@@ -21,6 +22,7 @@ from PIL import Image
 
 from ..domain.yukari import reference as rules
 from ..domain.yukari.recipe import render_spec
+from ..infrastructure.imaging.pose_skeleton import head_overflow
 from .generate import validate_request
 from .worker_channels import Management
 
@@ -34,6 +36,10 @@ DEPTH_BLUR = 0.015
 # hems and folds, with the head and chest left to the tags, or the skeleton for a reference read before depth was kept.
 POSE_FOLLOWS = ("off", "loose", "firm")
 POSE_ASPECTS = (0.5, 2.0)
+# A head the reference crops is drawn whole: the frame grows past it by its
+# freed disc and this share of the disc beyond, and the tags that crop it go.
+HEADROOM_MARGIN = 0.1
+HEAD_CROP_TAGS = ("head out of frame", "close-up")
 
 
 class ReferenceImageMissing(Exception):
@@ -71,6 +77,38 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
         "dropped": proposal.dropped,
         "figure": found.get("figure"),
     }
+
+
+def _padded_picture(picture: str, pads: tuple[float, float, float, float]) -> str:
+    with Image.open(io.BytesIO(base64.b64decode(picture))) as opened:
+        source = opened.convert("L")
+    width, height = source.size
+    left, top, right, bottom = (round(pad * side) for pad, side in
+                                zip(pads, (width, height, width, height)))
+    padded = Image.new("L", (width + left + right, height + top + bottom), 0)
+    padded.paste(source, (left, top))
+    buffer = io.BytesIO()
+    padded.save(buffer, format="PNG", optimize=True)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def with_headroom(figure: Mapping) -> Mapping:
+    """`figure` with its frame grown so the head disc the depth leaves to the
+    prompt lies inside it: the points and aspect moved, the pictures padded
+    with black."""
+    overflow = head_overflow(figure["points"], figure["aspect"])
+    if not any(overflow):
+        return figure
+    left, top, right, bottom = (pad * (1 + HEADROOM_MARGIN) if pad else 0.0
+                                for pad in overflow)
+    across, down = 1 + left + right, 1 + top + bottom
+    grown = {**figure,
+             "points": [[(x + left) / across, (y + top) / down, score]
+                        for x, y, score in figure["points"]],
+             "aspect": figure["aspect"] * across / down}
+    if "depth" in figure:
+        grown["depth"] = _padded_picture(figure["depth"], (left, top, right, bottom))
+    return grown
 
 
 def pose_patch(figure: Mapping, follow: str) -> dict:
@@ -160,6 +198,12 @@ def _selection(payload: Mapping) -> tuple[str, str, dict[str, list[str]]]:
     return source, pose, {part: list(tags) for part, tags in applied.items()}
 
 
+def _without_head_crop(applied: Mapping[str, list[str]]) -> dict[str, list[str]]:
+    kept = {part: [tag for tag in tags if tag not in HEAD_CROP_TAGS]
+            for part, tags in applied.items()}
+    return {part: tags for part, tags in kept.items() if tags}
+
+
 def reference_render(row: Mapping, services: ReferenceServices) -> dict:
     """Queue the generate that draws the tags picked from a reference."""
     payload = row.get("payload") or {}
@@ -167,22 +211,26 @@ def reference_render(row: Mapping, services: ReferenceServices) -> dict:
     source = services.management.request("GET", f"/api/v1/requests/{source_id}") or {}
     if source.get("kind") != "reference" or source.get("status") != "done":
         raise SystemExit(f"request {source_id} is not a done reference")
+    follow = payload.get("pose_follow", "loose")
+    if follow not in POSE_FOLLOWS:
+        raise SystemExit(f"reference_render payload.pose_follow must be one of {POSE_FOLLOWS}")
+    figure = (source.get("result") or {}).get("figure")
     try:
         rules.check_selection((source.get("result") or {}).get("candidates") or [],
                               pose, applied)
+        if figure and follow != "off":
+            grown = with_headroom(figure)
+            if grown is not figure:
+                figure, applied = grown, _without_head_crop(applied)
         plan = rules.build(pose, applied)
     except ValueError as error:
         raise SystemExit(f"reference_render: {error}") from error
     seed = payload.get("seed")
     if seed is None:
         seed = services.random_seed()
-    follow = payload.get("pose_follow", "loose")
-    if follow not in POSE_FOLLOWS:
-        raise SystemExit(f"reference_render payload.pose_follow must be one of {POSE_FOLLOWS}")
     body = generate_request(plan, seed=seed,
                             source=source.get("short_id") or source_id,
-                            figure=(source.get("result") or {}).get("figure"),
-                            pose_follow=follow)
+                            figure=figure, pose_follow=follow)
     validate_request(body)
     queued = {"kind": "generate", "created_by": "system",
               "idempotency_key": f"reference_render:{row['id']}", "payload": body}
