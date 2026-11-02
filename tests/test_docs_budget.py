@@ -1,7 +1,7 @@
 """docs/ stays small enough to open: size caps, a complete index, a frozen archive.
 
 Findings are rewritten in place when knowledge changes; history lives in
-``experiments/`` and git. The archive is the pre-split measurement log and
+chimera and git. The archive is the pre-split measurement log and
 takes no further writes.
 """
 
@@ -54,7 +54,7 @@ class DocsBudgetTest(unittest.TestCase):
                     count, cap,
                     f"docs/{rel} is {count} lines (cap {cap}). Rewrite it shorter "
                     "or split it by topic; do not append history -- that goes "
-                    "to experiments/.")
+                    "to chimera or git.")
 
     def test_oversize_entries_still_needed(self) -> None:
         for rel, cap in OVERSIZE.items():

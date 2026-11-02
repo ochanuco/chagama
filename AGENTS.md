@@ -89,55 +89,55 @@ redrawn, and a LayerDiffuse base is refused by both `redraw` and `deliver`.
 The ComfyUI node encoding is under `infrastructure/comfyui/`.
 `chagama yukari prompt --pose …` prints what the recipe sends.
 
-Everything measured is recorded — see "Where information lives" below for
-which store. The records are the point of the repository; the scripts are how
-they were produced.
+Everything measured is recorded on chimera — see "Where information lives"
+below. This repository holds the implementation and the conclusions that are
+true now; the renders and what they showed live on chimera.
 
 Run everything through `uv run` — the client env is pillow, numpy,
 opencv-python and scipy, and nothing here imports torch.
 
 ## Where information lives (hard rule)
 
-> Research logs are append-only. Code comments are current-state-only.
-
-Four stores, one job each:
+> The repository holds implementation and current conclusions. Data lives
+> on chimera, split into permanent and temporary records.
 
 ```text
 src/          current recipe (What). Comments hold only the non-obvious
               constraints that guard today's values — a few lines per
               definition, no history.
-experiments/  one observation per JSONL record (seed, render_id, parameter,
-              value, outcome accepted|rejected|inconclusive, reason).
-              Append-only: a refuted hypothesis gets a NEW record, the old
-              one is never rewritten. Schema in experiments/README.md.
-              An A/B round with arms and a chimera Request is recorded as a
-              chimera Experiment/Run instead of a JSONL record; plain
-              observations still append here. The JSONL stays the source
-              of truth; chimera holds a derived index kept in sync by
-              `scripts/observation_sync.py`.
 docs/         conclusions, current state only. Lessons in
               docs/findings/<topic>.md, index in docs/README.md.
               docs/archive/ is the frozen pre-split log: grep, never edit.
 tests/        invariants that must hold across models and seeds (prompt
               byte-stability is already pinned by the snapshot contract).
+
+chimera, permanent   every Generation: image, prompt, model, seed,
+                     parameters, lineage, the semantic written at queue
+                     time and the human rating; pairwise judgments. This
+                     is the record of what was tried and how it went.
+chimera, temporary   Experiment / Run / Observation: a round's working
+                     memory. They expire 14 days after the last activity;
+                     the Generations they made stay.
 ```
 
 Rules that follow from it — enforced by `tests/test_comment_discipline.py`,
 which bans dates, render IDs, `1.45 -> 1.3` walk-downs, 「」 quotes and
 comment blocks over 8 lines in `src/**`:
 
-- A new failure is an `experiments/` record first, never a code comment. If
-  the code needs anything, it is one short line stating the constraint that
-  is now in force.
+- A new failure is recorded on the render that showed it (its semantic on
+  chimera) and in the commit message, never as a code comment. If the code
+  needs anything, it is one short line stating the constraint now in force.
 - New knowledge REPLACES a comment; it never stacks on top of one. If old
   and new disagree, the old line is deleted.
-- Before changing a pose or tag, grep `experiments/` for the same
-  character/pose/parameter. Do not repeat a rejected trial without stating
+- Before changing a pose or tag, search chimera for the same word or
+  parameter (`list_generations` with `q`, and `rating: "bad"` for what was
+  rejected) and `git log -S`. Do not repeat a rejected trial without stating
   what is different this time.
-- An experiment result is an observation under its conditions (pose, prompt,
-  checkpoint, seed), not a universal rule.
-- chimera stays the per-render channel (every render is recorded there);
-  `experiments/` is the greppable ledger the comments can point to.
+- A render's result holds under its conditions (pose, prompt, checkpoint,
+  seed), not as a universal rule; one made on a retired checkpoint is
+  history, not evidence for today.
+- A conclusion worth keeping past a round goes into the recipe or
+  `docs/findings/`; everything else may expire with the round.
 - The `PENDING_CLEANUP` list in the discipline test names the files written
   before this rule; it may only shrink.
 
@@ -365,14 +365,14 @@ put it in the blocks (`yukari/costumes.py`'s `COSTUMES`/`LEGWEAR`).
 
 `.local/` is untracked (`.gitignore`) and is where analysis scripts, sweeps and
 logs go — `uv run .local/foo.py`. It is not the repo: anything worth keeping
-moves into `scripts/`, `experiments/` or `docs/findings/`. Request JSON no longer lives
+moves into `scripts/` or `docs/findings/`. Request JSON no longer lives
 here: a round is queued with `derive_request`, and the record on chimera is the
 reproducible artefact.
 
 ### Writing docs: rewrite, never append
 
-A measurement, null results included, is an `experiments/` record (append-only).
-A doc holds only the conclusion that is true now:
+A measurement, null results included, is the render's semantic and rating
+on chimera. A doc holds only the conclusion that is true now:
 
 - New knowledge rewrites the finding it touches. A contradicted line is
   replaced, not corrected underneath; the old version is in git.

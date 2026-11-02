@@ -25,7 +25,7 @@ Each line carries a scope tag:
 `(a3 §The gradient direction)` points at archive file 3, at the heading
 that starts with those words; `uv run scripts/atlas.py notes "The gradient
 direction"` prints that section alone. A pointer with no `a<n>` came after
-the archive and lives in `experiments/`, chimera or the named PR.
+the archive and lives on chimera or in the named PR.
 
 ## Recipe
 
@@ -53,6 +53,6 @@ it, never open it whole.
 
 ## Writing here
 
-New measurements go to `experiments/` (append-only). Docs are rewritten to
+A measurement is the render's semantic and rating on chimera. Docs are rewritten to
 the current conclusion; see "Writing docs" in `AGENTS.md`.
 `tests/test_docs_budget.py` enforces the caps and this index.

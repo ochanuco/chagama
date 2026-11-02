@@ -1,2 +1,0 @@
-{"character": "yukari", "pose": "gao", "parameter": "(gao) action tag", "value": "(gao:1.2)", "outcome": "rejected", "reason": "draws onomatopoeia text (GAO, katakana) on 3/3 renders despite TEXT_BAN (gtcsww, seeds 44-46); removing it leaves 0/6 with text and the claw pose intact (0jf2eh, qskjpr)"}
-{"character": "yukari", "pose": "gao", "parameter": "look", "value": "from behind + looking back, upper body, 1024x1280, mature face, no legs", "outcome": "accepted", "reason": "dhlnps (seed 1201228488), derived from the 6imhan bunny-pose framing, chosen as the new gao basis"}

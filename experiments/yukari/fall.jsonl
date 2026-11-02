@@ -1,2 +1,0 @@
-{"character": "yukari", "pose": "fall", "parameter": "fall action tags combination", "value": "tripping + falling + fallen down (all three together)", "outcome": "rejected", "reason": "drew two figures (two moments) on three seeds of three - one still upright, one already on the ground"}
-{"character": "yukari", "pose": "fall", "parameter": "fall action tag", "value": "(falling:1.5) alone", "outcome": "accepted", "reason": "mid-air is what reads as spectacular; the only one of the three action tags kept"}

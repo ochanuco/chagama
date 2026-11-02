@@ -12,7 +12,7 @@ Anima recipe itself in [`docs/yukari/anima.md`](../yukari/anima.md). Tags and
 - On SilvermoonMix the hair gloss comes from `masterpiece, best quality,
   score_7`: removing them alone gives a flat fill and an even green backdrop
   on bust; on full-body anyo the change is small and the soles lose toe detail.
-  Not the default. `[Anima]` (`experiments/yukari/prompt_style.jsonl`)
+  Not the default. `[Anima]`
 - On SilvermoonMix `@oshiki hitoshi` carries the black line and shadow,
   `@yoshikawa hideaki` the round face, younger look and gloss. `[Anima]`
 - A LoRA trained on 2B Anima barely moves the 2.9B layer expansion even at
