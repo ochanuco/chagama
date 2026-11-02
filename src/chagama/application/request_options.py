@@ -77,7 +77,7 @@ _STAGE_PATTERN_OPTIONS = frozenset({"backdrop", "shadow_from", "light", "frame"}
 _KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas", "expand",
                                "strokes"})
 
-_KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
+_KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene", "acrylic", "seed"})
 _KNOWN_SATURATION_OPTIONS = frozenset({"strength"})
 
 _KNOWN_REDRAW_OPTIONS = {
@@ -631,9 +631,15 @@ def lighting_arguments(options: Mapping) -> dict:
     scene = options.get("scene")
     if scene is not None and scene not in LIGHT_SCENES:
         raise ValueError(f"scene must be null or one of {sorted(LIGHT_SCENES)}, got {scene!r}")
+    acrylic = options.get("acrylic", False)
+    if not isinstance(acrylic, bool):
+        raise ValueError(f"acrylic must be true or false, got {acrylic!r}")
+    seed = options.get("seed", 0)
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2 ** 32:
+        raise ValueError(f"seed must be an integer 0..2^32-1, got {seed!r}")
     return {"direction": direction,
             "strength": _ranged(options, "strength", LIGHTING_STRENGTH),
-            "scene": scene}
+            "scene": scene, "acrylic": acrylic, "seed": seed}
 
 
 def saturation_arguments(options: Mapping) -> dict:

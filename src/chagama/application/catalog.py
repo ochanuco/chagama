@@ -327,6 +327,11 @@ def _lighting_block() -> dict:
         "scene": {"values": sorted(LIGHT_SCENES), "default": None,
                   "help": "light the figure as this scene (default direction nw) and "
                           "tint a pattern backdrop to it; a photo stays as it is"},
+        "acrylic": {"default": False,
+                    "help": "make the outline a clear acrylic plate over the backdrop, "
+                            "re-rendered by Qwen-Image edit and lit from `direction` "
+                            "(default nw); the figure stays as delivered. Needs a backdrop"},
+        "seed": {"default": 0, "help": "the acrylic re-render's seed"},
     }
 
 

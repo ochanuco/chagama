@@ -14,6 +14,7 @@ import numpy as np
 
 from chagama.domain.generation import anima_blocks
 from chagama.infrastructure.imaging import (
+    acrylic_plate,
     delivery,
     depth_blur,
     lens,
@@ -387,6 +388,28 @@ class YukariSaturation:
                 bridge.png_to_image(outline_png, "RGBA"))
 
 
+class YukariAcrylicPlate:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE", "MASK")
+    RETURN_NAMES = ("image", "print_mask")
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "backdrop": ("IMAGE",),
+            "figure": ("IMAGE",),
+            "outline": ("IMAGE",),
+            "direction": ("STRING", {"default": "nw"}),
+        }}
+
+    def run(self, backdrop, figure, outline, direction="nw"):
+        guide, mask = acrylic_plate.plate_pngs(
+            bridge.image_to_png(backdrop), bridge.image_to_png(figure),
+            bridge.image_to_png(outline), direction)
+        return (bridge.png_to_image(guide), bridge.png_to_mask(mask))
+
+
 class YukariRelight:
     CATEGORY = "yukari"
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE")
@@ -579,6 +602,7 @@ NODE_CLASS_MAPPINGS = {
     "YukariViewfinder": YukariViewfinder,
     "YukariLens": YukariLens,
     "YukariPhotoStage": YukariPhotoStage,
+    "YukariAcrylicPlate": YukariAcrylicPlate,
     "YukariStage": YukariStage,
     "YukariRelight": YukariRelight,
     "YukariPhotoDepthOfField": YukariPhotoDepthOfField,
@@ -599,6 +623,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariViewfinder": "Yukari Viewfinder",
     "YukariLens": "Yukari Lens",
     "YukariPhotoStage": "Yukari Photo Stage",
+    "YukariAcrylicPlate": "Yukari Acrylic Plate",
     "YukariStage": "Yukari Stage",
     "YukariRelight": "Yukari Relight",
     "YukariPhotoDepthOfField": "Yukari Photo Depth of Field",

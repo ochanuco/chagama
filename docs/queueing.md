@@ -154,24 +154,24 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 - Each layer is compressed through its own alpha (every pixel above 0), the
   outline colour included; `layer-backdrop` passes through. The picture is
   backdrop, outline, figure composited as stage does (RGBA without a
-  backdrop). The output records `kind: "saturation"`, `base_generation` and
-  `strength`, and later kinds take it as the delivery it came from.
+  backdrop). The output records `kind: "saturation"` and `strength`; later
+  kinds take it as the delivery it came from.
 
 ### Lighting options
 
 - The source must be a stage output, a delivery or its saturation, or a cut
   redraw; a lighting output is refused. With no backdrop layer there is no
   ambient: only `direction` / `scene` shade (one required), staying transparent.
-- The ambient is the backdrop in a ring around the card (6% of the longest
-  side). Figure and outline take `(ambient luminance / 0.35) ** (0.4 ×
-  strength)` (within 0.35..1.15, linear) and half its colour cast at
-  strength 1. A `direction` first shades the figure with the scene's
-  underpaint, its lit side tinted by the backdrop's brightest light.
-  `strength` 0..1 (default 0.7). A `scene` (sunset / moon) shades and tints
-  the figure the same way (`direction` default nw) and tints a
-  pattern backdrop; a photo backdrop is never changed.
+- Figure and outline take the exposure and half the colour cast of the
+  backdrop around the card (`relight.py`), by `strength` 0..1 (default 0.7).
+  A `direction` shades the figure, its lit side tinted by the backdrop's
+  brightest light; a `scene` (sunset / moon) shades and tints it the same
+  way (`direction` nw) and tints a pattern backdrop, never a photo.
+- `acrylic: true` (needs a backdrop; `seed`, default 0) draws the outline as
+  a clear plate over the backdrop, has Qwen-Image 2.1 edit re-render it as
+  real acrylic lit from `direction` (nw), and lays the lit figure back.
 - The output (`-lit`) carries the relit layers (and backdrop) and records
-  `kind: "lighting"`, `direction` and `strength`.
+  `kind: "lighting"` and its options.
 
 ### Dof options
 
