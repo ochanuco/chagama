@@ -552,6 +552,15 @@ class Light(NamedTuple):
 
 
 LIGHT_FROM_DEFAULT = "nw"
+# `acrylic` lighting: the outline turned into a clear plate is re-rendered by
+# an image edit model asked for this, then the figure is laid back as
+# delivered, so only the acrylic and its light come from the model.
+LIGHTING_ACRYLIC_PROMPT = (
+    "Make the clear border around the character a real, thick, polished clear "
+    "acrylic plate, like a high quality acrylic stand photographed in this scene: "
+    "glossy reflections on its surface, light caught inside its cut edges, the "
+    "background refracted through the clear acrylic, and a faint soft shadow. Keep "
+    "the character artwork, the plate's outline and the background exactly as they are.")
 LIGHT_ELEVATION = 0.15
 LIGHT_REACH = 0.12
 LIGHT_GRADIENT = 0.9
