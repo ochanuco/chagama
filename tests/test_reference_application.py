@@ -79,15 +79,13 @@ def fake_estimator(log):
     return estimate
 
 
-class FakeSegmenter:
-    def __init__(self, log):
-        self.log = log
-
-    def run(self, outputs, feeds):
-        self.log.append(("segment", feeds["img"].shape))
-        mask = np.zeros((1, 1, 1024, 1024), np.float32)
-        mask[..., 256:768, 256:768] = 1.0
-        return [mask]
+def fake_segmenters(log):
+    def anime(rgb):
+        log.append(("segment", "anime"))
+        mask = np.zeros(rgb.shape[:2], np.float32)
+        mask[2:6, 3:9] = 1.0
+        return mask
+    return [("anime", anime)]
 
 
 def fake_depth(image):
@@ -119,7 +117,7 @@ def make(chimera, log, image=...):
         analyze=lambda data: analyze(Image.open(io.BytesIO(data)),
                                      lambda: FakeTagger(log), lambda: FakeVerifier(log),
                                      lambda: fake_estimator(log),
-                                     lambda: FakeSegmenter(log),
+                                     lambda: fake_segmenters(log),
                                      lambda: fake_depth),
         emit=lambda message: None,
         sleep=lambda seconds: log.append(("sleep", seconds)),
@@ -140,12 +138,13 @@ class ReferenceTest(unittest.TestCase):
         self.assertEqual(log, [
             "free", ("sleep", FREE_SETTLE_SECONDS), "tag", "tagger closed",
             ("verify", ("looking up", "light smile")), "verifier closed",
-            ("pose", (12, 8, 3)), ("segment", (1, 3, 1024, 1024))])
+            ("pose", (12, 8, 3)), ("segment", "anime")])
         self.assertEqual(chimera.calls, [])
         self.assertEqual(chimera.deleted, ["ref-1"])
         self.assertEqual(set(result), {"generation_ids", "pose", "candidates",
                                        "applied", "dropped", "figure"})
         self.assertEqual(result["figure"]["aspect"], 8 / 12)
+        self.assertEqual(result["figure"]["cut"], "anime")
         self.assertEqual(result["figure"]["points"][0], [0.5, 0.25, 0.9])
         self.assertEqual(result["generation_ids"], [])
         self.assertEqual(result["pose"], "yukari_persona")
@@ -177,7 +176,7 @@ class ReferenceTest(unittest.TestCase):
     def test_the_analysis_carries_only_candidate_scores(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
                         lambda: FakeVerifier([]), lambda: fake_estimator([]),
-                        lambda: FakeSegmenter([]), lambda: fake_depth)
+                        lambda: fake_segmenters([]), lambda: fake_depth)
         self.assertEqual(set(found), {"scores", "kept", "groups", "verdicts", "figure"})
         self.assertEqual(set(found["groups"]), set(GROUPS))
         self.assertIn("1girl", found["kept"])
@@ -187,7 +186,7 @@ class ReferenceTest(unittest.TestCase):
     def test_no_figure_is_none(self):
         found = analyze(Image.new("RGB", (4, 4)), lambda: FakeTagger([]),
                         lambda: FakeVerifier([]), lambda: lambda bgr: ([], []),
-                        lambda: FakeSegmenter([]), lambda: fake_depth)
+                        lambda: fake_segmenters([]), lambda: fake_depth)
         self.assertIsNone(found["figure"])
 
     def test_another_recipe_is_refused(self):
@@ -259,7 +258,7 @@ class ReferenceRenderTest(unittest.TestCase):
             "control": "depth", "picture": figure["depth"], "free_head": True,
             "free_chest": True, "blur": 0.015, "points": figure["points"], "aspect": figure["aspect"], "strength": 1.0})
 
-    def test_firm_on_a_reference_read_before_depth_follows_the_skeleton(self):
+    def test_firm_without_a_depth_follows_the_skeleton(self):
         chimera = Chimera()
         chimera.source = analysed_source()
         del chimera.source["result"]["figure"]["depth"]
