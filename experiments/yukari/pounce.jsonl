@@ -1,3 +1,0 @@
-{"character": "yukari", "pose": "pounce", "parameter": "stance base render", "value": "978fb1f1 (squat)", "outcome": "rejected", "reason": "picked off the squat, but the request changed to a kneeling stance (「片膝は着くくらい」) which a low-denoise refine cannot achieve from a squat render", "render_id": "978fb1f1"}
-{"character": "yukari", "pose": "pounce", "parameter": "stance tag (arm ka)", "value": "(one knee:1.45) alone", "outcome": "rejected", "reason": "drew the knee on some seeds and a deeper squat on others"}
-{"character": "yukari", "pose": "pounce", "parameter": "stance tag (arm kb)", "value": "(kneeling:1.4), (one knee:1.45) pair", "outcome": "accepted", "reason": "won on 9b2dfdf6", "render_id": "9b2dfdf6", "seed": 1886970040}

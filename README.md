@@ -36,8 +36,8 @@ uv run scripts/atlas.py notes       # findings and archive by heading, with line
 
 [`docs/`](docs/) holds the operating notes — queueing, the GPU box,
 releases, model provenance. [`docs/findings/`](docs/findings/) is what the
-measurements concluded, one topic per file; `experiments/` is the measurements
-themselves, and `docs/archive/` the original log they were distilled from. They
+measurements concluded, one topic per file; the renders behind them are on chimera, and
+`docs/archive/` is the original log they were distilled from. They
 are the point of the repository; the scripts are how they were produced.
 
 ## What it runs on

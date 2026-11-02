@@ -1,3 +1,0 @@
-{"character": "yukari", "pose": "roar", "parameter": "tooth tag", "value": "(sharp teeth)", "outcome": "rejected", "reason": "draws a mouthful of teeth, but the joke is one tooth"}
-{"character": "yukari", "pose": "roar", "parameter": "tooth tag", "value": "(fang:1.3)", "outcome": "accepted", "reason": "draws the single tooth the joke needs"}
-{"character": "yukari", "pose": "roar", "parameter": "(leaning forward) weight", "value": 1.35, "outcome": "inconclusive", "reason": "at hype's weight it was fighting nothing, since roar's hands-up already pushes the shoulders forward"}
