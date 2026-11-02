@@ -2,7 +2,8 @@
 figure. The silhouette and lineart are black on white for the Anima any-test
 LLLite; the depth is white near on black for the Anima VACE depth.
 
-skytnt's anime-seg masks the figure; the lineart is the gap between the
+skytnt's anime-seg masks the figure, and BiRefNet lite does where anime-seg
+finds no one (a photo); the lineart is the gap between the
 picture's grey and its dilation, kept inside the slightly widened mask; the
 depth is spread over `DEPTH_RANGE` between the figure's nearest and farthest
 percentile, so the farthest of the figure still stands off the black.
@@ -12,15 +13,22 @@ from __future__ import annotations
 
 import base64
 import io
+from collections.abc import Callable, Sequence
 
 import cv2
 import numpy as np
 from PIL import Image
 
-from .models import ANIME_SEG, model_path
+from .models import ANIME_SEG, PHOTO_SEG, model_path
+
+Segment = Callable[[np.ndarray], np.ndarray]
 
 SEGMENTER = "isnetis.onnx"
 SEGMENTER_SIDE = 1024
+PHOTO_SEGMENTER = "model.onnx"
+PHOTO_SIDE = 1024
+PHOTO_MEAN = (0.485, 0.456, 0.406)
+PHOTO_STD = (0.229, 0.224, 0.225)
 LONG_SIDE = 768
 MASK_THRESHOLD = 0.5
 LINE_KERNEL = 3
@@ -30,10 +38,38 @@ DEPTH_RANGE = (0.15, 1.0)
 DEPTH_PERCENTILES = (1, 99)
 
 
-def load_segmenter():
+def _session(folder: str, name: str):
     import onnxruntime
-    path = model_path(ANIME_SEG, (SEGMENTER,)) / SEGMENTER
+    path = model_path(folder, (name,)) / name
     return onnxruntime.InferenceSession(str(path), providers=["CPUExecutionProvider"])
+
+
+def load_segmenters() -> list[tuple[str, Segment]]:
+    """`(name, segment)` pairs, tried in order until one finds a figure; each
+    model is loaded on its first use."""
+    sessions: dict[str, object] = {}
+
+    def anime(rgb: np.ndarray) -> np.ndarray:
+        if "anime" not in sessions:
+            sessions["anime"] = _session(ANIME_SEG, SEGMENTER)
+        return figure_mask(rgb, sessions["anime"])
+
+    def photo(rgb: np.ndarray) -> np.ndarray:
+        if "photo" not in sessions:
+            sessions["photo"] = _session(PHOTO_SEG, PHOTO_SEGMENTER)
+        return photo_mask(rgb, sessions["photo"])
+    return [("anime", anime), ("photo", photo)]
+
+
+def photo_mask(rgb: np.ndarray, segmenter) -> np.ndarray:
+    """BiRefNet's float 0..1 mask of the figure, the picture's size."""
+    height, width = rgb.shape[:2]
+    scaled = cv2.resize(rgb, (PHOTO_SIDE, PHOTO_SIDE),
+                        interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255
+    scaled = (scaled - np.float32(PHOTO_MEAN)) / np.float32(PHOTO_STD)
+    feed = {segmenter.get_inputs()[0].name: scaled.transpose(2, 0, 1)[None]}
+    logits = segmenter.run(None, feed)[-1][0, 0]
+    return cv2.resize(1 / (1 + np.exp(-logits)), (width, height))
 
 
 def figure_mask(rgb: np.ndarray, segmenter) -> np.ndarray:
@@ -64,8 +100,6 @@ def lineart(rgb: np.ndarray, mask: np.ndarray) -> np.ndarray:
 
 def depth(relative: np.ndarray, mask: np.ndarray) -> np.ndarray:
     inside = mask >= MASK_THRESHOLD
-    if not inside.any():
-        return np.zeros(relative.shape, np.uint8)
     far, near = np.percentile(relative[inside], DEPTH_PERCENTILES)
     spread = np.clip((relative - far) / max(near - far, 1e-6), 0, 1)
     low, high = DEPTH_RANGE
@@ -83,12 +117,19 @@ def png_base64(picture: np.ndarray) -> str:
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def outlines(image: Image.Image, segmenter, estimate_depth) -> dict:
-    """`{silhouette, lineart, depth}`: each a base64 greyscale PNG, the long
-    side at most `LONG_SIDE`. `estimate_depth` maps the picture to its
-    relative depth, larger nearer."""
+def outlines(image: Image.Image, segmenters: Sequence[tuple[str, Segment]],
+             estimate_depth) -> dict:
+    """`{cut, silhouette, lineart, depth}`: `cut` names the segmenter that
+    found the figure, and each picture is a base64 greyscale PNG, the long
+    side at most `LONG_SIDE`; just `{cut: None}` when none found it.
+    `estimate_depth` maps the picture to its relative depth, larger nearer."""
     rgb = np.asarray(image.convert("RGB"))
-    mask = figure_mask(rgb, segmenter)
-    return {"silhouette": png_base64(silhouette(mask)),
+    for name, segment in segmenters:
+        mask = segment(rgb)
+        if (mask >= MASK_THRESHOLD).any():
+            break
+    else:
+        return {"cut": None}
+    return {"cut": name, "silhouette": png_base64(silhouette(mask)),
             "lineart": png_base64(lineart(rgb, mask)),
             "depth": png_base64(depth(estimate_depth(image.convert("RGB")), mask))}

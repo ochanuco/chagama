@@ -140,6 +140,13 @@ repo = "skytnt/anime-seg"
 file = "isnetis.onnx"
 revision = "493cb60893f47441b26ec4fb9a306bce9e342982"
 
+# BiRefNet lite (MIT): the figure mask for a photo, where anime-seg finds no one.
+[[model]]
+dest = "reference/birefnet-lite/model.onnx"
+repo = "onnx-community/BiRefNet_lite-ONNX"
+file = "onnx/model.onnx"
+revision = "de15b22ba131738a16dff04aab8bdf8dc32e3ac1"
+
 [[model]]
 dest = "reference/dwpose/yolox_m_8xb8-300e_humanart-c2c7a14a.onnx"
 repo = "Claquasse/Anima-Control-Pose"
