@@ -480,6 +480,11 @@ PHOTO_FOCAL_LENGTH = {"values": list(PHOTO_FOCAL_LENGTHS), "default": "85mm"}
 # seated or cropped figure is smaller, so it blurs a little less than the
 # same framing would through a real lens.
 PHOTO_SUBJECT_MM = 1500.0
+# What stands in the photo: `print`, the delivery's figure and outline bands
+# as one flat card, or `acrylic`, the figure alone on a clear acrylic stand
+# with its cut edge, base and glare. An acrylic stand is drawn upright and in
+# focus, so it takes no tilt and no focus point.
+PHOTO_CARD = {"values": ["print", "acrylic"], "default": "print"}
 # A stage request sets a delivery's figure and outline layers on a backdrop of
 # their own: a pattern (or #RRGGBB) at the delivery's canvas, optionally with
 # the drop shadow thrown away from `shadow_from`, or a photo, the card's base

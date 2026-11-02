@@ -202,7 +202,10 @@ class PhotoUseCaseTest(unittest.TestCase):
         self.assertEqual(inputs["focal_mm"], 85.0)
         services, _ = run()
         inputs = stage_node(services.comfyui.submitted[0])["inputs"]
-        self.assertEqual((inputs["stand"], inputs["focus"]), ("base", "subject"))
+        self.assertEqual((inputs["stand"], inputs["focus"], inputs["card"]),
+                         ("base", "subject", "print"))
+        services, _ = run(card="acrylic")
+        self.assertEqual(stage_node(services.comfyui.submitted[0])["inputs"]["card"], "acrylic")
 
     def test_the_request_records_its_kind_base_photo_and_options(self):
         services, _ = run(stand_at=(0.8, 0.4))
@@ -212,7 +215,7 @@ class PhotoUseCaseTest(unittest.TestCase):
             "kind": "photo", "base_generation": "dlv", "photo": "pic",
             "place": [0.3, 0.9], "height": 0.6, "stand_at": [0.8, 0.4],
             "nearer": 0.0, "focus": "subject", "f_number": 2.0, "tilt": 0.0, "bokeh": 0.0,
-            "focal_length": "85mm"})
+            "focal_length": "85mm", "card": "print"})
         self.assertEqual([ref["source_generation_id"] for ref in resolution["references"]],
                          ["dlv", "pic"])
 

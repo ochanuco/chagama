@@ -236,6 +236,9 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   below the frame, to crop the feet and show the card larger) is where the
   middle of its bottom edge goes; `height` (0.05..1.5 of the photo height, default
   0.7) its size. The output is the photo's size.
+- `card` (default `print`): `acrylic` prints the figure alone on a clear plate
+  with a tab in a clear base (`height` spans the whole stand), lit from the upper
+  left; it stands upright and in focus, so `tilt` and a `focus` point are refused.
 - The photo's depth is the `depth` asset of the photo Generation, reused
   under the `cut` rule, or built in the graph and attached to it. The card
   takes one depth: the photo's at `stand_at` (`[x, y]`; null, the default,
@@ -250,12 +253,8 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 - `focus` is `"subject"` (the card; its middle when tilted, default) or `[x, y]` of
   the picture (a point on the card is the card's depth there); `f_number` follows
   the dof's range; `focal_length` names the full-frame lens (catalog
-  `photo.focal_length`, default `85mm`). The card stands for a 1.5 m figure: the
-  aperture (focal / f-number) at its pixels per mm is the disc of an infinitely far
-  point, and a point blurs by |depth − focus| / focus of that (depth read as
-  disparity, far end = infinity; focus floored at 0.1, disc capped at 8% of the long
-  side). The photo is blurred in 24 depth slices laid far to near and the card row
-  by row by the same disc; the card is composited over the photo.
+  `photo.focal_length`, default `85mm`). The card stands for a 1.5 m figure, which
+  sets the lens disc; the photo blurs in 24 depth slices and the card row by row.
 - The output Generation (`-staged`) refines the delivery, is itself a
   delivered picture (a lens may follow), and records `kind: "photo"`,
   `base_generation`, `photo` and the resolved options.

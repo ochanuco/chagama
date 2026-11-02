@@ -45,6 +45,7 @@ from ..domain.yukari.delivery_style import (
     SATURATION_STRENGTH,
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
+    PHOTO_CARD,
     PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     STROKE_CHOICES,
@@ -153,6 +154,8 @@ def _photo_options_from_args(args) -> dict:
         options["bokeh"] = args.bokeh
     if args.focal_length is not None:
         options["focal_length"] = args.focal_length
+    if args.card is not None:
+        options["card"] = args.card
     return options
 
 
@@ -398,6 +401,10 @@ def parser() -> argparse.ArgumentParser:
         "--focal-length", choices=PHOTO_FOCAL_LENGTH["values"], default=None,
         help="the full-frame lens the photo is shot through; a longer lens "
              f"blurs the scene more (default {PHOTO_FOCAL_LENGTH['default']})")
+    photo_parser.add_argument(
+        "--card", choices=PHOTO_CARD["values"], default=None,
+        help="print: the delivery with its outline bands as a flat card; acrylic: "
+             f"the figure on a clear acrylic stand (default {PHOTO_CARD['default']})")
 
     stage_parser = commands.add_parser(
         "stage", help="set one delivered picture on a backdrop pattern or in a photo")

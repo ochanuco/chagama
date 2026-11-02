@@ -35,6 +35,7 @@ from ..domain.yukari.delivery_style import (
     LIGHTING_STRENGTH,
     SATURATION_STRENGTH,
     PHOTO_BOKEH,
+    PHOTO_CARD,
     PHOTO_FOCAL_LENGTH,
     PHOTO_HEIGHT,
     PHOTO_NEARER,
@@ -67,7 +68,7 @@ _KNOWN_LENS_OPTIONS = frozenset({"center", "strength", "shape", "radius"})
 
 _KNOWN_PHOTO_OPTIONS = frozenset({
     "photo", "place", "height", "stand_at", "nearer", "focus", "f_number", "tilt", "bokeh",
-    "focal_length"})
+    "focal_length", "card"})
 
 _KNOWN_STAGE_OPTIONS = frozenset({"photo", "place", "height", "backdrop", "shadow_from",
                                   "light", "frame"})
@@ -530,6 +531,13 @@ def photo_arguments(options: Mapping) -> dict:
         focus = _point(options, "focus", None)
         if focus is None:
             raise ValueError('focus must be "subject" or [x, y]')
+    card = options.get("card", PHOTO_CARD["default"])
+    if card not in PHOTO_CARD["values"]:
+        raise ValueError(f"card must be one of {PHOTO_CARD['values']}, got {card!r}")
+    tilt = _ranged(options, "tilt", PHOTO_TILT)
+    if card == "acrylic" and (focus != "subject" or tilt != 0):
+        raise ValueError("アクスタ（card acrylic）は正面に立ててピントを合わせるので、"
+                         "focus の点指定と tilt は使えません")
     return {
         "photo_id": photo_id,
         "place": _point(options, "place", list(PHOTO_PLACE_DEFAULT), PHOTO_PLACE_MAX_Y),
@@ -538,9 +546,10 @@ def photo_arguments(options: Mapping) -> dict:
         "nearer": _ranged(options, "nearer", PHOTO_NEARER),
         "focus": focus,
         "f_number": _ranged(options, "f_number", DOF_F_NUMBER),
-        "tilt": _ranged(options, "tilt", PHOTO_TILT),
+        "tilt": tilt,
         "bokeh": _ranged(options, "bokeh", PHOTO_BOKEH),
         "focal_length": _focal_length(options),
+        "card": card,
     }
 
 

@@ -25,10 +25,12 @@ import numpy as np
 from PIL import Image
 
 from ...domain.yukari.delivery_style import (
+    PHOTO_CARD,
     PHOTO_FOCAL_LENGTH,
     PHOTO_FOCAL_LENGTHS,
     PHOTO_SUBJECT_MM,
 )
+from . import acrylic_stand
 from .depth_blur import (
     ALPHA_EPSILON,
     DEPTH_PERCENTILES,
@@ -55,6 +57,7 @@ LUMA = np.array([0.2126, 0.7152, 0.0722], np.float32)
 # blur over what stands behind it instead of keeping a hard silhouette.
 DEPTH_SLICES = 24
 SUBJECT = "subject"
+PRINT, ACRYLIC = PHOTO_CARD["values"]
 # A focus this far back or farther counts as this far, so a card standing at
 # the far end does not blow the near scene up without bound.
 FOCUS_DEPTH_FLOOR = 0.1
@@ -218,9 +221,18 @@ def blur_card(photo: np.ndarray, depth: np.ndarray, placed: np.ndarray, *,
 
 def stage(photo: np.ndarray, depth: np.ndarray, figure: np.ndarray,
           outline: np.ndarray, *, place: tuple[float, float], height: float,
-          **blur) -> np.ndarray:
+          card_style: str = PRINT, **blur) -> np.ndarray:
     """`blur_card` with the card made from a delivery's straight RGBA
-    `figure` and `outline` layers and placed on `photo` first."""
+    `figure` and `outline` layers and placed on `photo` first. An ACRYLIC
+    card is the figure alone printed on a clear stand, drawn in focus over
+    the scene blurred for its base."""
+    if card_style == ACRYLIC:
+        empty = np.zeros((*photo.shape[:2], 4), np.float32)
+        scene = blur_card(photo, depth, empty, place=place, height=height, **blur) / 255.0
+        return acrylic_stand.stand(scene.astype(np.float32), figure,
+                                   place=place, height=height) * 255.0
+    if card_style != PRINT:
+        raise ValueError(f"unknown card style {card_style!r}")
     placed = place_card(card(figure, outline), photo.shape[1::-1], place, height)
     return blur_card(photo, depth, placed, place=place, height=height, **blur)
 
