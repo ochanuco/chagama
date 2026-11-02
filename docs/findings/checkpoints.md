@@ -76,6 +76,12 @@ control re-rendered in the same ComfyUI process:
 - IPAdapter for costume transfer: across 4 poses, no palette gain and a 7–15%
   thicker line. Earlier "it works" came from a confounded baseline. `[IL]` (a2 §2026-08-17 -- the generation test)
 - Checkpoint swaps to fix a look the recipe's own blocks were causing. `[IL]` (a6 §The AI look)
+- Qwen-Image edit fixes fingers, toes and soles and keeps her identity, but
+  redraws the whole frame at its own pixel budget, so pasting a crop back
+  leaves seams; its text-to-image does not draw her. `[all]`
+- MOSS-Image draws her without a LoRA but in even CG paint; an image
+  reference carries content, not line; artist tags do nothing. A style LoRA
+  from our picks at 1.0 came nearest and still lost the hand-drawn line. `[all]`
 - Krea2: tag prompts draw someone else, CG paint. `[all]`
 - Detail Daemon: numbers rise, the picture does not improve. `[IL]` (a1 §Detail Daemon)
 - SilvermoonMix gloss through words: flat color 1.6 or at the head, cel /

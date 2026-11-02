@@ -93,6 +93,13 @@ Run `deploy` by `workflow_dispatch` with `ref` set to an older commit on main.
 Any commit on main works: a release that was pruned is built again. A
 rollback always asks for approval.
 
+### A new pose
+
+A pose added in code reaches `list_catalog` when the worker publishes the
+catalog, but `plain_render` and requests by pose name 404 until the pose is
+imported as a preset: after the deploy, `POST /api/v1/presets/import` with
+`{"recipe_ref": "production"}` through `ChimeraClient` (idempotent).
+
 ## Draining before a deploy
 
 `stop.ps1` asks the worker to stop before it stops the task: it writes

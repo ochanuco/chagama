@@ -52,6 +52,29 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 - A costume change silently breaks per-pose splices of every pose not
   re-rendered right after. `[all]` (a5 §`stand` が銀紙ノイズ)
 
+## Levers away from the default (SilvermoonMix)
+
+- Brown in sheer legwear: negative `brown legwear` / `brown pantyhose` /
+  `tan` / `beige legwear`; keep the `gradient` / `soft shading` bans or the
+  sheer turns brown-to-black. `[Anima]`
+- Official knee-highs: `(light purple thighhighs:1.4), (ribbed legwear:1.35),
+  (purple trim on thighhighs:1.1), (zettai ryouiki:1.3)` with `pantyhose` /
+  `tights` / `bare legs` banned. Removing every legwear word gives bare legs.
+  Over the default tights: `(thighhighs over pantyhose:1.4)` + the same words,
+  without the bans. `[Anima]`
+- Pantyhose, not thigh-highs: `(pantyhose:1.4)` + negative `thighhighs` /
+  `knee highs` / `zettai ryouiki` / `bare thighs`. Worn polka dots need
+  `large polka dots` near 1.5. `[Anima]`
+- Oversized hoodie means silhouette, not material: `(oversized
+  cardigan:1.6), (sleeves past wrists:1.1), (cardigan too big for her:1.3),
+  (long cardigan reaching mid-thigh:1.3), (dropped shoulders:1.3), (wide
+  sleeves:1.25)` + negative `fur trim` / `fur` / `fleece`. `oversized` alone
+  changes nothing; the shoulders and sleeves do. `[Anima]`
+- Pullover roomwear: replace the costume part, `(no shoes:1.2)` for the
+  sneakers, drop the `hood` ban, ban `zipper` / `open jacket` / `hood up` /
+  `shoes`. `[Anima]`
+- `sleeves past fingers` weakens as soon as expression words are added. `[Anima]`
+
 ## Does not work
 
 - Directional gradient legwear (purple thigh → black ankle): 11 arms, the
@@ -62,3 +85,7 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   too. `[IL]` (a5 §膝枕深掘り)
 - Post-hoc painting of tights colour or sheerness: rejected as degradation. `[all]`
 - Pale-purple pantyhose: reads as bare white skin. `[Anima]`
+- The standard dress hem: length words and frill removal leave it as drawn. `[Anima]`
+- Underwear shown through a sheer top: `bra` turns into a bikini, a tube top
+  reverts to the purple dress. Use a one-piece sheer garment. `[Anima]`
+- Empty discarded tights (`no humans`): the legs stay inside. `[Anima]`

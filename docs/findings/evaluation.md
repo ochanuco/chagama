@@ -32,6 +32,12 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 - Do not open renders to browse; rating and semantic first, then
   `get_generation_image` on the short_id the user names. `[all]`
 
+- In one ComfyUI process, the same seed and canvas with only the expression
+  or action changed keeps the composition and moves only the face and hands.
+  What is stable is prompt + canvas, not the seed. `[Anima]`
+- Line weight can split by seed rather than prompt; pick the seed before
+  tuning style words. `[Anima]`
+
 ## Process
 
 - Render the control before adding a fix: the defect may already be gone.
@@ -63,4 +69,7 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 - Hough circles to count wheels; tuning a detector until its number looks
   right. `[all]` (a4 §Null: circles)
 - Carrying a numeric threshold across characters or poses. `[all]` (a1 §What the parts block buys)
+- Hand defects by detector: the WD tagger's `bad_hands` stays near 0 on
+  broken hands; a hand crop judged by a small VLM catches finger count only;
+  no model (Claude included) caught a wrong hand orientation. `[Anima]`
 - Band/ringing checks that measure the deliberate white outline. `[all]` (a4 §Purely bigger)
