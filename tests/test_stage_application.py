@@ -227,42 +227,6 @@ class LightingTest(unittest.TestCase):
                          ["layer-figure", "layer-outline", "layer-backdrop"])
         self.assertEqual((inputs["scene"], inputs["tint_backdrop"]), ("", False))
 
-    def test_an_acrylic_plate_is_re_rendered_and_the_figure_laid_back(self):
-        import io as _io
-        from PIL import Image as _Image
-        png = _io.BytesIO()
-        _Image.new("RGBA", (40, 60)).save(png, "PNG")
-        layers = {**LAYERS, "layer-figure": png.getvalue()}
-        management = ManagementFake({"stg": ({"kind": "stage", "base_generation": "dlv",
-                                              "photo": "p", "place": [0.5, 1.0],
-                                              "height": 0.8}, layers)})
-        with tempfile.TemporaryDirectory() as directory:
-            services = services_for(StageServices, management, directory)
-            lighting("stg", services, direction="ne", strength=0.5, acrylic=True, seed=3)
-        graph = services.comfyui.submitted[0]
-        by_type = {n["class_type"]: (key, n) for key, n in graph.items()}
-        plate_id, plate = by_type["YukariAcrylicPlate"]
-        self.assertEqual(plate["inputs"]["direction"], "ne")
-        self.assertEqual(by_type["TextEncodeQwenImage21"][1]["inputs"]["images.image_1"],
-                         [plate_id, 0])
-        self.assertEqual(by_type["SamplerCustom"][1]["inputs"]["noise_seed"], 3)
-        self.assertEqual((by_type["ImageScale"][1]["inputs"]["width"],
-                          by_type["ImageScale"][1]["inputs"]["height"]), (40, 60))
-        kept_id, kept = by_type["ImageCompositeMasked"]
-        self.assertEqual(kept["inputs"]["mask"], [plate_id, 1])
-        lit = [n for n in graph.values() if n["class_type"] == "SaveImage"
-               and n["inputs"]["filename_prefix"].endswith("-lit")]
-        self.assertEqual(lit[0]["inputs"]["images"], [kept_id, 0])
-        self.assertTrue(management.resolution()["parameters"]["acrylic"])
-
-    def test_an_acrylic_plate_needs_a_backdrop(self):
-        management = ManagementFake({"dlv": (DELIVERY, {
-            "layer-figure": b"figure-png", "layer-outline": b"outline-png"})})
-        with tempfile.TemporaryDirectory() as directory:
-            services = services_for(StageServices, management, directory)
-            with self.assertRaisesRegex(SystemExit, "背景"):
-                lighting("dlv", services, direction="ne", strength=0.5, acrylic=True)
-
     def test_a_scene_tints_a_pattern_backdrop_but_never_a_photo(self):
         management = ManagementFake({
             "stg": ({"kind": "stage", "base_generation": "dlv", "backdrop": "dots"}, LAYERS),
@@ -541,7 +505,7 @@ class TransparentLightingTest(unittest.TestCase):
         self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
         self.assertEqual(management.resolution()["parameters"], {
             "kind": "lighting", "base_generation": "dlv", "direction": "ne",
-            "strength": 0.5, "scene": None, "acrylic": False, "seed": 0})
+            "strength": 0.5, "scene": None})
         saved = [n["inputs"]["filename_prefix"] for n in
                  services.comfyui.submitted[0].values() if n["class_type"] == "SaveImage"]
         self.assertEqual(sorted(saved), ["light-dlv-layer-figure", "light-dlv-layer-outline",

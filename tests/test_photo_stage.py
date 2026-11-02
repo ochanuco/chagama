@@ -220,21 +220,3 @@ class AcrylicTest(unittest.TestCase):
     def test_an_unknown_card_is_refused(self):
         with self.assertRaisesRegex(ValueError, "card"):
             self.stage("paper")
-
-
-class AcrylicPlateTest(unittest.TestCase):
-    def test_the_outline_turns_clear_and_the_figure_stays(self):
-        from chagama.infrastructure.imaging import acrylic_plate
-        backdrop = np.full((120, 100, 3), 100.0, np.float32)
-        figure = np.zeros((120, 100, 4), np.float32)
-        figure[30:90, 35:65] = (200, 60, 120, 255)
-        outline = np.zeros((120, 100), np.float32)
-        outline[20:100, 25:75] = 1.0
-        guide, mask = acrylic_plate.plate(backdrop, figure, outline, "nw")
-        self.assertEqual(guide.shape, (120, 100, 3))
-        np.testing.assert_allclose(guide[60, 50], (200, 60, 120), atol=2)
-        band = guide[60, 28:32].mean(-1)
-        self.assertTrue(np.all(np.abs(band - 100) < 30))
-        self.assertGreater(mask[60, 50], 0.99)
-        self.assertLess(mask[60, 30], 0.01)
-        self.assertGreater(guide[18:24, 25:75].mean(), 100)

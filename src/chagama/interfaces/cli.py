@@ -460,11 +460,6 @@ def parser() -> argparse.ArgumentParser:
         "--strength", type=float, default=None,
         help=f"{LIGHTING_STRENGTH['min']}..{LIGHTING_STRENGTH['max']} "
              f"(default {LIGHTING_STRENGTH['default']})")
-    lighting_parser.add_argument(
-        "--acrylic", action="store_true",
-        help="make the outline a clear acrylic plate, re-rendered by an image edit model")
-    lighting_parser.add_argument("--seed", type=int, default=None,
-                                 help="the acrylic re-render's seed (default 0)")
 
     saturation_parser = commands.add_parser(
         "saturation", help="compress a delivery's layers' saturation")
@@ -668,9 +663,7 @@ def main(argv: list[str] | None = None) -> None:
         services = build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata)
         options = {"direction": args.direction, "scene": args.scene,
-                   **({"strength": args.strength} if args.strength is not None else {}),
-                   **({"acrylic": True} if args.acrylic else {}),
-                   **({"seed": args.seed} if args.seed is not None else {})}
+                   **({"strength": args.strength} if args.strength is not None else {})}
         try:
             arguments = lighting_arguments(options)
         except ValueError as error:
