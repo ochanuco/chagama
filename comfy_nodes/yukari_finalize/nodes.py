@@ -250,8 +250,8 @@ class YukariLens:
 
 class YukariPhotoStage:
     CATEGORY = "yukari"
-    RETURN_TYPES = ("IMAGE",)
-    RETURN_NAMES = ("image",)
+    RETURN_TYPES = ("IMAGE", "MASK")
+    RETURN_NAMES = ("image", "print_mask")
     FUNCTION = "run"
 
     @classmethod
@@ -281,22 +281,28 @@ class YukariPhotoStage:
             "tilt": ("FLOAT", {"default": 0.0, "min": -1.0, "max": 1.0, "step": 0.01}),
             "bokeh": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
             "focal_mm": _focal_mm(),
+            "card": ([photo_stage.PRINT, photo_stage.ACRYLIC], {"default": photo_stage.PRINT}),
         }}
 
     def run(self, photo, depth, figure, figure_mask, outline, outline_mask,
             place_x, place_y, height, stand, stand_x, stand_y, nearer, focus,
             focus_x, focus_y, f_number, tilt=0.0, bokeh=0.0,
-            focal_mm=photo_stage.DEFAULT_FOCAL_MM):
+            focal_mm=photo_stage.DEFAULT_FOCAL_MM, card=photo_stage.PRINT):
+        photo_png = bridge.image_to_png(photo)
+        figure_png = bridge.loaded_rgba_png(figure, figure_mask)
+        outline_png = bridge.loaded_rgba_png(outline, outline_mask)
+        mask = photo_stage.print_mask_png(photo_png, figure_png, outline_png,
+                                          place=(place_x, place_y), height=height,
+                                          card_style=card)
         data = photo_stage.stage_png(
-            bridge.image_to_png(photo), bridge.image_to_png(depth),
-            bridge.loaded_rgba_png(figure, figure_mask),
-            bridge.loaded_rgba_png(outline, outline_mask),
+            photo_png, bridge.image_to_png(depth), figure_png, outline_png,
             place=(place_x, place_y), height=height,
             stand_at=(stand_x, stand_y) if stand == "point" else None,
             nearer=nearer,
             focus=(focus_x, focus_y) if focus == "point" else photo_stage.SUBJECT,
-            f_number=f_number, tilt=tilt, bokeh=bokeh, focal_mm=focal_mm)
-        return (bridge.png_to_image(data),)
+            f_number=f_number, tilt=tilt, bokeh=bokeh, focal_mm=focal_mm,
+            card_style=card)
+        return (bridge.png_to_image(data), bridge.png_to_mask(mask))
 
 
 def _focal_mm():

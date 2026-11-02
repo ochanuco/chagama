@@ -202,7 +202,27 @@ class PhotoUseCaseTest(unittest.TestCase):
         self.assertEqual(inputs["focal_mm"], 85.0)
         services, _ = run()
         inputs = stage_node(services.comfyui.submitted[0])["inputs"]
-        self.assertEqual((inputs["stand"], inputs["focus"]), ("base", "subject"))
+        self.assertEqual((inputs["stand"], inputs["focus"], inputs["card"]),
+                         ("base", "subject", "print"))
+        services, _ = run(card="acrylic")
+        self.assertEqual(stage_node(services.comfyui.submitted[0])["inputs"]["card"], "acrylic")
+
+    def test_a_reshoot_edits_the_composite_and_lays_the_drawing_back(self):
+        services, _ = run(card="acrylic", reshoot=True, seed=9)
+        graph = services.comfyui.submitted[0]
+        by_type = {node["class_type"]: node for node in graph.values()}
+        stage_id = next(key for key, node in graph.items()
+                        if node["class_type"] == "YukariPhotoStage")
+        self.assertEqual(by_type["TextEncodeQwenImage21"]["inputs"]["images.image_1"],
+                         [stage_id, 0])
+        self.assertEqual(by_type["SamplerCustom"]["inputs"]["noise_seed"], 9)
+        kept = by_type["ImageCompositeMasked"]["inputs"]
+        self.assertEqual((kept["source"], kept["mask"]), ([stage_id, 0], [stage_id, 1]))
+        saved = by_type["SaveImage"]["inputs"]["images"][0]
+        self.assertEqual(graph[saved]["class_type"], "ImageCompositeMasked")
+        services, _ = run()
+        self.assertNotIn("SamplerCustom",
+                         {node["class_type"] for node in services.comfyui.submitted[0].values()})
 
     def test_the_request_records_its_kind_base_photo_and_options(self):
         services, _ = run(stand_at=(0.8, 0.4))
@@ -212,7 +232,7 @@ class PhotoUseCaseTest(unittest.TestCase):
             "kind": "photo", "base_generation": "dlv", "photo": "pic",
             "place": [0.3, 0.9], "height": 0.6, "stand_at": [0.8, 0.4],
             "nearer": 0.0, "focus": "subject", "f_number": 2.0, "tilt": 0.0, "bokeh": 0.0,
-            "focal_length": "85mm"})
+            "focal_length": "85mm", "card": "print", "reshoot": False, "seed": 0})
         self.assertEqual([ref["source_generation_id"] for ref in resolution["references"]],
                          ["dlv", "pic"])
 

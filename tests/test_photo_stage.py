@@ -170,3 +170,53 @@ class BokehTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AcrylicTest(unittest.TestCase):
+    def setUp(self):
+        self.h, self.w = 240, 200
+        ys, xs = np.mgrid[:self.h, :self.w]
+        self.photo = np.full((self.h, self.w, 3), 128.0, np.float32)
+        self.depth = (ys / self.h * 200 + 20).astype(np.float32)
+        self.figure = np.zeros((160, 100, 4), np.float32)
+        self.figure[10:150, 25:75] = (200, 60, 120, 255)
+        self.outline = np.zeros_like(self.figure)
+        self.outline[5:155, 20:80] = (255, 255, 255, 255)
+
+    def stage(self, card_style):
+        return photo_stage.stage(
+            self.photo, self.depth, self.figure, self.outline, place=(0.5, 0.95),
+            height=0.8, stand_at=None, nearer=0.0, focus=photo_stage.SUBJECT,
+            f_number=2.8, card_style=card_style)
+
+    def test_the_figure_is_printed_without_its_outline_bands(self):
+        image = self.stage(photo_stage.ACRYLIC)
+        self.assertFalse(np.any(np.all(image > 250, axis=-1)[100:120]))
+        magenta = (image[..., 0] > 150) & (image[..., 1] < 110)
+        rows, cols = np.nonzero(magenta)
+        self.assertGreater(rows.size, 1000)
+        self.assertAlmostEqual((cols.min() + cols.max()) / 2, self.w / 2, delta=3)
+
+    def test_the_stand_spans_its_height_from_the_base(self):
+        image = self.stage(photo_stage.ACRYLIC)
+        changed = (image - self.photo).max(-1) > 12
+        rows = np.nonzero(changed.mean(1) > 0.02)[0]
+        self.assertAlmostEqual(rows.max(), round(0.95 * self.h), delta=4)
+        self.assertAlmostEqual(rows.max() - rows.min(), 0.8 * self.h, delta=0.06 * self.h)
+
+    def test_the_clear_plate_shows_the_scene_with_a_lit_rim_and_a_cut_edge(self):
+        image = self.stage(photo_stage.ACRYLIC)
+        mean = image.mean(-1)
+        self.assertAlmostEqual(mean[100, 100 - 25 - 2], 128, delta=30)
+        self.assertGreater(mean[90:110, 60:73].max(), 140)
+        self.assertLess(mean[90:110, 127:140].min(), 126)
+
+    def test_the_print_card_is_unchanged_by_default(self):
+        default = photo_stage.stage(
+            self.photo, self.depth, self.figure, self.outline, place=(0.5, 0.95),
+            height=0.8, stand_at=None, nearer=0.0, focus=photo_stage.SUBJECT, f_number=2.8)
+        np.testing.assert_array_equal(default, self.stage(photo_stage.PRINT))
+
+    def test_an_unknown_card_is_refused(self):
+        with self.assertRaisesRegex(ValueError, "card"):
+            self.stage("paper")

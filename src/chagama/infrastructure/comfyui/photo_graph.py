@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
-from ...domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH, PHOTO_FOCAL_LENGTHS
+from ...domain.yukari.delivery_style import (
+    PHOTO_CARD,
+    PHOTO_FOCAL_LENGTH,
+    PHOTO_FOCAL_LENGTHS,
+    PHOTO_RESHOOT_PROMPT,
+)
 from .deliver_graph import depth_nodes
+from .qwen_edit_graph import edit_nodes
 
 STAGED_SUFFIX = "-staged"
 
@@ -15,7 +21,9 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
                 stand_at: tuple[float, float] | None, nearer: float,
                 focus: tuple[float, float] | str, f_number: float,
                 tilt: float = 0.0, bokeh: float = 0.0,
-                focal_length: str = PHOTO_FOCAL_LENGTH["default"]) -> dict:
+                focal_length: str = PHOTO_FOCAL_LENGTH["default"],
+                card: str = PHOTO_CARD["default"], reshoot: bool = False,
+                seed: int = 0) -> dict:
     """The photo graph over the uploaded photo and layer images.
 
     The photo's depth is the uploaded `depth_image`, or is built from the
@@ -55,8 +63,23 @@ def photo_graph(photo_image: str, figure_image: str, outline_image: str,
         "stand_x": stand[0], "stand_y": stand[1], "nearer": nearer,
         "focus": "subject" if focus == "subject" else "point",
         "focus_x": point[0], "focus_y": point[1], "f_number": f_number,
-        "tilt": tilt, "bokeh": bokeh, "focal_mm": PHOTO_FOCAL_LENGTHS[focal_length]}}
+        "tilt": tilt, "bokeh": bokeh, "focal_mm": PHOTO_FOCAL_LENGTHS[focal_length],
+        "card": card}}
+    final = [stage_id, 0]
+    if reshoot:
+        if photo_size is None:
+            raise ValueError("a reshoot needs the photo's size")
+        edited = edit_nodes(graph, allocate, [stage_id, 0], PHOTO_RESHOOT_PROMPT, seed)
+        scaled = allocate()
+        graph[scaled] = {"class_type": "ImageScale", "inputs": {
+            "image": edited, "upscale_method": "lanczos", "width": photo_size[0],
+            "height": photo_size[1], "crop": "disabled"}}
+        kept = allocate()
+        graph[kept] = {"class_type": "ImageCompositeMasked", "inputs": {
+            "destination": [scaled, 0], "source": [stage_id, 0], "x": 0, "y": 0,
+            "resize_source": False, "mask": [stage_id, 1]}}
+        final = [kept, 0]
     save = allocate()
     graph[save] = {"class_type": "SaveImage", "inputs": {
-        "images": [stage_id, 0], "filename_prefix": prefix + STAGED_SUFFIX}}
+        "images": final, "filename_prefix": prefix + STAGED_SUFFIX}}
     return graph

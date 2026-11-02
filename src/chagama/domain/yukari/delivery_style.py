@@ -480,6 +480,21 @@ PHOTO_FOCAL_LENGTH = {"values": list(PHOTO_FOCAL_LENGTHS), "default": "85mm"}
 # seated or cropped figure is smaller, so it blurs a little less than the
 # same framing would through a real lens.
 PHOTO_SUBJECT_MM = 1500.0
+# What stands in the photo: `print`, the delivery's figure and outline bands
+# as one flat card, or `acrylic`, the figure alone on a clear acrylic stand
+# with its cut edge, base and glare. An acrylic stand is drawn upright and in
+# focus, so it takes no tilt and no focus point.
+PHOTO_CARD = {"values": ["print", "acrylic"], "default": "print"}
+# `reshoot` passes the composite through an image edit model asked for this,
+# then lays the drawing itself back over the result, so the model relights
+# the stand and the scene while the picture stays the delivered one.
+PHOTO_RESHOOT_PROMPT = (
+    "Turn this into a real photograph of the clear acrylic stand standing on the "
+    "table, taken with a camera. Keep the printed character, the stand's outline, "
+    "its base and the background exactly where they are. Make the acrylic look "
+    "real: the polished cut edge catching the room light, faint reflections of the "
+    "room on the glossy surface, the scene refracted through the clear margin, and "
+    "a soft natural shadow under the base.")
 # A stage request sets a delivery's figure and outline layers on a backdrop of
 # their own: a pattern (or #RRGGBB) at the delivery's canvas, optionally with
 # the drop shadow thrown away from `shadow_from`, or a photo, the card's base
