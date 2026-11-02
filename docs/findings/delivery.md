@@ -75,6 +75,10 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 - Seat layered delivery: backdrop → seat → frame → figure, re-running
   `clean_background` with the seat pasted into the backdrop. `[Anima]`
 
+- The green key is read from the top-left 8x8 patch only. When steam or the
+  figure covers that corner the key is None and `see_through` stops too.
+  Steam that floats free of the figure is cut away. `[Anima]`
+
 ## Palette (repin)
 
 - Repin per hue window, not one saturation scale; a light-band normalisation
@@ -120,3 +124,5 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 - See-through part decomposition off-front: drops legs and legwear, and its
   output is a redraw. `[all]` (a5 §See-through)
 - Chaining two same-size image-space passes to rough then colour. `[IL]` (a5 §2026-08-29 再考)
+- An acrylic-plate rim: 2D line, transparency and glint effects and a Qwen
+  edit redraw of the rim both read as cheap CG. `[Anima]`

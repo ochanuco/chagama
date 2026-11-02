@@ -60,6 +60,54 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   and crops a cowboy shot near the hip. 896x1440 frames like 1024x1640.
   `[Anima]`
 
+## Levers away from the default (SilvermoonMix)
+
+- A young-looking face is the canvas first: a square bust draws a short
+  round face, 1280x2048 a longer one. A 896x1440 bust draft also reads
+  younger (less face detail at that size) and face words do not fix it.
+  `[Anima]`
+- Even light on a bust: `(front lighting:1.3), (flat lighting:1.3), (even
+  lighting:1.3), (no shadow:1.2), (bright lighting:1.1), (light purple hair
+  shadows:1.2)`; not `id photo`. `[Anima]`
+- A closer framing needs a square canvas (1152x1152) and the leg words gone
+  (legwear and body-build legs, negative legs / thighs / pantyhose). `cropped`
+  / `out of frame` call a small inset figure; `slightly from below` drifts to
+  the crotch, so a chest close-up goes `from above`. `[Anima]`
+- Foot close-up: `(extreme foreshortening:1.5), (foot in foreground:1.5),
+  (close-up:1.2), (foot focus:1.5), (toes:1.3), (soles:1.2)` + a sentence that
+  the toes hide part of the body. Some seeds add face stamps in the
+  background that no ban removes. `[Anima]`
+- A hand or object thrust at the camera comes out blurred at generation; no
+  word or negative fixes it, so change the composition. Blur and focus come
+  only from `dof`; dropping framing `depth of field` removes unwanted blur.
+  `[Anima]`
+- True side and rear views do not come from words (the figure looks back or
+  stops at 3/4; bust + `from_behind` looks over the shoulder). A depth
+  `render.pose` from a mesh of the figure at strength 1.0 sets the angle.
+  `[Anima]`
+- Reference poses hold at strength 1.0 with the head (and chest) freed; a
+  lower strength adds faces and toys outside the figure, and an `end` cutoff
+  does nothing on Turbo. `[Anima]`
+- Lying: from `stand` add `lying` / `on back` / `knees up` and negative
+  `standing`. `upside-down` mirrors a front view; use `top-down view`. Long
+  English leg descriptions turn 3 of 4 into multi-view sheets; short tags
+  (`kicking`, `legs up`, `motion lines`) do not. `[Anima]`
+- Sitting with no furniture: `(sitting:1.4), (invisible chair:1.3)` +
+  negative `chair` / `furniture` / `stool` / `bench` / `table` / `standing`.
+  `[Anima]`
+- Looking down at the viewer needs `(from below:1.6), (low angle:1.3)`; 1.4
+  with `looking down at viewer` keeps the camera level. `[Anima]`
+- Legs to one side, feet together: `(yokozuwari:1.5), (sitting on floor:1.2),
+  (legs to the side:1.2)` + negative `wariza` / `kneeling`. `[Anima]`
+- `bent over` stands and bends; a kneeling forward stretch needs a landscape
+  canvas plus `kneeling`. `plank` draws lying down. `[Anima]`
+- "Legs near, body far" by foreshortening detaches legs from hips;
+  `from side` + `wide shot` keeps the depth. `[Anima]`
+- Crossing a frame: pose `(outside border:1.5), (thin border:1.15),
+  (square:1.1), (breaking the fourth wall:1.2), (stepping:1.3), (leaning
+  forward:1.2)` + a sentence; a leg stepping over reads, leaning over the top
+  does not. The frame's size and place do not follow the prompt. `[Anima]`
+
 ## Does not work
 
 - Crops, cut-outs or repairs to deliver while the prompt is being tuned: the
