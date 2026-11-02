@@ -59,7 +59,7 @@ RECIPES = {
     "yukari": (render_spec, anima_build_graph),
 }
 
-# `generation.recipe` -> its identity_tags(pose, costume) function.
+# `generation.recipe` -> its identity_tags(pose, costume, expression) function.
 IDENTITY_TAGS = {
     "yukari": identity_tags,
 }
@@ -72,11 +72,12 @@ def _build_generation_graph(generation: dict, seed: int, prefix: str) -> dict:
     return request_graph(generation, seed, prefix, spec_builder, encode)
 
 
-def _identity_tags(recipe: str, pose: str, costume: str | None) -> frozenset[str] | None:
+def _identity_tags(recipe: str, pose: str, costume: str | None,
+                   expression: str | None = None) -> frozenset[str] | None:
     fn = IDENTITY_TAGS.get(recipe)
     if fn is None:
         return None
-    return fn(pose) if costume is None else fn(pose, costume)
+    return fn(pose, costume, expression)
 
 
 def _pose_fingerprint(recipe: str, pose: str) -> str | None:

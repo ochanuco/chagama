@@ -19,6 +19,11 @@ CHARACTER = CHARACTER_TAG + SERIES_TAG + ARTIST_TAG
 IDENTITY = ("light purple hair, short hair with long locks, very long "
             "sidelocks, (dark greyish purple eyes:1.4), (dark irises:1.2), "
             "hair ornament, ")
+# The sidelock tube goes only when another tie fills its place.
+NO_HAIR_ORNAMENT = ("(no hair ornament:1.5), (tied sidelocks:1.3), "
+                    "(sidelocks tied with orange hair tie:1.3), "
+                    "(orange hair tie:1.2), ")
+HAIR_ORNAMENT_BAN = "(hair ornament:1.4), (hairclip:1.3), (hair bobbles:1.2), "
 BODY = ("(mature female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), "
         "(soft thighs:1.3), (long legs:1.35), (narrow waist:1.25), "
         "adult proportions, long torso, seven heads tall, (collarbone:1.2), ")
@@ -27,6 +32,7 @@ BACKGROUND = "simple background, (green background:1.3), "
 # Leads every expression's eyes block: placed behind BACKGROUND (as FACE
 # is) the tag stops reaching the eyes at any weight.
 EYE_SHAPE = "(jitome:2.0), (tareme:1.2), (long eyes:1.25), "
+EYE_SHAPE_SOFT = "(jitome:1.2), (tareme:1.2), (long eyes:1.25), "
 FACE = ("(large eyes:1.2), (round face:1.3), (tareme:1.2), "
         "(thick eyelashes:1.3), (long eyelashes:1.15), ")
 STYLE = "(flat color:1.3), (sketch:1.3), (traditional media:1.2)"
