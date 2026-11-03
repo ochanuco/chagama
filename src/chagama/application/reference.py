@@ -14,7 +14,7 @@ import io
 import math
 import random
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from PIL import Image
@@ -30,6 +30,8 @@ FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
 DEPTH_BLUR = 0.015
+BACK_TAGS = frozenset({"from behind", "facing away"})
+LOOKING_BACK = "looking back"
 # off: the tags only. loose: the skeleton. firm: the depth, smoothed of its
 # hems and folds, with the head and chest left to the tags, or the skeleton for a reference read before depth was kept.
 POSE_FOLLOWS = ("off", "loose", "firm")
@@ -73,11 +75,20 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
     }
 
 
-def pose_patch(figure: Mapping, follow: str) -> dict:
+def shows_back(applied: Mapping[str, Sequence[str]]) -> bool:
+    return any(tag in BACK_TAGS for tags in applied.values() for tag in tags)
+
+
+def pose_patch(figure: Mapping, follow: str, *,
+               applied: Mapping[str, Sequence[str]] | None = None) -> dict:
+    applied = applied or {}
+    back = shows_back(applied)
     if follow == "firm" and "depth" in figure:
+        # A back view's head and chest are her back: the prompt would turn them round.
+        looking_back = any(LOOKING_BACK in tags for tags in applied.values())
         value = {"control": "depth", "picture": figure["depth"],
-                 "free_head": True, "free_chest": True, "points": figure["points"],
-                 "blur": DEPTH_BLUR}
+                 "free_head": not back or looking_back, "free_chest": not back,
+                 "points": figure["points"], "blur": DEPTH_BLUR}
     else:
         value = {"points": figure["points"]}
     return {"target": "render.pose", "op": "set",
@@ -107,11 +118,14 @@ def generate_request(plan: rules.Plan, *, seed: int, source: str,
     patches = list(plan.patches)
     if figure and pose_follow != "off":
         patches += canvas_patches(plan.pose, figure["aspect"])
-        patches.append(pose_patch(figure, pose_follow))
+        patches.append(pose_patch(figure, pose_follow, applied=plan.applied))
+    parameters = {"pose": plan.pose}
+    if shows_back(plan.applied):
+        parameters["angle"] = "from_behind"
     return {
         "schema_version": 1,
         "request": {"instruction": "参考画像から描く", "count": 1, "seeds": [seed]},
-        "generation": {"recipe": RECIPE, "parameters": {"pose": plan.pose},
+        "generation": {"recipe": RECIPE, "parameters": parameters,
                        "patches": patches},
         "semantic": {
             "summary": f"参考画像から: {plan.pose}",

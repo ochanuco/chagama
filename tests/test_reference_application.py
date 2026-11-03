@@ -15,11 +15,14 @@ from chagama.application.reference import (
     FREE_SETTLE_SECONDS,
     ReferenceImageMissing,
     ReferenceServices,
+    generate_request,
     pose_canvas,
+    pose_patch,
     reference,
     reference_render,
 )
 from chagama.application.work import work_once
+from chagama.domain.yukari.reference import Plan
 from chagama.infrastructure.reference.analyze import analyze
 from chagama.infrastructure.reference.anima_tagger import TagGroup
 from test_work import ManagementFake, make_services
@@ -257,6 +260,26 @@ class ReferenceRenderTest(unittest.TestCase):
         self.assertEqual(self.pose_of(chimera), {
             "control": "depth", "picture": figure["depth"], "free_head": True,
             "free_chest": True, "blur": 0.015, "points": figure["points"], "aspect": figure["aspect"], "strength": 1.0})
+
+    def test_a_back_view_holds_the_head_and_chest_and_draws_the_back(self):
+        figure = analysed_source()["result"]["figure"]
+        plan = Plan(pose="yukari_persona", patches=[], dropped=[], applied={
+            "framing_tags": ["from behind", "from below"], "gesture": ["standing"]})
+        payload = generate_request(plan, seed=1, source="r1", figure=figure,
+                                   pose_follow="firm")
+        validate_request(payload)
+        self.assertEqual(payload["generation"]["parameters"],
+                         {"pose": "yukari_persona", "angle": "from_behind"})
+        (pose,) = [patch["value"] for patch in payload["generation"]["patches"]
+                   if patch["target"] == "render.pose"]
+        self.assertEqual((pose["free_head"], pose["free_chest"]), (False, False))
+
+    def test_a_back_view_looking_back_leaves_the_head_free(self):
+        figure = analysed_source()["result"]["figure"]
+        plan = Plan(pose="yukari_persona", patches=[], dropped=[], applied={
+            "framing_tags": ["facing away"], "gesture": ["looking back"]})
+        pose = pose_patch(figure, "firm", applied=plan.applied)["value"]
+        self.assertEqual((pose["free_head"], pose["free_chest"]), (True, False))
 
     def test_firm_without_a_depth_follows_the_skeleton(self):
         chimera = Chimera()
