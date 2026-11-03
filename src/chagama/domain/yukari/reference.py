@@ -52,6 +52,14 @@ DENIED = frozenset({
     "moaning",
 })
 POSE_CHOICES = (PERSONA_POSE,)
+BACK_TAGS = frozenset({"from behind", "facing away"})
+LOOKING_BACK = "looking back"
+# Eye and face words turn a back view's face to the viewer.
+BACK_VIEW_PARTS = {"eye_base": "(jitome:0.6), (tareme:0.6), ", "face": "",
+                   "eye_quality": "", "mouth": ""}
+BACK_VIEW_GESTURE = "(facing away:1.6), (back of head:1.35), "
+BACK_VIEW_NEGATIVE = (", (looking at viewer:1.6), (from front:1.3), "
+                      "(looking back:1.5), (looking over shoulder:1.4)")
 REASON = "参考画像のタグ"
 
 
@@ -132,6 +140,21 @@ def _remove_items(target: str, text: str, names: Collection[str]) -> list[dict]:
             for old in olds]
 
 
+def _face_away(current: Mapping[str, str], mouth_tags: Collection[str]) -> list[dict]:
+    patches = []
+    for part, text in BACK_VIEW_PARTS.items():
+        if part == "mouth" and mouth_tags:
+            continue
+        patch = _part_patch(part, current[part], text)
+        if patch:
+            patches.append(patch)
+    patches.append({"target": "prompt.positive.gesture", "op": "append",
+                    "value": BACK_VIEW_GESTURE, "reason": REASON})
+    patches.append({"target": "prompt.negative", "op": "append",
+                    "value": BACK_VIEW_NEGATIVE, "reason": REASON})
+    return patches
+
+
 def build(pose: str, accepted: Mapping[str, Sequence[str]],
           kept: Collection[str] = ()) -> Plan:
     """The patches that put `accepted` (part -> tags) onto `pose`."""
@@ -159,6 +182,8 @@ def build(pose: str, accepted: Mapping[str, Sequence[str]],
         applied[part] = tags
 
     used = {tag for tags in accepted.values() for tag in tags}
+    if used & BACK_TAGS and LOOKING_BACK not in used:
+        patches += _face_away(current, set(accepted["mouth"]))
     patches += _remove_items("prompt.negative", negative(pose), used)
     dropped = sorted(set(kept) - used)
     return Plan(pose=pose, applied=applied, patches=patches, dropped=dropped)

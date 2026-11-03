@@ -30,8 +30,6 @@ FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
 DEPTH_BLUR = 0.015
-BACK_TAGS = frozenset({"from behind", "facing away"})
-LOOKING_BACK = "looking back"
 # off: the tags only. loose: the skeleton. firm: the depth, smoothed of its
 # hems and folds, with the head and chest left to the tags, or the skeleton for a reference read before depth was kept.
 POSE_FOLLOWS = ("off", "loose", "firm")
@@ -76,7 +74,7 @@ def analyze(image: bytes, services: ReferenceServices) -> dict:
 
 
 def shows_back(applied: Mapping[str, Sequence[str]]) -> bool:
-    return any(tag in BACK_TAGS for tags in applied.values() for tag in tags)
+    return any(tag in rules.BACK_TAGS for tags in applied.values() for tag in tags)
 
 
 def pose_patch(figure: Mapping, follow: str, *,
@@ -85,7 +83,7 @@ def pose_patch(figure: Mapping, follow: str, *,
     back = shows_back(applied)
     if follow == "firm" and "depth" in figure:
         # A back view's head and chest are her back: the prompt would turn them round.
-        looking_back = any(LOOKING_BACK in tags for tags in applied.values())
+        looking_back = any(rules.LOOKING_BACK in tags for tags in applied.values())
         value = {"control": "depth", "picture": figure["depth"],
                  "free_head": not back or looking_back, "free_chest": not back,
                  "points": figure["points"], "blur": DEPTH_BLUR}
