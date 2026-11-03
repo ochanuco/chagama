@@ -83,6 +83,9 @@ control re-rendered in the same ComfyUI process:
   reference carries content, not line; artist tags do nothing. A style LoRA
   from our picks at 1.0 came nearest and still lost the hand-drawn line. `[all]`
 - Krea2: tag prompts draw someone else, CG paint. `[all]`
+- One obsession Anima v5.0 (Turbo-based mix) as stage 1: the look shifts
+  from picture to picture and is not one the user likes; bust and close
+  framings also lose the flat green key. `[Anima]`
 - Detail Daemon: numbers rise, the picture does not improve. `[IL]` (a1 §Detail Daemon)
 - SilvermoonMix gloss through words: flat color 1.6 or at the head, cel /
   minimal / two-tone shading, no highlights / matte hair, a stronger shiny-hair
