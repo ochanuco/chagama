@@ -72,12 +72,6 @@ dest = "diffusion_models/silvermoon.safetensors"
 civitai_model = 2639339
 civitai_version = 3335123 # v2.3_2.9B Anima
 
-# One obsession Anima, a Turbo-based mix tried per request with render.model.
-[[model]]
-dest = "diffusion_models/one-obsession-anima.safetensors"
-civitai_model = 2695493
-civitai_version = 3443487 # v5.0
-
 # Anima's text encoder and VAE, which the yukari graph loads by name.
 [[model]]
 dest = "text_encoders/qwen_3_06b_base.safetensors"
