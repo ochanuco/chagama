@@ -136,8 +136,9 @@ env built for its pins. `scripts/worker/reference-env.ps1` builds it with uv
 ComfyUI's Python with `--system-site-packages`, which borrows its CUDA torch
 and adds the pinned packages; when that venv cannot import them with CUDA, a
 standalone Python 3.12 venv with the pinned cu130 torch wheel (about 5 GB on
-disk). It marks the env `ready` only after that import check passes; until
-then reference rows fail and every other kind runs. The deploy's prepare
+disk). It marks the env `ready` only after that import check passes, and runs the
+check again before trusting a `ready` env, rebuilding it when files have gone
+missing; until then reference rows fail and every other kind runs. The deploy's prepare
 step runs it, and the `reference-env` op reruns it. Older envs are not
 pruned. The worker sends ComfyUI `/free` before the subprocess loads the
 models; d1 in bf16 takes about 7 GB of VRAM, the tagger under 1 GB, and both
