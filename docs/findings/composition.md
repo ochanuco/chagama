@@ -64,7 +64,7 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 
 - A young-looking face is the canvas first: a square bust draws a short
   round face, 1280x2048 a longer one. A 896x1440 bust draft also reads
-  younger and face words do not fix it, so a bust drafts at 1280x2048.
+  younger (less face detail at that size) and face words do not fix it.
   `[Anima]`
 - Even light on a bust: `(front lighting:1.3), (flat lighting:1.3), (even
   lighting:1.3), (no shadow:1.2), (bright lighting:1.1), (light purple hair
