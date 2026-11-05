@@ -1,10 +1,13 @@
-"""Akari's wardrobe: the half-worn jacket over a pinafore, and white tights
-with a faint orange tint."""
+"""Akari's wardrobe: the half-worn jacket over a pinafore with a white
+frilled hem, and white tights with a faint orange tint."""
 
 from __future__ import annotations
 
 from ..anima.character import Wardrobe
 from .prompt_style import GARMENT_BLACK_BAN, HOOD_BAN, SHEER_TONE_BAN
+
+_HEM_FRILL = ("(frilled dress:1.2), (white frilled hem:1.3), "
+              "(white lace trim on skirt hem:1.2), ")
 
 _JACKET = ("(very dark brown jacket:1.4), (blackish brown:1.3), "
            "(dark orange-brown tint:1.1), ")
@@ -15,14 +18,14 @@ COSTUMES = {
                     "(off-shoulder jacket:1.3), (oversized jacket:1.2), "
                     "(white fur-trimmed collar:1.2), long sleeves, "
                     "(dark grey pinafore dress:1.4), (white shirt:1.2), "
-                    "collared shirt, (orange neck ribbon:1.1), "),
+                    "collared shirt, (orange neck ribbon:1.1), " + _HEM_FRILL),
 }
 
 # From behind the open front, shirt and ribbon are out of sight.
 BEHIND_COSTUMES = {
     "half_jacket": (_JACKET + "(jacket slipping off shoulders:1.3), "
                     "(oversized jacket:1.2), (white fur-trimmed collar:1.2), "
-                    "long sleeves, (dark grey pinafore dress:1.4), "),
+                    "long sleeves, (dark grey pinafore dress:1.4), " + _HEM_FRILL),
 }
 
 LEGWEAR = {

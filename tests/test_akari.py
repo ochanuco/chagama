@@ -67,6 +67,15 @@ class AkariCarriesNothingOfYukariTest(unittest.TestCase):
                 self.assertIn("(very dark brown jacket:1.4)",
                               dict(RECIPE.positive_parts(pose))["costume"])
 
+    def test_half_jacket_has_the_white_frilled_hem_front_and_back(self):
+        frill = ("(frilled dress:1.2), (white frilled hem:1.3), "
+                 "(white lace trim on skirt hem:1.2), ")
+        for angle in (None, "from_behind"):
+            with self.subTest(angle=angle):
+                kwargs = {"angle": angle} if angle else {}
+                costume = dict(RECIPE.positive_parts("amae", **kwargs))["costume"]
+                self.assertIn(frill, costume)
+
 
 class AkariLegwearTest(unittest.TestCase):
     def test_default_legwear_is_white_with_an_orange_tint(self):
