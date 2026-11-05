@@ -38,6 +38,7 @@ from .prompt_style import (
     HEIGHT,
     HIRES_DENOISE,
     HOOD_BAN,
+    MECHANICAL_BAN,
     MODEL,
     NEGATIVE_TAIL,
     PROPORTION_BAN,
@@ -237,7 +238,7 @@ def negative(pose: str, costume: str | None = None,
              + COSTUME_BAN.get(c, "")
              + (BEHIND_COSTUME_BAN.get(c, "") if shows_back(angle) else "")
              + sheer_ban + legwear_state_ban
-             + SCORE_BAN + PROPORTION_BAN + TEXT_BAN)
+             + SCORE_BAN + PROPORTION_BAN + TEXT_BAN + MECHANICAL_BAN)
     # `sheer-gloss` only, tacked on after TEXT_BAN so it is the last
     # thing in the negative prompt.
     if lw == "sheer-gloss" and p.legwear and ls is not LegwearState.OFF:

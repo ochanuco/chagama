@@ -18,7 +18,8 @@ ARTIST_TAG = "(@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
 CHARACTER = CHARACTER_TAG + SERIES_TAG + ARTIST_TAG
 IDENTITY = ("light purple hair, short hair with long locks, very long "
             "sidelocks, (dark greyish purple eyes:1.4), (dark irises:1.2), "
-            "hair ornament, ")
+            "hair ornament, (pale pink pupils:1.05), (vertical oval pupils:1.0), "
+            "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
 # The sidelock tube goes only when another tie fills its place.
 NO_HAIR_ORNAMENT = ("(no hair ornament:1.5), (tied sidelocks:1.3), "
                     "(sidelocks tied with orange hair tie:1.3), "
@@ -80,6 +81,9 @@ PROPORTION_BAN = (", (fat:1.35), (chubby:1.35), (short legs:1.35), (muscular:1.3
                   "(toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2)")
 TEXT_BAN = (", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
             "(english text:1.2), signature, watermark")
+# Keeps `mechanical eyes` in the eyes instead of turning the body into a robot.
+MECHANICAL_BAN = (", (robot:1.3), (cyborg:1.3), (mechanical parts:1.2), "
+                  "(android joints:1.2)")
 
 MODEL = "silvermoon-turbo.safetensors"
 WIDTH, HEIGHT = 1024, 1640

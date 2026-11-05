@@ -20,6 +20,13 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 - Eye colour moves only when `purple eyes` is replaced: adding
   `dark greyish purple eyes` next to it barely darkens the iris even at 1.6.
   `[Anima]`
+- The default eye is a dark greyish purple iris with a tall, pale pink core
+  and faint mechanical rings: `pale pink pupils` 1.05, `vertical oval
+  pupils` 1.0, `concentric iris rings` 0.9, `mechanical eyes` 0.6 in the
+  identity. The negative's `pink eyes` keeps the pink to the core, and
+  `robot` / `cyborg` / `mechanical parts` / `android joints` keep the machine
+  out of the face and body. At 1.3 / 1.2 / 1.1 / 0.8 the core and rings
+  overpower the eye. `[Anima]`
 - Bust eye size does not move with `large eyes` / `big eyes` weight or
   position on Anima; dropping `half-closed eyes` opens them a little. `[Anima]`
 - Two settled states on IL: resting = `unamused` + `half-closed eyes` (1.3

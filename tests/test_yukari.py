@@ -56,10 +56,14 @@ def _current_defaults(fixture):
         .replace("masterpiece, best quality, score_7, ", "")
         .replace("hitoshi:0.85)", "hitoshi:1.3)")
         .replace("seven heads tall, ", "seven heads tall, (collarbone:1.2), ")
+        .replace("(dark irises:1.2), hair ornament, ", "(dark irises:1.2), hair ornament, "
+                 "(pale pink pupils:1.05), (vertical oval pupils:1.0), "
+                 "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
         .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "))
     out["negative"] = fixture["negative"].replace(
         "(aged down:1.2)", "(aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-        "(english text:1.2), signature, watermark", 1)
+        "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+        "(mechanical parts:1.2), (android joints:1.2)", 1)
     return out
 
 
@@ -72,6 +76,7 @@ COFFEE_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
@@ -110,7 +115,8 @@ COFFEE_NEGATIVE = (
     "(muscular:1.3), (toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged "
     "down:1.2)"
     ", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-    "(english text:1.2), signature, watermark"
+    "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2)"
     "(glossy:1.3), (specular highlights:1.3), (reflection:1.2), "
     "(ribbed legwear:1.3), (vertical-striped legwear:1.3), "
 )
@@ -120,6 +126,7 @@ AMAE_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
@@ -146,6 +153,7 @@ STAND_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (from front:1.3), (full body:1.45), (wide "
     "shot:1.3), (thighs:1.1), (mature female:1.3), (adult:1.2), (wide "
@@ -186,7 +194,8 @@ STAND_NEGATIVE = (
     "(muscular:1.3), (toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged "
     "down:1.2)"
     ", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-    "(english text:1.2), signature, watermark"
+    "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2)"
     "(glossy:1.3), (specular highlights:1.3), (reflection:1.2), "
     "(ribbed legwear:1.3), (vertical-striped legwear:1.3), "
 )
@@ -196,6 +205,7 @@ BUST_POSITIVE = (
     "voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed eyes:1.35), "
     "(unamused:1.35), (expressionless:1.2), "
     "(from front:1.3), (portrait:1.5), (head and shoulders:1.4), "
@@ -230,7 +240,8 @@ BUST_NEGATIVE_TAG_SOURCE = (
     " (black hoodie:1.35), score_1, score_2, score_3, (fat:1.35),"
     " (chubby:1.35), (short legs:1.35), (muscular:1.3), (toned:1.2), "
     "(child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3),"
-    " (english text:1.2), signature, watermark, (wavy mouth:1.4),"
+    " (english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2), (wavy mouth:1.4),"
     " (:3:1.3), (pout:1.3), (pursed lips:1.3), (puckered lips:1.2), "
     "(smile:1.2), "
 )
@@ -239,7 +250,8 @@ GAO_POSITIVE = (
     "1girl, solo, yuzuki yukari, vocaloid, voiceroid, (@oshiki "
     "hitoshi:1.3), (@yoshikawa hideaki:0.5), light purple hair, short hair "
     "with long locks, very long sidelocks, (dark greyish purple eyes:1.4), "
-    "(dark irises:1.2), hair ornament, (jitome:2.0), (tareme:1.2), (long "
+    "(dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), (jitome:2.0), (tareme:1.2), (long "
     "eyes:1.25), (confident:1.18), (from behind:1.2), (looking back:1.3), "
     "(looking over shoulder:1.2), (upper body:1.3), (mature female:1.3), "
     "(adult:1.2), (narrow waist:1.25), adult proportions, long torso, seven "
@@ -273,7 +285,8 @@ GAO_NEGATIVE = (
     "(fat:1.35), (chubby:1.35), (short legs:1.35), (muscular:1.3), "
     "(toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2), "
     "(text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), (english "
-    "text:1.2), signature, watermark"
+    "text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2)"
 )
 
 COFFEE_POSITIVE = _with_nails(COFFEE_POSITIVE)
@@ -623,7 +636,8 @@ class PoseTableTest(unittest.TestCase):
         self.assertIn(SHEER_LEGWEAR, spec.prompts.positive)
         self.assertNotIn("full body", spec.prompts.positive)
         self.assertTrue(spec.prompts.negative.endswith(
-            "watermark, (standing:1.4), (sneakers:1.2), (panties:1.3), "
+            "watermark, (robot:1.3), (cyborg:1.3), (mechanical parts:1.2), "
+            "(android joints:1.2), (standing:1.4), (sneakers:1.2), (panties:1.3), "
             "(pantyshot:1.3), (green pillow:1.4), (smile:1.2), "
             "(looking at viewer:1.2), (eyes on pillow:1.45), "
             "(face on cushion:1.45), (stuffed toy:1.4), "
