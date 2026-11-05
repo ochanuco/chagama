@@ -329,9 +329,9 @@ class DialsTest(unittest.TestCase):
 
 
 class DeliverSectionTest(unittest.TestCase):
-    def section(self) -> dict:
+    def section(self, recipe: str = "yukari") -> dict:
         by_name = {recipe["name"]: recipe for recipe in build_catalog(GIT)["recipes"]}
-        return by_name["yukari"]["deliver"]
+        return by_name[recipe]["deliver"]
 
     def test_defaults_are_the_delivery_recipe_and_valid_options(self):
         defaults = self.section()["defaults"]
@@ -355,6 +355,11 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertNotIn("dof", section)
         self.assertNotIn("dof", section["defaults"])
         self.assertNotIn("outlines", section["defaults"])
+
+    def test_each_recipe_publishes_its_own_outline_default(self):
+        self.assertEqual(self.section("akari")["outlines"]["default"],
+                         [{"color": "#ffffff", "width": 0.8},
+                          {"color": "#c27138", "width": 1.04}])
 
     def test_publishes_the_lens_section_at_the_catalog_root(self):
         lens = build_catalog(GIT)["lens"]

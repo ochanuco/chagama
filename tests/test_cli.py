@@ -86,8 +86,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs, {
             "keep_scene": False, "transparent": False, "backdrop": "dots",
             "stroke_light": RECIPE_DEFAULT,
-            "outlines": [{"color": "#ffffff", "width": 0.8},
-                         {"color": "#7e6988", "width": 1.04}],
+            "outlines": None,
             "light": None, "saturation": 1.0})
 
     @patch.object(cli, "deliver")

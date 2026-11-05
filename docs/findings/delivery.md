@@ -1,8 +1,8 @@
 # Delivery: deliver, palette, matte, stroke
 
 The delivery identity (solid backdrop `#ffffff`, purple stroke, acceptance band)
-lives in `domain/yukari/delivery_style.py`, fingerprinted by
-`scripts/delivery_check.py`. When `--accept` records a change, rewrite
+lives in `domain/yukari/delivery_style.py`, with each recipe's default bands
+in `domain/recipes.py`, both fingerprinted by `scripts/delivery_check.py`. When `--accept` records a change, rewrite
 "The look now" below. Tags and `a<n> §` pointers: see
 [`docs/README.md`](../README.md).
 
@@ -14,6 +14,12 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
   Defaults: `DELIVER_DEFAULTS` in `delivery_style.py`. `[Anima]`
 - Deliver defaults: `saturation` 1, backdrop `dots`, stroke light from `n`.
   The diagonal stripes + faint focus lines backdrop is `backdrop=stripes`. `[Anima]`
+- The default bands are the source's recipe's (`RecipeEntry.outlines`):
+  yukari's `#7e6988` rim, akari's `#c27138` (picked from the swatch
+  delivery 1vfghs), the same white band and widths for both. A request's
+  `outlines` wins; the catalog publishes each recipe's default under
+  `deliver.outlines.default`. The backdrop patterns stay yukari's purples
+  for every recipe. `[Anima]`
 - Saturation comes before the bands, so a band is exactly the colour it is
   given. The figure matches what a `saturation` request (strength 1) on a
   delivery makes of it, to the level (z0fus0's figure re-delivered against
@@ -22,8 +28,8 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
   `deliver` of it draws the bands at that strength from the drawing's cut.
   On a delivery made with `saturation: 0` the request compresses both
   layers, and it refuses one already compressed. `[Anima]`
-- The bands are a list (`OUTLINES`, the `outlines` deliver option), innermost
-  first: a white band at 0.8% of the longest side, then the `#7e6988` rim at
+- The bands are a list (`OUTLINES` for yukari, the `outlines` deliver option),
+  innermost first: a white band at 0.8% of the longest side, then the `#7e6988` rim at
   1.04%, each polygonised (Douglas–Peucker, eps 0.5%) for a hand-cut look.
   `#7e6988` is what the curve makes of the earlier `#885b80` rim (measured
   on 0yansg's outline layer, 89k flat pixels), so a delivery looks as one

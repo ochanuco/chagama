@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 from urllib.parse import quote
 
+from ..domain.recipes import deliver_outlines
 from .catalog import publish_catalog as publish_catalog_document
 from .deliver import DeliverServices, deliver, saturate_drawing
 from .dof import DofServices, dof
@@ -148,7 +149,7 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
     generation_id = payload.get("generation_id")
     if not generation_id:
         raise SystemExit("deliver payload.generation_id is required")
-    context, _ = fetch_source(services.management, generation_id)
+    context, recipe = fetch_source(services.management, generation_id)
     options = payload.get("options") or {}
     try:
         arguments = deliver_arguments(options)
@@ -158,7 +159,10 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
                               key_prefix=f"request:{row['id']}",
                               request_id=row["id"], context=context,
                               **arguments)
-    result["resolved_options"] = {**options, "outlines": arguments["outlines"],
+    outlines = result.pop("outlines", arguments["outlines"])
+    if outlines is None:
+        outlines = deliver_outlines(recipe)
+    result["resolved_options"] = {**options, "outlines": outlines,
                                   "saturation": result.pop("saturation",
                                                            arguments["saturation"])}
     return result

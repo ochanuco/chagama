@@ -25,7 +25,7 @@ from ..domain.anima.components import PART_GROUPS, Framing
 from ..domain.anima.framing import FRAMING, FRAMING_LABELS
 from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
 from ..domain.anima.style import HEIGHT, WIDTH
-from ..domain.recipes import RECIPES, RecipeEntry
+from ..domain.recipes import RECIPES, RecipeEntry, deliver_outlines
 from ..domain.yukari.delivery_style import (
     BACKDROP,
     BACKDROP_LABELS,
@@ -156,7 +156,7 @@ def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
         "deliver": {
             "defaults": {key: value for key, value in DELIVER_DEFAULTS.items()
                          if key != "outlines"},
-            "outlines": {"default": DELIVER_DEFAULTS["outlines"],
+            "outlines": {"default": deliver_outlines(recipe_name),
                          "max_count": OUTLINES_MAX,
                          "max_width": OUTLINE_WIDTH_MAX_PCT},
             "stroke_light": list(STROKE_CHOICES),

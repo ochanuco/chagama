@@ -7,10 +7,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from .akari.delivery import OUTLINES as AKARI_OUTLINES
 from .akari.recipe import RECIPE as AKARI
 from .anima.dials import DIALS
 from .anima.poses import POSE_LABELS
 from .anima.recipe import Recipe
+from .yukari.delivery_style import OUTLINES
 from .yukari.recipe import RECIPE as YUKARI
 
 
@@ -21,12 +23,20 @@ class RecipeEntry:
     pose_labels: Mapping[str, str]
     dials: Mapping[str, Mapping[str, Mapping[str, float]]]
     rejected_parameters: frozenset[str] = frozenset()
+    # The deliver bands a request that names no `outlines` gets.
+    outlines: tuple[Mapping[str, object], ...] = OUTLINES
 
 
 RECIPES: Mapping[str, RecipeEntry] = {
     "yukari": RecipeEntry(YUKARI, POSE_LABELS, DIALS),
-    "akari": RecipeEntry(AKARI, POSE_LABELS, DIALS),
+    "akari": RecipeEntry(AKARI, POSE_LABELS, DIALS, outlines=AKARI_OUTLINES),
 }
 
 # What a refining request records when its source names no recipe.
 DEFAULT_RECIPE = "yukari"
+
+
+def deliver_outlines(recipe: str | None) -> list[dict]:
+    """The default deliver bands for a picture drawn by `recipe`."""
+    entry = RECIPES.get(recipe or DEFAULT_RECIPE) or RECIPES[DEFAULT_RECIPE]
+    return [dict(outline) for outline in entry.outlines]

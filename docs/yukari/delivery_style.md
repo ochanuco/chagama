@@ -10,7 +10,7 @@ in [`findings/delivery.md`](../findings/delivery.md).
 
 | Group | Read by |
 |---|---|
-| `BACKDROP`, `OUTLINES`, `OUTLINES_MAX`, `OUTLINE_WIDTH_MAX_PCT` | band drawing in `infrastructure/imaging/delivery.py`, the `outlines` deliver option |
+| `BACKDROP`, `OUTLINES`, `OUTLINES_MAX`, `OUTLINE_WIDTH_MAX_PCT` | band drawing in `infrastructure/imaging/delivery.py`, the `outlines` deliver option; `OUTLINES` is yukari's default, and another recipe swaps its rim colour through `RecipeEntry.outlines` (akari: `domain/akari/delivery.py`) |
 | `STROKE_CUT_EPS_PCT`, `STROKE_EDGE_SMOOTH` | `band_alphas`: hand-cut outline and edge rounding |
 | `STROKE_LIGHT_*`, `STROKE_LIGHTS`, `STROKE_CHOICES`, `STICKER_SHADOW_*` | the `stroke_light` deliver option |
 | `STRIPES_*`, `WAVEFORM_*`, `EARS_*`, `BACKDROP_*` | named backdrops in `infrastructure/imaging/backdrops.py` |

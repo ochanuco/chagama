@@ -84,9 +84,9 @@ _KNOWN_REDRAW_OPTIONS = {
 }
 
 
-def _outlines_argument(value: object, *, key: str = "outlines") -> list[dict]:
+def _outlines_argument(value: object, *, key: str = "outlines") -> list[dict] | None:
     if value is None:
-        return [dict(outline) for outline in DELIVER_DEFAULTS["outlines"]]
+        return None
     if not isinstance(value, list):
         raise ValueError(f"{key} must be null or an array, got {type(value).__name__}")
     if len(value) > OUTLINES_MAX:
@@ -302,8 +302,9 @@ def redraw_arguments(options: Mapping) -> dict:
 def deliver_arguments(options: Mapping) -> dict:
     """Validate a deliver request's `options` and map it to deliver() kwargs.
 
-    Absent keys take DELIVER_DEFAULTS; unknown keys or a wrong type raise
-    ValueError naming the offending key.
+    Absent keys take DELIVER_DEFAULTS, except `outlines`, left None for the
+    source's recipe to fill; unknown keys or a wrong type raise ValueError
+    naming the offending key.
     """
     if not isinstance(options, Mapping):
         raise ValueError(

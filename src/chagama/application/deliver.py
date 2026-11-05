@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ..domain.yukari import delivery_style
 from ..domain.yukari.delivery_style import Light
-from ..domain.recipes import DEFAULT_RECIPE
+from ..domain.recipes import DEFAULT_RECIPE, deliver_outlines
 from ..infrastructure.comfyui.deliver_graph import deliver_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -200,7 +200,7 @@ def _deliver(generation_id: str, services: DeliverServices, *,
         stroke_light = (light.direction if light is not None
                         else delivery_style.DELIVER_DEFAULTS["stroke_light"])
     if outlines is None:
-        outlines = delivery_style.DELIVER_DEFAULTS["outlines"]
+        outlines = deliver_outlines(drawing["request"].get("recipe"))
     if keep_scene:
         saturation = 0.0
 
@@ -308,7 +308,8 @@ def _deliver(generation_id: str, services: DeliverServices, *,
         f"**file** `{delivered_name}`\n"
         f"**chimera** {rendered['canonical_url']}", delivered_name, delivered)
     services.emit(f"request {request.get('short_id') or request['id']} done")
-    result = {"generation_ids": [rendered["id"]], "saturation": saturation}
+    result = {"generation_ids": [rendered["id"]], "saturation": saturation,
+              "outlines": outlines}
     if state_path:
         state.update({"status": "completed", "result": result})
         services.state.save(state_path, state)

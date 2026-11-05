@@ -82,9 +82,7 @@ class DeliverArgumentsTest(unittest.TestCase):
     def test_defaults_are_the_recipes_delivery(self):
         self.assertEqual(deliver_arguments({}), {
             "keep_scene": False, "transparent": False, "backdrop": "dots",
-            "stroke_light": RECIPE_DEFAULT,
-            "outlines": [{"color": "#ffffff", "width": 0.8},
-                         {"color": "#7e6988", "width": 1.04}],
+            "stroke_light": RECIPE_DEFAULT, "outlines": None,
             "light": None, "saturation": 1.0})
 
     def test_saturation_is_a_strength_from_zero_to_one_and_off_for_a_kept_scene(self):
