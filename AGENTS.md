@@ -5,8 +5,8 @@ and costs a session an hour to rediscover.
 
 ## What this repository makes
 
-Pictures of Yuzuki Yukari that are **hand-drawn in look, leg-forward in
-composition, in tights**. Those four -- the drawn look, the legs, the tights,
+Pictures of Yuzuki Yukari -- and, in the same drawn style, Kizuna Akari --
+that are **hand-drawn in look, leg-forward in composition, in tights**. Those four -- the drawn look, the legs, the tights,
 the character -- are the user's whole requirement; a model, a LoRA or a
 pipeline stage is kept for as long as it serves them and swapped when
 something serves them better.
@@ -78,14 +78,17 @@ rejects an empty list; a zero-strength LoRA is left out of the graph) and
 remove `(sketch style:1.2), ` from `prompt.positive.style`. The recipe's
 plain `stand` still wears the pre-official costume.
 
-One recipe is live, `yukari` under `src/chagama/domain/`: the shared Anima
-Turbo style (`domain/anima/`: render settings, artist and style tags,
-structural bans, the prompt assembler) drawing the `YUKARI` character
-(`domain/yukari/`: identity, costumes, poses, expressions).
+Two recipes are live, `yukari` and `akari` under `src/chagama/domain/`:
+the shared Anima Turbo style (`domain/anima/`: render settings, artist and
+style tags, structural bans, the prompt assembler, and the poses and
+expressions both characters share by name) drawing the `YUKARI` or `AKARI`
+character (`domain/yukari/`, `domain/akari/`: identity, eyes, costumes,
+and each one's looks on the shared poses and expressions).
 `domain/recipes.py` is the one table of recipes a request can name; the
 worker, `validate_request`, the catalog and `chagama <recipe> prompt` all
 read it, so a new recipe is one entry there plus its own package.
-`docs/yukari/anima.md` maps where each part lives. `domain/yukari/delivery_style.py`
+`docs/yukari/anima.md` maps where each part lives, `docs/akari/anima.md`
+what is akari's own. `domain/yukari/delivery_style.py`
 holds both the delivery identity (backdrop, purple stroke, acceptance band)
 every delivered picture wears, read by imaging, catalog, work and cli
 alike, and the redraw settings (stage-2 model, sampler,

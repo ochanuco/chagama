@@ -11,21 +11,14 @@ class EyeQuality(Enum):
     BLANK = "blank"
 
 
-# The eye_quality component text is EYE_QUALITY[expression.eye_quality] +
-# expression.eyes -- the shared quality tags, then the expression's own extra.
-EYE_QUALITY = {
-    EyeQuality.COLD: "(half-closed eyes:1.3), (unamused:1.15), ",
-    EyeQuality.BLANK: "",
-}
-
-
+# The eye_quality component text is the character's text for
+# `expression.eye_quality` + expression.eyes.
 @dataclass(frozen=True)
 class Expression:
     mouth: str
     eyes: str = ""
     eye_quality: EyeQuality = EyeQuality.COLD
-    # None keeps the character's eye shape; jitome 2.0 holds the eyes open
-    # and flattens a strong emotion.
+    # None keeps the character's eye shape.
     eye_base: str | None = None
     # Bare tags taken out of the face part.
     face_drop: frozenset[str] = frozenset()

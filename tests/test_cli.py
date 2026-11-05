@@ -255,7 +255,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(document["schema_version"], 3)
         self.assertEqual(
             {recipe["name"] for recipe in document["recipes"]},
-            {"yukari"})
+            {"yukari", "akari"})
 
     @patch.object(cli, "publish_catalog_document")
     @patch.object(cli, "ChimeraClient")

@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from .expression import EyeQuality
 from .legwear import OFF_LEGWEAR, REMOVING_LEGWEAR, LegwearState
 
 
@@ -59,6 +60,26 @@ class Wardrobe:
 
 
 @dataclass(frozen=True)
+class PoseLook:
+    """A character's own blocks for one shared pose; None keeps the pose's."""
+    costume: str | None = None
+    body: str | None = None
+    face: str | None = None
+    identity: str | None = None
+    # Appended to the pose's own negative.
+    negative: str = ""
+
+
+@dataclass(frozen=True)
+class ExpressionLook:
+    """A character's own eyes for one shared expression; None keeps the
+    expression's."""
+    eyes: str | None = None
+    eye_base: str | None = None
+    face_drop: frozenset[str] | None = None
+
+
+@dataclass(frozen=True)
 class Character:
     tag: str
     series: str
@@ -69,9 +90,13 @@ class Character:
     identity_tag_names: frozenset[str]
     costume: str
     eye_shape: str
+    # Leads the eye_quality component, per `Expression.eye_quality`.
+    eye_quality: Mapping[EyeQuality, str]
     nails: str
     body: str
     face: str
+    # Appended to the style's (or a pose's own) style block.
+    style: str
     wardrobe: Wardrobe
     # Negative tags in the order `Recipe.negative` places them: `line_ban`
     # after the style's line ban, `eye_ban` and `palette_ban` after its tail,
@@ -83,3 +108,6 @@ class Character:
     # The character alone, for a reference render: no pose, framing, angle
     # or expression of its own. Never listed as a look.
     persona_pose: str
+    # Laid over the shared poses and expressions by name.
+    pose_looks: Mapping[str, PoseLook]
+    expression_looks: Mapping[str, ExpressionLook]

@@ -14,12 +14,13 @@ from chagama.application.generate import request_graph, validate_request
 from chagama.domain.generation.prompt_lint import tags as prompt_tags
 from chagama.domain.anima import style as st
 from chagama.domain.anima.components import PART_NAMES
-from chagama.domain.anima.expression import EYE_QUALITY, Expression, EyeQuality
+from chagama.domain.anima.expression import Expression, EyeQuality
 from chagama.domain.anima.legwear import (OFF_LEGWEAR, OFF_LEGWEAR_BAN,
                                           REMOVING_LEGWEAR,
                                           REMOVING_LEGWEAR_BAN, SHEER_BAN,
                                           LegwearState)
 from chagama.domain.yukari import prompt_style as ps
+from chagama.domain.yukari.character import YUKARI
 from chagama.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
                                             SHEER_GLOSS_LEGWEAR,
                                             SHEER_LEGWEAR)
@@ -496,9 +497,9 @@ class EyeQualityTest(unittest.TestCase):
             self.EXPECTED)
 
     def test_cold_and_blank_tag_text(self):
-        self.assertEqual(EYE_QUALITY[EyeQuality.COLD],
+        self.assertEqual(YUKARI.eye_quality[EyeQuality.COLD],
                          "(half-closed eyes:1.3), (unamused:1.15), ")
-        self.assertEqual(EYE_QUALITY[EyeQuality.BLANK], "")
+        self.assertEqual(YUKARI.eye_quality[EyeQuality.BLANK], "")
 
     def test_eye_quality_component_is_quality_text_plus_extras(self):
         for name, expression in EXPRESSIONS.items():
@@ -506,10 +507,10 @@ class EyeQualityTest(unittest.TestCase):
                 parts = dict(positive_parts("stand", expression=name))
                 self.assertEqual(
                     parts["eye_quality"],
-                    EYE_QUALITY[expression.eye_quality] + expression.eyes)
+                    YUKARI.eye_quality[expression.eye_quality] + expression.eyes)
 
     def test_resting_no_longer_carries_its_own_unamused_weight(self):
-        # Unified onto EYE_QUALITY[COLD]: (unamused:1.3) -> (unamused:1.15).
+        # Unified onto her COLD eye quality: (unamused:1.3) -> (unamused:1.15).
         parts = dict(positive_parts("stand", expression="resting"))
         self.assertEqual(parts["eye_quality"],
                          "(half-closed eyes:1.3), (unamused:1.15), ")

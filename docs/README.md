@@ -31,7 +31,8 @@ the archive and lives on chimera or in the named PR.
 
 | File | ~tok | Covers |
 |---|---|---|
-| [yukari/anima.md](yukari/anima.md) | 1.3k | the live recipe: the shared Anima style and the yukari character, where each block lives, cross-file contracts |
+| [yukari/anima.md](yukari/anima.md) | 1.5k | the shared Anima style, poses and expressions, and the yukari character: where each block lives, cross-file contracts |
+| [akari/anima.md](akari/anima.md) | 0.5k | the akari character: what is hers on top of the shared style and poses |
 | [yukari/delivery_style.md](yukari/delivery_style.md) | 0.9k | delivery constants: which code reads them, cross-file contracts |
 
 ## Operations

@@ -30,6 +30,7 @@ NAILS = "(nail polish:1.3), (light purple nails:1.4), "
 # is) the tag stops reaching the eyes at any weight.
 EYE_SHAPE = "(jitome:2.0), (tareme:1.2), (long eyes:1.25), "
 EYE_SHAPE_SOFT = "(jitome:1.2), (tareme:1.2), (long eyes:1.25), "
+COLD_EYES = "(half-closed eyes:1.3), (unamused:1.15), "
 FACE = ("(large eyes:1.2), (round face:1.3), (tareme:1.2), "
         "(thick eyelashes:1.3), (long eyelashes:1.15), ")
 
