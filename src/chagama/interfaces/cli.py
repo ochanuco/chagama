@@ -31,9 +31,10 @@ from ..application.request_options import (
 )
 from ..application.watch import WatchServices, watch
 from ..application.work import work
-from ..domain.yukari.angles import ANGLES
-from ..domain.yukari.components import Framing
-from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
+from ..domain.anima.angles import ANGLES
+from ..domain.anima.components import Framing
+from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
+from ..domain.yukari.costumes import COSTUMES
 from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,

@@ -1,6 +1,6 @@
 """Camera framing: the tag text and canvas each `Framing` kind carries.
 
-`recipe._components` builds the `framing_tags` component as
+`Recipe.components` builds the `framing_tags` component as
 `pose.angle + pose.angle_action + FRAMING[pose.framing].text`, with a
 request's `angle` and `framing` in place of the pose's; `render_spec`
 resolves canvas as `pose.canvas` if set and no `framing` was requested, else

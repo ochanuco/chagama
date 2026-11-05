@@ -1,12 +1,14 @@
 """Component-model invariants: Section/Priority ordering, the GENERAL-section
-priority table `_components` assigns, part-mapping coverage, and every
+priority table `Recipe.components` assigns, part-mapping coverage, and every
 pose's Framing."""
 
 from __future__ import annotations
 
 import unittest
 
-from chagama.domain.yukari.components import (
+from chagama.domain.anima.components import (
+    PART_GROUPS,
+    PART_NAMES,
     PART_OF,
     Component,
     Framing,
@@ -14,12 +16,10 @@ from chagama.domain.yukari.components import (
     Section,
     assemble,
 )
-from chagama.domain.yukari.framing import FRAMING
+from chagama.domain.anima.framing import FRAMING
 from chagama.domain.yukari.poses import POSES
 from chagama.domain.yukari.recipe import (
-    PART_GROUPS,
-    PART_NAMES,
-    _components,
+    RECIPE,
     positive,
     positive_parts,
     render_spec,
@@ -58,7 +58,7 @@ class GeneralPriorityTableTest(unittest.TestCase):
     def test_general_components_match_the_priority_table(self):
         for pose in POSES:
             with self.subTest(pose=pose):
-                for component in _components(pose):
+                for component in RECIPE.components(pose):
                     if component.section != Section.GENERAL:
                         continue
                     if component.name in self.LEAD:
@@ -79,7 +79,7 @@ class PartMappingTest(unittest.TestCase):
 
     def test_every_declared_component_maps_to_a_known_part(self):
         for pose in POSES:
-            for component in _components(pose):
+            for component in RECIPE.components(pose):
                 self.assertIn(component.name, PART_OF, component.name)
 
     def test_every_legacy_groups_members_exist_in_positive_parts(self):

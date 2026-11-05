@@ -18,20 +18,38 @@ uv run chagama catalog                                            # every pose, 
 On the MCP, `get_catalog_pose yukari <pose>` returns the same thing as the
 production worker sees it.
 
-## Where things are (`src/chagama/domain/yukari/`)
+## Where things are
+
+The recipe is the shared Anima style drawing one `Character`. The style
+never names a character; a second character fills a `Character` and reuses
+`Recipe`.
+
+`src/chagama/domain/anima/` (the style, shared by every character):
 
 | File | Holds |
 |---|---|
-| `layers.py` | the three layers every pose stands on: `CHARACTER` (character/series tags, identity, costume `standard`), `CUSTOMIZATION` (artist, eye shape, nails, body, face, style, default legwear kind) and `PRODUCTION` (quality/count tags, the green cut-out backdrop) |
-| `prompt_style.py` | the text of those blocks, the negative bans, render constants (model, canvas, steps, cfg, sampler) |
-| `poses.py` | `POSE_LABELS` (the Japanese display name every pose must have, published as the catalog pose's `label`) and one `Pose` per pose: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/style/negative/canvas/loras; `yukari_persona` (`PERSONA`), the layers with no pose, framing or expression, is kept out of `POSES` |
+| `style.py` | quality/count tags, artist tags, the green cut-out backdrop, `STYLE`, the structural negative bans (digits, detail, coloured line, thin body, shine, gradient, eye sparkle and motion lines, score, proportion, text), render constants (model, canvas, steps, cfg, sampler) |
+| `character.py` | `Character` (character/series tags, identity and its guarded tag names, default costume, eye shape, nails, body, face, the character's own negative bans, persona pose name) and `Wardrobe` (costume blocks, from-behind swaps, per-costume bans, hood ban, legwear blocks) |
+| `recipe.py` | `Recipe(character, poses, expressions)`: assembly, negative order, `render_spec`, identity tags, the persona pose |
+| `pose.py` | the `Pose` record: action, mood, gesture, framing, angle (camera) and `angle_action` (action tags that sit beside it), default expression/costume/legwear, optional body/face/identity/nails/style/negative/canvas/loras |
+| `expression.py` | the `Expression` record and the `EyeQuality` routing |
+| `legwear.py` | legwear kinds (`sheer` default, `sheer-gloss`, `opaque`) and states (`worn`, `removing`, `off`) with their shared negative edits |
 | `angles.py` | `ANGLE_LABELS` (Japanese display names, published as `angle_labels`) and the `angle` request words (`from_below`, `from_above`, `from_front`, `from_side`, `from_behind`, `dutch`, `pov`), one axis each: height, facing, tilt, pov |
-| `costumes.py` | garment block per costume, `LEGWEAR` per costume, the legwear kinds (`sheer` default, `sheer-gloss`, `opaque`) and states (`worn`, `removing`, `off`) with their negative edits |
-| `expressions.py` | mouth/eyes per expression and the `EyeQuality` routing |
-| `framing.py` | `FRAMING_LABELS` (published as `framing_labels`) and shot tags per `Framing` kind; `BUST` also carries its canvas |
-| `components.py` | the component model: `(name, section, priority, text)`, legacy part groups |
-| `recipe.py` | assembly, `render_spec`, identity tags, the IL redraw prompt |
+| `framing.py` | `FRAMING_LABELS` (published as `framing_labels`) and shot tags per `Framing` kind; `BUST` and `CLOSE` also carry their canvas |
+| `components.py` | the component model: `(name, section, priority, text)`, `PART_NAMES` and the legacy `PART_GROUPS` |
 | `dials.py` | words for `render.width`/`render.height` patches |
+
+`src/chagama/domain/yukari/` (the character):
+
+| File | Holds |
+|---|---|
+| `character.py` | `YUKARI`, the `Character` the recipe draws |
+| `prompt_style.py` | her blocks: character/series tags, identity, eye shapes, face, body, nails, hair-ornament swaps, her negative bans (purple line, eye colour, vivid palette, hood, black garment, sheer tone, mechanical body) |
+| `costumes.py` | garment block per costume, `LEGWEAR` per costume, the sheer blocks, assembled into `WARDROBE` |
+| `poses.py` | `POSE_LABELS` (the Japanese display name every pose must have, published as the catalog pose's `label`) and one `Pose` per pose; `yukari_persona` (`PERSONA_POSE`) is kept out of `POSES` |
+| `expressions.py` | mouth/eyes per expression |
+| `recipe.py` | `RECIPE`, the style bound to `YUKARI`, and its `positive` / `negative` / `render_spec` |
+| `reference.py` | a reference picture's tags onto `yukari_persona` |
 | `delivery_style.py` | delivery identity, redraw settings and deliver defaults; see [delivery_style.md](delivery_style.md) |
 
 The graph is built by `infrastructure/comfyui/anima_graph.py`.
@@ -45,8 +63,9 @@ The graph is built by `infrastructure/comfyui/anima_graph.py`.
 - Each component name is a `prompt.positive.<name>` patch target. The 13
   legacy part names still resolve through `PART_GROUPS`.
 - A request's `costume`, `expression`, `legwear`, `legwear_state`, `angle`
-  and `framing` override the pose's own. `body`, `face` and `style` override
-  `CUSTOMIZATION` per pose; `loras` belong to the pose. `pose.legwear=False` ignores both legwear parameters.
+  and `framing` override the pose's own. A pose's `body`, `face`, `identity`
+  and `nails` override the character's, its `style` and `background` the
+  style's; `loras` belong to the pose. `pose.legwear=False` ignores both legwear parameters.
 - `framing_tags` is the camera angle, then `pose.angle_action`, then the
   framing's shot tags. `angle` (comma-separated words or a list, at most
   one word per axis, joined in axis order) replaces only the camera angle;

@@ -7,8 +7,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..domain.anima.style import HEIGHT, WIDTH
 from ..domain.yukari import delivery_style
-from ..domain.yukari.prompt_style import HEIGHT, WIDTH
 from ..infrastructure.comfyui.base_graph import (
     BaseRoles,
     base_roles,

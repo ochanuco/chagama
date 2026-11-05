@@ -12,21 +12,21 @@ from unittest.mock import patch
 
 from chagama.application.generate import request_graph, validate_request
 from chagama.domain.generation.prompt_lint import tags as prompt_tags
+from chagama.domain.anima import style as st
+from chagama.domain.anima.components import PART_NAMES
+from chagama.domain.anima.expression import EYE_QUALITY, Expression, EyeQuality
+from chagama.domain.anima.legwear import (OFF_LEGWEAR, OFF_LEGWEAR_BAN,
+                                          REMOVING_LEGWEAR,
+                                          REMOVING_LEGWEAR_BAN, SHEER_BAN,
+                                          LegwearState)
 from chagama.domain.yukari import prompt_style as ps
 from chagama.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
-                                                    OFF_LEGWEAR,
-                                                    OFF_LEGWEAR_BAN,
-                                                    REMOVING_LEGWEAR,
-                                                    REMOVING_LEGWEAR_BAN,
-                                                    SHEER_GLOSS_LEGWEAR,
-                                                    SHEER_LEGWEAR,
-                                                    LegwearState)
-from chagama.domain.yukari.expressions import (
-    EXPRESSIONS, EYE_QUALITY, Expression, EyeQuality)
+                                            SHEER_GLOSS_LEGWEAR,
+                                            SHEER_LEGWEAR)
+from chagama.domain.yukari.expressions import EXPRESSIONS
 from chagama.domain.yukari.poses import POSES
 from chagama.domain.yukari.recipe import (
-    PART_NAMES, identity_tags, negative, positive, positive_parts,
-    render_spec,
+    identity_tags, negative, positive, positive_parts, render_spec,
 )
 from chagama.infrastructure.comfyui import anima_graph
 from chagama.interfaces import cli
@@ -362,12 +362,12 @@ class PromptTest(unittest.TestCase):
 
     def test_sheer_gloss_legwear_drops_the_garment_gloss_bans_only(self):
         text = negative("amae", legwear="sheer-gloss")
-        for tags in ps.GARMENT_GLOSS_TAGS:
+        for tags in st.GARMENT_GLOSS_TAGS:
             self.assertNotIn(tags, text)
         self.assertIn("(shiny hair:1.4), (hair highlights:1.2), (watercolor:1.3), ",
                       text)
-        self.assertIn(ps.SHEER_BAN + ps.SCORE_BAN, text)
-        self.assertIn(ps.GRADIENT_BAN, text)
+        self.assertIn(SHEER_BAN + st.SCORE_BAN, text)
+        self.assertIn(st.GRADIENT_BAN, text)
 
     def test_sheer_gloss_legwear_leaves_a_bare_leg_pose_alone(self):
         self.assertEqual(positive("bust", legwear="sheer-gloss"), positive("bust"))
@@ -404,13 +404,13 @@ class PromptTest(unittest.TestCase):
 
     def test_sheer_legwear_drops_the_garment_gloss_bans_only(self):
         text = negative("amae", legwear="sheer")
-        for tags in ps.GARMENT_GLOSS_TAGS:
+        for tags in st.GARMENT_GLOSS_TAGS:
             self.assertNotIn(tags, text)
         self.assertIn("(shiny hair:1.4), (hair highlights:1.2), (watercolor:1.3), ",
                       text)
-        self.assertIn(ps.SHEER_BAN + ps.SHEER_TONE_BAN + ps.SCORE_BAN, text)
+        self.assertIn(SHEER_BAN + ps.SHEER_TONE_BAN + st.SCORE_BAN, text)
         self.assertNotIn(ps.SHEER_TONE_BAN, negative("amae", legwear="sheer-gloss"))
-        self.assertIn(ps.GRADIENT_BAN, text)
+        self.assertIn(st.GRADIENT_BAN, text)
 
     def test_sheer_legwear_leaves_a_bare_leg_pose_alone(self):
         self.assertEqual(positive("bust", legwear="sheer"), positive("bust"))
@@ -428,7 +428,8 @@ class PromptTest(unittest.TestCase):
 
     def test_dance_carries_its_own_expression_and_costume(self):
         text = positive("dance")
-        self.assertTrue(text.startswith(ps.QUALITY + ps.CHARACTER + ps.IDENTITY))
+        self.assertTrue(text.startswith(st.QUALITY + ps.CHARACTER_TAG + ps.SERIES_TAG
+                                        + st.ARTIST_TAG + ps.IDENTITY))
         self.assertIn("(:v:1.5)", text)
         self.assertIn(COSTUMES["standard"], text)
 
@@ -669,7 +670,7 @@ class PoseTableTest(unittest.TestCase):
 class RenderSpecTest(unittest.TestCase):
     def test_render_spec_fields(self):
         spec = render_spec("coffee", 42, "p")
-        self.assertEqual(spec.model_path, ps.MODEL)
+        self.assertEqual(spec.model_path, st.MODEL)
         self.assertEqual((spec.width, spec.height), (1024, 1640))
         self.assertEqual(spec.steps, 10)
 
@@ -690,7 +691,7 @@ class RenderSpecTest(unittest.TestCase):
         spec = render_spec("stand", 42, "p", hires=2048)
         self.assertEqual(spec.hires.width, 1280)
         self.assertEqual(spec.hires.height, 2048)
-        self.assertEqual(spec.hires.denoise, ps.HIRES_DENOISE)
+        self.assertEqual(spec.hires.denoise, st.HIRES_DENOISE)
         self.assertIsNone(spec.hires.positive)
         self.assertEqual(spec.hires.negative, spec.prompts.negative)
 
@@ -791,11 +792,11 @@ class LegwearStateTest(unittest.TestCase):
 
     def test_removing_negative_bans_thighhighs_kneehighs_socks(self):
         removing = negative("stand", legwear_state="removing")
-        self.assertIn(REMOVING_LEGWEAR_BAN + ps.SCORE_BAN, removing)
+        self.assertIn(REMOVING_LEGWEAR_BAN + st.SCORE_BAN, removing)
 
     def test_off_negative_bans_every_legwear_kind_and_drops_worn_only_bans(self):
         off = negative("stand", legwear_state="off")
-        self.assertIn(OFF_LEGWEAR_BAN + ps.SCORE_BAN, off)
+        self.assertIn(OFF_LEGWEAR_BAN + st.SCORE_BAN, off)
 
     def test_off_drops_the_sheer_kind_negative_edits(self):
         # `dance`'s legwear_kind is sheer-gloss; OFF means no legwear kind is
@@ -846,7 +847,7 @@ class GraphTest(unittest.TestCase):
         spec = replace(render_spec("coffee", 42, "p"), guided_steps=None)
         graph = anima_graph.build_graph(spec)
         self.assertEqual(graph["1"]["class_type"], "UNETLoader")
-        self.assertEqual(graph["1"]["inputs"]["unet_name"], ps.MODEL)
+        self.assertEqual(graph["1"]["inputs"]["unet_name"], st.MODEL)
         self.assertEqual(graph["2"]["class_type"], "CLIPLoader")
         self.assertEqual(graph["4"]["class_type"], "VAELoader")
         self.assertEqual(graph["5"]["class_type"], "EmptyLatentImage")
@@ -948,7 +949,7 @@ class GuidedStepsTest(unittest.TestCase):
 
     def test_default_spec_is_silvermoon_with_guided_steps(self):
         spec = render_spec("coffee", 42, "p")
-        self.assertEqual(spec.model_path, ps.MODEL)
+        self.assertEqual(spec.model_path, st.MODEL)
         self.assertEqual(spec.model_path,
                          "silvermoon-turbo.safetensors")
         self.assertEqual(spec.guided_steps, 4)
@@ -1184,7 +1185,7 @@ class AngleFramingOverrideTest(unittest.TestCase):
         self.assertEqual((render_spec("gao", 7, "p").width,
                           render_spec("gao", 7, "p").height), (1024, 1280))
         spec = render_spec("gao", 7, "p", framing="full")
-        self.assertEqual((spec.width, spec.height), (ps.WIDTH, ps.HEIGHT))
+        self.assertEqual((spec.width, spec.height), (st.WIDTH, st.HEIGHT))
         spec = render_spec("stand", 7, "p", framing="bust")
         self.assertEqual((spec.width, spec.height), (1280, 2048))
 

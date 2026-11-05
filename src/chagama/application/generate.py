@@ -10,10 +10,10 @@ from dataclasses import dataclass, replace as spec_replace
 from pathlib import Path
 from typing import Protocol
 
+from ..domain.anima.dials import DIALS
 from ..domain.generation.models import PromptPair, RenderSpec
 from ..domain.generation.patches import apply_patches, parse_patches
 from ..domain.generation.prompt_lint import tags as prompt_tags
-from ..domain.yukari.dials import DIALS
 from ..infrastructure.comfyui.base_graph import conditioning_text
 from ..infrastructure.comfyui.timings import note_ingested
 from .ingest import create_job, open_request, rate_generation

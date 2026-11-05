@@ -20,9 +20,13 @@ from ..domain.generation.patches import (
     TEXT_OP_KEYS,
     TEXT_TARGETS,
 )
-from ..domain.yukari.angles import ANGLE_LABELS, ANGLES
-from ..domain.yukari.components import Framing
-from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
+from ..domain.anima.angles import ANGLE_LABELS, ANGLES
+from ..domain.anima.components import PART_GROUPS, Framing
+from ..domain.anima.dials import DIALS
+from ..domain.anima.framing import FRAMING, FRAMING_LABELS
+from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
+from ..domain.anima.style import HEIGHT, WIDTH
+from ..domain.yukari.costumes import COSTUMES
 from ..domain.yukari.delivery_style import (
     BACKDROP,
     BACKDROP_LABELS,
@@ -63,12 +67,9 @@ from ..domain.yukari.delivery_style import (
     STROKE_CHOICES,
     STROKE_LIGHTS,
 )
-from ..domain.yukari.dials import DIALS
 from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.framing import FRAMING, FRAMING_LABELS
 from ..domain.yukari.poses import PERSONA_POSE, POSE_LABELS, POSES
-from ..domain.yukari.prompt_style import HEIGHT, WIDTH
-from ..domain.yukari.recipe import PART_GROUPS, identity_tags, render_spec
+from ..domain.yukari.recipe import identity_tags, render_spec
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
 from ..infrastructure.imaging.depth_blur import sharp_reach_per_f

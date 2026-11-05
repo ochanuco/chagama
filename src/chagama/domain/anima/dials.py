@@ -1,4 +1,4 @@
-"""Named words for yukari's request options, published in the catalog."""
+"""Named words for an Anima recipe's request options, published in the catalog."""
 
 from __future__ import annotations
 
