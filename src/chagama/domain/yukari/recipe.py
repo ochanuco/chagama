@@ -1,14 +1,14 @@
-"""The yukari recipe: the Anima style drawing `YUKARI` in her poses and
-expressions."""
+"""The yukari recipe: the Anima style drawing `YUKARI` in the shared poses
+and expressions."""
 
 from __future__ import annotations
 
+from ..anima.expressions import EXPRESSIONS
+from ..anima.poses import POSES
 from ..anima.recipe import Recipe
 from .character import YUKARI
-from .expressions import EXPRESSIONS
-from .poses import POSES
 
-RECIPE = Recipe(character=YUKARI, poses=POSES, expressions=EXPRESSIONS)
+RECIPE = Recipe.drawing(YUKARI, POSES, EXPRESSIONS)
 
 _components = RECIPE.components
 positive_parts = RECIPE.positive_parts

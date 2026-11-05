@@ -7,9 +7,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from .akari.recipe import RECIPE as AKARI
 from .anima.dials import DIALS
+from .anima.poses import POSE_LABELS
 from .anima.recipe import Recipe
-from .yukari.poses import POSE_LABELS as YUKARI_POSE_LABELS
 from .yukari.recipe import RECIPE as YUKARI
 
 
@@ -23,7 +24,8 @@ class RecipeEntry:
 
 
 RECIPES: Mapping[str, RecipeEntry] = {
-    "yukari": RecipeEntry(YUKARI, YUKARI_POSE_LABELS, DIALS),
+    "yukari": RecipeEntry(YUKARI, POSE_LABELS, DIALS),
+    "akari": RecipeEntry(AKARI, POSE_LABELS, DIALS),
 }
 
 # What a refining request records when its source names no recipe.

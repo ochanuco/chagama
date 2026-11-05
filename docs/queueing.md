@@ -294,7 +294,7 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   in a subprocess and deletes the picture; a 404 re-queues while attempts remain.
 - `reference_render` rechecks each `(part, tag)` against the source's
   `candidates` and posts a `generate` (`system`, key `reference_render:{id}`).
-- The render draws on `BASE` (`domain/yukari/poses.py`, not in the catalog):
+- The render draws on `yukari_persona` (`Recipe.persona`, not among the catalog's poses):
   the character with no pose, framing, angle, expression or legwear of its own.
 - The analysis runs in the reference env (`docs/release.md`) with the
   `reference/` models of `worker-models.toml`; without them only reference rows fail.

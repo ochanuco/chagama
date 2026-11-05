@@ -17,7 +17,8 @@ class Pose:
     framing: Framing | None
     leg_display: str
     expression: str | None
-    costume: str
+    # None wears the character's own costume.
+    costume: str | None = None
     negative: str = ""
     negative_tail: str = ""
     canvas: tuple[int, int] | None = None

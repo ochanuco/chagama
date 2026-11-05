@@ -9,10 +9,10 @@ from dataclasses import dataclass, replace
 from ..generation.models import HiresSpec, PromptPair, RenderSpec
 from ..generation.prompt_lint import tags as prompt_tags
 from .angles import angle_text, shows_back
-from .character import Character
+from .character import Character, ExpressionLook, PoseLook
 from .components import (PART_GROUPS, Component, Framing, Priority, Section,
                          assemble)
-from .expression import BLANK, EYE_QUALITY, Expression
+from .expression import BLANK, Expression
 from .framing import FRAMING, LEG_BAN, LEG_TAG_NAMES
 from .legwear import (OFF_LEGWEAR_BAN, REMOVING_LEGWEAR_BAN, SHEER_BAN,
                       SHEER_GLOSS_BAN, LegwearState)
@@ -44,6 +44,10 @@ def _own(override: str | None, layer: str) -> str:
     return override if override is not None else layer
 
 
+def _over(override: str | None, layer: str | None) -> str | None:
+    return override if override is not None else layer
+
+
 def _drop_tags(text: str, names: frozenset[str]) -> str:
     if not names:
         return text
@@ -63,11 +67,47 @@ def _without_framing_tags(text: str) -> str:
                      if not set(prompt_tags(chunk)) & FRAMING_TAG_NAMES)
 
 
+def _dress_pose(pose: Pose, look: PoseLook | None, costume: str) -> Pose:
+    look = look or PoseLook()
+    return replace(
+        pose,
+        costume=look.costume or pose.costume or costume,
+        body=_over(look.body, pose.body),
+        face=_over(look.face, pose.face),
+        identity=_over(look.identity, pose.identity),
+        negative=pose.negative + look.negative)
+
+
+def _dress_expression(expression: Expression,
+                      look: ExpressionLook | None) -> Expression:
+    if look is None:
+        return expression
+    return replace(
+        expression,
+        eyes=_own(look.eyes, expression.eyes),
+        eye_base=_over(look.eye_base, expression.eye_base),
+        face_drop=(look.face_drop if look.face_drop is not None
+                   else expression.face_drop))
+
+
 @dataclass(frozen=True)
 class Recipe:
     character: Character
     poses: Mapping[str, Pose]
     expressions: Mapping[str, Expression]
+
+    @classmethod
+    def drawing(cls, character: Character, poses: Mapping[str, Pose],
+                expressions: Mapping[str, Expression]) -> Recipe:
+        """The shared poses and expressions with the character's looks laid over them."""
+        return cls(
+            character,
+            {name: _dress_pose(pose, character.pose_looks.get(name),
+                               character.costume)
+             for name, pose in poses.items()},
+            {name: _dress_expression(expression,
+                                     character.expression_looks.get(name))
+             for name, expression in expressions.items()})
 
     @property
     def persona(self) -> Pose:
@@ -114,7 +154,8 @@ class Recipe:
             Component("mouth", G, M, e.mouth),
             Component("mood", G, M, p.mood),
             Component("eye_base", G, L, _own(e.eye_base, ch.eye_shape)),
-            Component("eye_quality", G, L, EYE_QUALITY[e.eye_quality] + e.eyes),
+            Component("eye_quality", G, L,
+                      ch.eye_quality[e.eye_quality] + e.eyes),
             Component("gesture", G, M, p.gesture),
             Component("nails", G, M, _own(p.nails, ch.nails)),
             Component("costume", G, M,
@@ -129,7 +170,7 @@ class Recipe:
             Component("cutout", G, M, _own(p.background, BACKGROUND)),
             Component("face", G, T,
                       _drop_tags(_own(p.face, ch.face), e.face_drop)),
-            Component("style", G, T, _own(p.style, STYLE)),
+            Component("style", G, T, _own(p.style, STYLE) + ch.style),
         )
         return assemble(declared)
 
