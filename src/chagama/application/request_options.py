@@ -54,7 +54,7 @@ from .redraw import HIRES_DENOISE
 
 _KNOWN_DELIVER_OPTIONS = frozenset({
     "keep_scene", "transparent", "backdrop", "stroke_light", "outlines", "light",
-    "see_through",
+    "see_through", "saturation",
 })
 # The see-through gain's range; 1 is the cut as solved.
 _SEE_THROUGH_RANGE = (1.0, 5.0)
@@ -365,6 +365,8 @@ def deliver_arguments(options: Mapping) -> dict:
     if not low <= see_through <= high:
         raise ValueError(f"see_through must be between {low:g} and {high:g}, got {see_through!r}")
 
+    saturation = float(_ranged(options, "saturation", SATURATION_STRENGTH))
+
     return {
         "keep_scene": keep_scene,
         "transparent": transparent,
@@ -372,6 +374,7 @@ def deliver_arguments(options: Mapping) -> dict:
         "stroke_light": stroke_light,
         "outlines": outlines,
         "light": light,
+        "saturation": 0.0 if keep_scene else saturation,
         **({"see_through": float(see_through)} if see_through != 1.0 else {}),
     }
 

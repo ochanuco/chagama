@@ -87,16 +87,18 @@ class CliTest(unittest.TestCase):
             "keep_scene": False, "transparent": False, "backdrop": "dots",
             "stroke_light": RECIPE_DEFAULT,
             "outlines": [{"color": "#ffffff", "width": 0.8},
-                         {"color": "#885b80", "width": 1.04}],
-            "light": None})
+                         {"color": "#7e6988", "width": 1.04}],
+            "light": None, "saturation": 1.0})
 
     @patch.object(cli, "deliver")
     @patch.object(cli, "ChimeraClient")
     def test_deliver_flags_dispatch_without_network(
             self, chimera_class, run_deliver):
         cli.main(["deliver", "gen-1", "--transparent", "--light", "moon,se",
-                  "--outline", "#ffffff,0.8", "--outline", "#885b80,2"])
+                  "--outline", "#ffffff,0.8", "--outline", "#885b80,2",
+                  "--saturation", "0"])
         kwargs = run_deliver.call_args.kwargs
+        self.assertEqual(kwargs["saturation"], 0.0)
         self.assertIs(kwargs["transparent"], True)
         self.assertIsNone(kwargs["backdrop"])
         self.assertEqual(kwargs["outlines"], [{"color": "#ffffff", "width": 0.8},

@@ -85,18 +85,20 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 - The source must be a picture: a delivered picture and a LayerDiffuse
   picture are refused. Any other recipe or model is delivered as drawn.
 - The options are `keep_scene`, `transparent`, `backdrop`, `stroke_light`,
-  `outlines`, `light` and `see_through`; any other key is an error. An absent
-  `stroke_light` or
-  `backdrop` takes the recipe's `deliver.defaults`, the same values the WebUI
-  sends. `light` only shades the stroke and tints the backdrop; it does not
-  redraw. An explicit `backdrop: null` without `transparent` delivers a
-  transparent picture; `transparent: false` keeps the white background.
+  `outlines`, `light`, `see_through` and `saturation`; any other key is an
+  error. An absent `stroke_light`, `backdrop` or `saturation` takes the
+  recipe's `deliver.defaults`, as the WebUI sends. `light` only shades the
+  stroke and tints the backdrop. `backdrop: null` without `transparent` is
+  transparent; `transparent: false` keeps the white background.
 - `outlines` lists the bands around the figure, innermost first, each
   `{"color": "#rrggbb", "width": w}` with `w` a percent of the longest side,
   0 < w <= 5, at most 6 bands. Absent or `null` takes
   `deliver.outlines.default` from the catalog; `[]` delivers without bands
   and without a drop shadow. Each band starts at the previous band's outer
   edge; the innermost also runs under the figure's soft edge.
+- `saturation` 0..1 (default 1) compresses the cut figure on the `REPIN_*`
+  curve before the bands are drawn, so the bands keep the `outlines` colours
+  exactly; it is recorded when above 0, and a `keep_scene` delivery is never compressed.
 - `stroke_light` is a light direction (`n` .. `nw`) or `even` (a uniform outermost
   band, the same as `null`); it shades and extrudes the outermost band only. Only a
   direction throws the drop shadow, straight away from the light, in the outermost
@@ -148,13 +150,11 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 
 ### Saturation options
 
-- The source must be a deliver output with its layers, or a cut redraw.
-  `strength` 0..1 (default 1) blends the `REPIN_*` compression in; 0 leaves
-  the layers as they are.
-- Each layer is compressed through its own alpha (every pixel above 0), the
-  outline colour included; `layer-backdrop` passes through. The picture is
-  backdrop, outline, figure composited as stage does (RGBA without a
-  backdrop). The output records `kind: "saturation"`, `base_generation` and
+- The source must be a deliver output with its layers or a cut redraw; one
+  deliver already compressed (`saturation` > 0) is refused. `strength` 0..1
+  (default 1) compresses each layer through its own alpha, outline colour
+  included; `layer-backdrop` passes through and the picture is composited as
+  stage does. The output records `kind: "saturation"`, `base_generation` and
   `strength`, and later kinds take it as the delivery it came from.
 
 ### Lighting options

@@ -156,7 +156,8 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
                               key_prefix=f"request:{row['id']}",
                               request_id=row["id"], context=context,
                               **arguments)
-    result["resolved_options"] = {**options, "outlines": arguments["outlines"]}
+    result["resolved_options"] = {**options, "outlines": arguments["outlines"],
+                                  "saturation": arguments["saturation"]}
     return result
 
 

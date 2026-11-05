@@ -84,8 +84,16 @@ class DeliverArgumentsTest(unittest.TestCase):
             "keep_scene": False, "transparent": False, "backdrop": "dots",
             "stroke_light": RECIPE_DEFAULT,
             "outlines": [{"color": "#ffffff", "width": 0.8},
-                         {"color": "#885b80", "width": 1.04}],
-            "light": None})
+                         {"color": "#7e6988", "width": 1.04}],
+            "light": None, "saturation": 1.0})
+
+    def test_saturation_is_a_strength_from_zero_to_one_and_off_for_a_kept_scene(self):
+        self.assertEqual(deliver_arguments({"saturation": 0})["saturation"], 0.0)
+        self.assertEqual(deliver_arguments({"saturation": 0.5})["saturation"], 0.5)
+        self.assertEqual(deliver_arguments({"keep_scene": True})["saturation"], 0.0)
+        for bad in (-0.1, 1.5, True, "1", None):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "saturation"):
+                deliver_arguments({"saturation": bad})
 
     def test_see_through_is_a_gain_from_one_to_five(self):
         self.assertEqual(deliver_arguments({"see_through": 3})["see_through"], 3.0)

@@ -24,7 +24,7 @@ from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
 from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 LAYERS = ["dlv-g-layer-figure", "dlv-g-layer-outline", "dlv-g-layer-backdrop"]
-OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]
+OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#7e6988", "width": 1.04}]
 GRAPH_KWARGS = dict(
     keep_scene=False,
     transparent=False, backdrop="dots", stroke_light="n", outlines=OUTLINES,
@@ -396,6 +396,20 @@ class DeliverUseCaseTest(unittest.TestCase):
                           )[2]["parameters"]
         self.assertEqual(parameters["outlines"],
                          delivery_style.DELIVER_DEFAULTS["outlines"])
+
+    def test_the_figure_is_compressed_by_default_and_the_strength_recorded(self):
+        for kwargs, recorded in (({}, 1.0), ({"saturation": 0.0}, None),
+                                 ({"keep_scene": True}, None)):
+            management = ManagementFake()
+            with self.subTest(kwargs=kwargs), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                deliver("src", svc, **kwargs)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                parameters = next(call for call in management.calls
+                                  if call[0] == "POST" and call[1] == "/api/v1/requests"
+                                  )[2]["parameters"]
+                self.assertEqual(delivered["inputs"].get("saturation"), recorded)
+                self.assertEqual(parameters.get("saturation"), recorded)
 
     def test_delivered_outputs_are_refused_as_sources(self):
         cases = [

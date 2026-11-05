@@ -103,11 +103,13 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
                   keep_scene: bool, transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   light_scene: str | None, light_from: str | None,
-                  silhouette_ref: list | None = None) -> list:
+                  silhouette_ref: list | None = None,
+                  saturation: float = 0.0) -> list:
     """Appends the composite stage onto `graph` (mutated), saving the
     delivered picture and its layers.
     `silhouette_ref` is the mask the bands follow when it is not the matte.
-    Returns the delivered ref."""
+    `saturation` compresses the figure's saturation before the outlines are
+    drawn. Returns the delivered ref."""
     deliver_id = allocate()
     graph[deliver_id] = {"class_type": "YukariDeliver", "inputs": {
         "image": image_ref, "matte": matte_ref, "keep_scene": keep_scene,
@@ -116,7 +118,8 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
         "outlines": json.dumps(outlines),
         **({"light_scene": light_scene, "light_from": light_from}
            if light_scene else {}),
-        **({"silhouette": silhouette_ref} if silhouette_ref is not None else {})}}
+        **({"silhouette": silhouette_ref} if silhouette_ref is not None else {}),
+        **({"saturation": saturation} if saturation > 0.0 else {})}}
     delivered_ref = [deliver_id, 0]
     save_delivered = allocate()
     graph[save_delivered] = {"class_type": "SaveImage", "inputs": {

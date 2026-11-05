@@ -46,7 +46,7 @@ def _deep() -> np.ndarray:
     from .delivery import parse_color
 
     base, _light, _white = _palette()
-    stroke = np.array(parse_color(delivery_style.OUTLINES[-1]["color"]), dtype=float)
+    stroke = np.array(parse_color(delivery_style.BACKDROP_DEEP_STROKE), dtype=float)
     return (base * delivery_style.BACKDROP_DEEP_LAVENDER_SHARE
            + stroke * delivery_style.BACKDROP_DEEP_STROKE_SHARE)
 

@@ -16,10 +16,11 @@ from typing import NamedTuple
 BACKDROP = "#ffffff"
 
 # The bands framing the figure, innermost first: each a colour and a width
-# as a share of the longest side. The purple marker, outermost, is
-# deliberately darker than the hair accent.
+# as a share of the longest side. They are drawn after the figure's
+# saturation is compressed and keep their colours exactly; the purple
+# marker, outermost, is the colour repin's curve makes of #885b80.
 OUTLINES = ({"color": "#ffffff", "width": 0.8},
-            {"color": "#885b80", "width": 1.04})
+            {"color": "#7e6988", "width": 1.04})
 OUTLINES_MAX = 6
 OUTLINE_WIDTH_MAX_PCT = 5
 
@@ -70,10 +71,11 @@ STRIPES_BURST_CENTER = (0.5, 0.55)
 STRIPES_BURST_REACH = 0.75
 
 # BACKDROP_PINK: ear/sticker/ornament accent. `deep` (pencil/paper-cut
-# motifs) is lavender pulled toward the purple stroke rather than a fourth
-# free-standing hex, so it tracks either colour if they move.
+# motifs) is lavender pulled toward BACKDROP_DEEP_STROKE, the stroke's purple
+# before saturation; the backdrop is never saturated.
 BACKDROP_PINK = "#f4c9dc"
 BACKDROP_DEEP_LAVENDER_SHARE = 0.82
+BACKDROP_DEEP_STROKE = "#885b80"
 BACKDROP_DEEP_STROKE_SHARE = 0.18
 
 # `waveform`: VOICEROID-style voice-meter bars, loud behind the figure and
@@ -487,9 +489,10 @@ PHOTO_SUBJECT_MM = 1500.0
 # A lighting request then lights the figure and outline by that backdrop.
 LIGHTING_STRENGTH = {"min": 0.0, "max": 1.0, "default": 0.7}
 
-# A saturation request compresses a delivery's figure and outline layers on
-# repin's curve; `strength` blends the compression in (0 leaves the layers as
-# they are).
+# A deliver compresses the figure's saturation on repin's curve before it
+# draws the outlines; a saturation request compresses both layers of a
+# delivery made without it. `strength` blends the compression in (0 leaves
+# the layers as they are).
 SATURATION_STRENGTH = {"min": 0.0, "max": 1.0, "default": 1.0}
 
 # A framed stage sets the delivery in a square panel: the backdrop
@@ -563,4 +566,5 @@ LIGHT_SCENES = {
 }
 
 DELIVER_DEFAULTS = {"stroke_light": "n", "backdrop": "dots",
+                    "saturation": SATURATION_STRENGTH["default"],
                     "outlines": [dict(outline) for outline in OUTLINES]}

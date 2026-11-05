@@ -785,9 +785,15 @@ class DeliveryTest(unittest.TestCase):
         for key in ("n", "ne", "e", "se", "s", "sw", "w", "nw"):
             self.assertIn(repr(key), message)
 
-    def test_the_outermost_default_outline_is_the_hand_cut_mauve(self):
-        self.assertEqual(delivery_style.DELIVER_DEFAULTS["outlines"][-1]["color"], "#885b80")
-        self.assertEqual(parse_color("#885b80"), (136, 91, 128))
+    def test_the_outermost_default_outline_is_the_mauve_after_the_curve(self):
+        from chagama.infrastructure.imaging.saturation import saturate_layer
+
+        mauve = np.zeros((4, 4, 4), np.float32)
+        mauve[..., :3] = parse_color(PURPLE)
+        mauve[..., 3] = 255
+        curved = "#%02x%02x%02x" % tuple(int(v) for v in saturate_layer(mauve, 1.0)[0, 0, :3])
+        self.assertEqual(delivery_style.DELIVER_DEFAULTS["outlines"][-1]["color"], curved)
+        self.assertEqual(curved, "#7e6988")
 
     def _noisy_circle_figure(self, size=1000, radius=300, hole_radius=90,
                              noise_amp=4.0, freq=50):

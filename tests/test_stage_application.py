@@ -306,6 +306,14 @@ class SaturationTest(unittest.TestCase):
                 saturation("bare", services, strength=1.0)
         self.assertEqual(services.comfyui.submitted, [])
 
+    def test_a_delivery_that_compressed_its_figure_is_not_compressed_again(self):
+        management = ManagementFake({"dlv": ({**OPAQUE_DELIVERY, "saturation": 1.0}, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            with self.assertRaisesRegex(SystemExit, "圧縮済み"):
+                saturation("dlv", services, strength=1.0)
+        self.assertEqual(services.comfyui.submitted, [])
+
 
 class SaturatedSourceTest(unittest.TestCase):
     def records(self):

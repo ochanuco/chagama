@@ -8,15 +8,24 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 
 ## The look now
 
-- Deliver delivers the raw Anima pick: matte, repin, backdrop and purple
-  stroke, no redraw. A `redraw` (method `hires`) is opt-in per request and
-  is delivered afterwards.
+- Deliver delivers the raw Anima pick: matte, then the figure's saturation
+  compressed on repin's curve, then backdrop and bands, no redraw. A
+  `redraw` (method `hires`) is opt-in per request and is delivered afterwards.
   Defaults: `DELIVER_DEFAULTS` in `delivery_style.py`. `[Anima]`
-- Deliver defaults: repin on, backdrop `dots`, stroke light from `n`. The
-  diagonal stripes + faint focus lines backdrop is `backdrop=stripes`. `[Anima]`
+- Deliver defaults: `saturation` 1, backdrop `dots`, stroke light from `n`.
+  The diagonal stripes + faint focus lines backdrop is `backdrop=stripes`. `[Anima]`
+- Saturation comes before the bands, so a band is exactly the colour it is
+  given. The figure matches what a `saturation` request (strength 1) on a
+  delivery makes of it, to the level (z0fus0's figure re-delivered against
+  0yansg). The `saturation` request still compresses both layers of a
+  delivery made with `saturation: 0`, and refuses one already compressed. `[Anima]`
 - The bands are a list (`OUTLINES`, the `outlines` deliver option), innermost
-  first: a white band at 0.8% of the longest side, then the `#885b80` rim at
+  first: a white band at 0.8% of the longest side, then the `#7e6988` rim at
   1.04%, each polygonised (Douglas–Peucker, eps 0.5%) for a hand-cut look.
+  `#7e6988` is what the curve makes of the earlier `#885b80` rim (measured
+  on 0yansg's outline layer, 89k flat pixels), so a delivery looks as one
+  delivered and then saturated did. The white band stays `#ffffff` under the
+  curve. The `deep` backdrop motifs still mix the uncompressed `#885b80`.
   0.8 was picked over 0.2 and 0.4 on a raw drawn without a white outline
   (5e5p2h against fjci20 / ocym2i). The innermost band also runs under the
   figure's own edge pixels, so a soft edge blends into the band, not the
