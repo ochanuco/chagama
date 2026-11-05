@@ -650,11 +650,14 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "stage":
         services = build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata)
+        context = chimera.request(
+            "GET", f"/api/v1/generations/{args.generation_id}/context")
         try:
-            arguments = stage_arguments(_stage_options_from_args(args))
+            arguments = stage_arguments(_stage_options_from_args(args),
+                                        recipe=context["request"].get("recipe"))
         except ValueError as error:
             raise SystemExit(str(error)) from error
-        stage(args.generation_id, services, **arguments)
+        stage(args.generation_id, services, context=context, **arguments)
         return
     if args.command == "lighting":
         services = build_stage_services(

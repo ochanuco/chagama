@@ -168,6 +168,9 @@ def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
             "backdrop_color": BACKDROP,
             "backdrops": _backdrops_block(entry.backdrop_palette),
         },
+        "stage": {
+            "frame": {"line": dict(entry.frame_line), "rim": dict(entry.frame_rim)},
+        },
         "redraw": {
             "defaults": {
                 "hires": {"hires_denoise": HIRES_DENOISE},

@@ -237,7 +237,8 @@ def _execute_stage(services: WorkServices, row: Mapping) -> dict:
         raise SystemExit("stage payload.generation_id is required")
     context, _ = fetch_source(services.management, generation_id)
     try:
-        arguments = stage_arguments(payload.get("options") or {})
+        arguments = stage_arguments(payload.get("options") or {},
+                                    recipe=context["request"].get("recipe"))
     except ValueError as error:
         raise SystemExit(str(error)) from error
     result = services.stage(generation_id, services.stage_services,

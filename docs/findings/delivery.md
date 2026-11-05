@@ -1,10 +1,9 @@
 # Delivery: deliver, palette, matte, stroke
 
-The delivery identity (solid backdrop `#ffffff`, purple stroke, acceptance band)
-lives in `domain/yukari/delivery_style.py`, with each recipe's default bands
-and backdrop palette in `domain/recipes.py`, both fingerprinted by `scripts/delivery_check.py`. When `--accept` records a change, rewrite
-"The look now" below. Tags and `a<n> §` pointers: see
-[`docs/README.md`](../README.md).
+The delivery identity (solid backdrop `#ffffff`, purple stroke, acceptance band) is
+in `domain/yukari/delivery_style.py`, each recipe's bands, backdrop palette and frame
+colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`. On
+`--accept`, rewrite "The look now". Tags and `a<n> §` pointers: [`docs/README.md`](../README.md).
 
 ## The look now
 
@@ -22,7 +21,9 @@ and backdrop palette in `domain/recipes.py`, both fingerprinted by `scripts/deli
 - Every backdrop pattern serves every recipe, painted (deliver and stage) in
   the source recipe's `RecipeEntry.backdrop_palette`: yukari `#d9c6ee` /
   pink `#f4c9dc` / deep toward `#885b80`, akari `#f7d3b5` / same pink / deep
-  toward `#c27138`. Thumbnails per recipe: `deliver.backdrops`. `[Anima]`
+  toward `#c27138`. Thumbnails per recipe: `deliver.backdrops`. A framed stage's
+  line / rim default to the recipe's `frame_line` / `frame_rim` (catalog
+  `stage.frame`): yukari `#4a3152` / `#2e2236`, akari `#56321a` / `#33200f`. `[Anima]`
 - Saturation comes before the bands, so a band is exactly the colour it is
   given. The figure matches what a `saturation` request (strength 1) on a
   delivery makes of it, to the level (z0fus0's figure re-delivered against

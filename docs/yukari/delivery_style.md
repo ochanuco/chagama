@@ -75,8 +75,8 @@ A `stage` request's `frame` sets the delivery in a square panel:
   widths are percent of its longest side.
 - The canvas is painted `paper` and the box filled with the request's
   `backdrop` rendered at the box's size. The `line` and the `rim` along both
-  its edges (either null or width 0 for none, an omitted color or width the
-  default) are the border: a hand-drawn dry-brush line on each side, slightly
+  its edges (either null or width 0 for none, an omitted width the default,
+  an omitted color the staged picture's recipe's) are the border: a hand-drawn dry-brush line on each side, slightly
   wobbly, overshooting the corners, of overlapping dabs with a few thin
   streaks where the brush skipped (`FRAME_BRUSH`; the same frame and
   delivery size always draw the same pixels). The line's `pattern` is `solid`,

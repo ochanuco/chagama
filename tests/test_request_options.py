@@ -301,6 +301,19 @@ class StageArgumentsTest(unittest.TestCase):
                          Light("moon", "nw"))
         self.assertEqual(stage_arguments({"shadow_from": "nw"})["shadow_from"], "nw")
 
+    def test_a_frame_takes_the_staged_recipes_colours_unless_named(self):
+        box = {"box": [0, 0, 1, 1]}
+        self.assertEqual(stage_arguments({"frame": box}, recipe="yukari")["frame"],
+                         stage_arguments({"frame": box})["frame"])
+        frame = stage_arguments({"frame": box}, recipe="akari")["frame"]
+        self.assertEqual(frame["line"], {"color": "#56321a", "width": 0.6, "pattern": "solid"})
+        self.assertEqual(frame["rim"], {"color": "#33200f", "width": 0.25})
+        frame = stage_arguments({"frame": {**box, "line": {"width": 1},
+                                           "rim": {"color": "#000000"}}},
+                                recipe="akari")["frame"]
+        self.assertEqual(frame["line"], {"color": "#56321a", "width": 1.0, "pattern": "solid"})
+        self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
+
     def test_a_frame_takes_its_box_and_fills_the_catalog_defaults(self):
         frame = stage_arguments({"frame": {"box": [0.1, 0.25, 1, 1],
                                            "sides": {"left": "out"}}})["frame"]
