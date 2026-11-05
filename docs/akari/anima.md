@@ -22,7 +22,7 @@ uv run chagama akari prompt --pose bust
 | File | Holds |
 |---|---|
 | `prompt_style.py` | `kizuna akari`, identity (white twin braids, deep blue eyes with pale pink pupils), the droopy eye shape, `EYES` (her lower-lid droop, the eye quality under every expression), face, body, the `1990s (style)` suffix on the style block, her negative bans (eye shape, purple/black tights, black jacket, accessories, mechanical body) |
-| `costumes.py` | `half_jacket`, her only costume and the default: the very dark brown jacket slipping off the shoulders over a dark grey pinafore; a from-behind variant; white tights with a faint light-orange tint for every legwear kind |
+| `costumes.py` | `half_jacket`, her only costume and the default: the very dark brown jacket slipping off the shoulders over a dark grey pinafore with a white frilled, lace-trimmed hem; a from-behind variant (hem included); white tights with a faint light-orange tint for every legwear kind |
 | `looks.py` | her looks on the shared poses: the adult body of `bust` / `gao` / `avatar`, the bare face of the `nomakeup` poses |
 | `delivery.py` | her default deliver bands (yukari's white band, then the `#c27138` rim) and backdrop palette (base `#f7d3b5`, yukari's pink accent, deep stroke `#c27138`) |
 | `character.py` / `recipe.py` | `AKARI` and `RECIPE`, registered as `akari` in `domain/recipes.py`; persona pose `akari_persona` |
@@ -35,3 +35,12 @@ uv run chagama akari prompt --pose bust
 - None of yukari's words (name, purple, ジト目, hood, hair ornament) and
   none of her bans reach an akari prompt; the test checks every pose and
   expression.
+
+## Does not work
+
+- An orange or peach legwear colour (`light orange tint` at 1.3,
+  `pale peach tights`, `peach pantyhose`): Anima Turbo draws her official
+  orange vertical-striped tights and orange arm warmers, and
+  `plain pantyhose` / `solid color legwear` with striped bans in the
+  negative do not stop it. Ivory / cream, or skin showing through the
+  white, is the wording tried instead. `[Anima]`
