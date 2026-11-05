@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from ...domain.yukari.delivery_style import STROKE_CHOICES
+from ...domain.yukari.delivery_style import STROKE_CHOICES, BackdropPalette
 from ..imaging import backdrops
 from .refinement_graph import (
     _depth_nodes,
@@ -92,7 +92,8 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   light_scene: str | None, light_from: str | None,
-                  see_through: float = 1.0, saturation: float = 0.0) -> dict:
+                  see_through: float = 1.0, saturation: float = 0.0,
+                  backdrop_palette: BackdropPalette | None = None) -> dict:
     """The deliver graph over the uploaded `source_image`.
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
@@ -101,7 +102,8 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
     key showing through see-through clothing after the colour is solved;
     the saved alpha stays unscaled. `saturation` is the strength the
     figure's saturation is compressed with before the outlines are drawn;
-    a kept scene is never compressed.
+    a kept scene is never compressed. A pattern `backdrop` is painted in
+    `backdrop_palette`.
     """
     if stroke_light is not None and stroke_light not in STROKE_CHOICES:
         valid = ", ".join(repr(key) for key in STROKE_CHOICES)
@@ -141,5 +143,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         stroke_light=stroke_light, outlines=outlines,
         light_scene=light_scene, light_from=light_from,
         silhouette_ref=silhouette_ref,
-        saturation=0.0 if keep_scene else saturation)
+        saturation=0.0 if keep_scene else saturation,
+        backdrop_palette=backdrop_palette)
     return graph

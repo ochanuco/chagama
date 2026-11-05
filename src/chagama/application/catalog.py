@@ -25,7 +25,7 @@ from ..domain.anima.components import PART_GROUPS, Framing
 from ..domain.anima.framing import FRAMING, FRAMING_LABELS
 from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
 from ..domain.anima.style import HEIGHT, WIDTH
-from ..domain.recipes import RECIPES, RecipeEntry, deliver_outlines
+from ..domain.recipes import DEFAULT_RECIPE, RECIPES, RecipeEntry, deliver_outlines
 from ..domain.yukari.delivery_style import (
     BACKDROP,
     BACKDROP_LABELS,
@@ -65,6 +65,7 @@ from ..domain.yukari.delivery_style import (
     SATURATION_STRENGTH,
     STROKE_CHOICES,
     STROKE_LIGHTS,
+    BackdropPalette,
 )
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
@@ -165,6 +166,7 @@ def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
                                    "before the outlines are drawn; the outlines keep "
                                    "their colours. 0 for none"},
             "backdrop_color": BACKDROP,
+            "backdrops": _backdrops_block(entry.backdrop_palette),
         },
         "redraw": {
             "defaults": {
@@ -200,13 +202,14 @@ def _patches_block() -> dict:
     }
 
 
-def _backdrops_block() -> list[dict]:
+def _backdrops_block(palette: BackdropPalette) -> list[dict]:
     return [
         {
             "name": name,
             "label": BACKDROP_LABELS[name],
             "thumbnail": ("data:image/png;base64,"
-                         + base64.b64encode(backdrop_thumbnail(name)).decode("ascii")),
+                         + base64.b64encode(backdrop_thumbnail(name, palette))
+                         .decode("ascii")),
         }
         for name in BACKDROP_PATTERNS
     ]
@@ -348,7 +351,7 @@ def build_catalog(git: dict) -> dict:
                        "help": "compresses a delivery's figure and outline layers, "
                                "outline colours included; refused for a deliver that "
                                "already compressed its figure (saturation > 0)"},
-        "backdrops": _backdrops_block(),
+        "backdrops": _backdrops_block(RECIPES[DEFAULT_RECIPE].backdrop_palette),
     }
 
 

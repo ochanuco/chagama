@@ -8,6 +8,7 @@ import numpy as np
 from PIL import Image
 
 from ...domain.yukari import delivery_style
+from ...domain.yukari.delivery_style import BackdropPalette
 
 
 def _grid(height: int, width: int) -> tuple[np.ndarray, np.ndarray]:
@@ -17,11 +18,11 @@ def _grid(height: int, width: int) -> tuple[np.ndarray, np.ndarray]:
     return xx / longest, yy / longest
 
 
-def _palette() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Stripes' own lavender/light/white triad, shared by every pattern."""
+def _palette(palette: BackdropPalette) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """The palette's base/light/white triad, shared by every pattern."""
     from .delivery import parse_color
 
-    base = np.array(parse_color(delivery_style.STRIPES_BASE), dtype=float)
+    base = np.array(parse_color(palette.base), dtype=float)
     white = np.array([255.0, 255.0, 255.0])
     light = (base * (1 - delivery_style.STRIPES_CONTRAST)
             + white * delivery_style.STRIPES_CONTRAST)
@@ -41,21 +42,21 @@ def _flat(height: int, width: int, colour: np.ndarray) -> np.ndarray:
     return np.broadcast_to(colour, (height, width, 3)).astype(float).copy()
 
 
-def _deep() -> np.ndarray:
+def _deep(palette: BackdropPalette) -> np.ndarray:
     """Lavender pulled toward the purple stroke, for the pencil/paper motifs."""
     from .delivery import parse_color
 
-    base, _light, _white = _palette()
-    stroke = np.array(parse_color(delivery_style.BACKDROP_DEEP_STROKE), dtype=float)
+    base, _light, _white = _palette(palette)
+    stroke = np.array(parse_color(palette.deep_stroke), dtype=float)
     return (base * delivery_style.BACKDROP_DEEP_LAVENDER_SHARE
            + stroke * delivery_style.BACKDROP_DEEP_STROKE_SHARE)
 
 
-def _pink() -> np.ndarray:
+def _pink(palette: BackdropPalette) -> np.ndarray:
     """The pink accent shared by the ear/sticker/ornament motifs."""
     from .delivery import parse_color
 
-    return np.array(parse_color(delivery_style.BACKDROP_PINK), dtype=float)
+    return np.array(parse_color(palette.accent), dtype=float)
 
 
 def _value_noise(x: np.ndarray, y: np.ndarray, cells: int, seed: int) -> np.ndarray:
@@ -85,10 +86,10 @@ def _burst(img: np.ndarray, x: np.ndarray, y: np.ndarray, strength: float) -> np
     return img * (1 - t[..., None]) + white[None, None, :] * t[..., None]
 
 
-def stripes(height: int, width: int) -> np.ndarray:
+def stripes(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Diagonal lavender bands with a white radial burst behind the figure."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
 
     band = ((x + y) / delivery_style.STRIPES_PITCH) % 1.0
     stripe = _edge(band - 0.5, 0.01)
@@ -99,10 +100,10 @@ def stripes(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def waveform(height: int, width: int) -> np.ndarray:
+def waveform(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Voice-meter bars, loud behind the figure, quiet toward the edges."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     img = _flat(height, width, base)
     row_h = delivery_style.WAVEFORM_ROW_HEIGHT
     pitch = delivery_style.WAVEFORM_PITCH
@@ -121,11 +122,11 @@ def waveform(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def ears(height: int, width: int) -> np.ndarray:
+def ears(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Rabbit-hood ears on a staggered lattice, pink inner ear, alternating lean."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
-    pink = _pink()
+    base, light, _white = _palette(palette)
+    pink = _pink(palette)
     img = _flat(height, width, base)
     cell = delivery_style.EARS_CELL
     row = np.floor(y / cell)
@@ -152,10 +153,10 @@ def ears(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def phases(height: int, width: int) -> np.ndarray:
+def phases(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Rows of moon phases waxing and waning across the canvas, discs outlined."""
     x, y = _grid(height, width)
-    base, light, white = _palette()
+    base, light, white = _palette(palette)
     img = _flat(height, width, base)
     cellx = delivery_style.PHASES_CELL_X
     celly = delivery_style.PHASES_CELL_Y
@@ -178,11 +179,11 @@ def phases(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def hatching(height: int, width: int) -> np.ndarray:
+def hatching(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Hand-drawn pencil hatching in dashed patches, echoing the sketch line."""
     x, y = _grid(height, width)
-    lavender, light, _white = _palette()
-    deep = _deep()
+    lavender, light, _white = _palette(palette)
+    deep = _deep(palette)
     colours = {"lavender": lavender, "deep": deep}
     img = _flat(height, width, light)
     pitch = delivery_style.HATCHING_PITCH
@@ -208,11 +209,11 @@ def hatching(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def torn(height: int, width: int) -> np.ndarray:
+def torn(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Hand-cut paper layers behind the figure, white paper edges like the rim."""
     x, y = _grid(height, width)
-    base, light, white = _palette()
-    deep = _deep()
+    base, light, white = _palette(palette)
+    deep = _deep(palette)
     img = _flat(height, width, deep)
     cx = x.max() * delivery_style.TORN_CENTER[0]
     cy = y.max() * delivery_style.TORN_CENTER[1]
@@ -236,11 +237,11 @@ def torn(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def stickers(height: int, width: int) -> np.ndarray:
+def stickers(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Scattered crescents, sparkles and hood ears, seeded, sparse."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
-    pink = _pink()
+    base, light, _white = _palette(palette)
+    pink = _pink(palette)
     img = _flat(height, width, base)
     rng = np.random.default_rng(delivery_style.STICKERS_SEED)
     longest = max(height, width)
@@ -294,12 +295,12 @@ def stickers(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def ornament(height: int, width: int) -> np.ndarray:
+def ornament(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Yukari's hair ornament, ringed disc with a small satellite, as a lattice motif."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
-    deep = _deep()
-    pink = _pink()
+    base, light, _white = _palette(palette)
+    deep = _deep(palette)
+    pink = _pink(palette)
     img = _flat(height, width, base)
     cell = delivery_style.ORNAMENT_CELL
     row = np.floor(y / cell)
@@ -321,10 +322,10 @@ def ornament(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def dots(height: int, width: int) -> np.ndarray:
+def dots(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Large white polka dots on lavender, offset rows."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     cell = delivery_style.DOTS_CELL
     row = np.floor(y / cell)
     gx = ((x + cell / 2 * (row % 2)) % cell) - cell / 2
@@ -335,10 +336,10 @@ def dots(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def gingham(height: int, width: int) -> np.ndarray:
+def gingham(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Lavender gingham: overlapping translucent bands, darker at crossings."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     cell = delivery_style.GINGHAM_CELL
     half_band = cell * delivery_style.GINGHAM_BAND_SHARE
     bx = _edge(half_band - np.abs((x % cell) - cell / 2), delivery_style.GINGHAM_EDGE_SOFT)
@@ -349,10 +350,10 @@ def gingham(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def moons(height: int, width: int) -> np.ndarray:
+def moons(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Small white crescents scattered on a staggered lattice, weak burst behind."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     cell = delivery_style.MOONS_CELL
     row = np.floor(y / cell)
     gx = ((x + cell / 2 * (row % 2)) % cell) - cell / 2
@@ -366,10 +367,10 @@ def moons(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def halftone(height: int, width: int) -> np.ndarray:
+def halftone(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """White halftone dots growing toward the lower-left, big faint crescent behind."""
     x, y = _grid(height, width)
-    base, _light, white = _palette()
+    base, _light, white = _palette(palette)
     cell = delivery_style.HALFTONE_CELL
     gx, gy = (x % cell) - cell / 2, (y % cell) - cell / 2
     t = np.clip((y - x + 0.5) / delivery_style.HALFTONE_GRADIENT_SPAN, 0, 1)
@@ -388,10 +389,10 @@ def halftone(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def sunburst(height: int, width: int) -> np.ndarray:
+def sunburst(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Alternating wide wedges from behind the figure, no bands."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     cx = x.max() * delivery_style.SUNBURST_CENTER[0]
     cy = y.max() * delivery_style.SUNBURST_CENTER[1]
     ang = np.arctan2(y - cy, x - cx)
@@ -401,10 +402,10 @@ def sunburst(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def chevron(height: int, width: int) -> np.ndarray:
+def chevron(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Horizontal zigzag bands."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     zig = (delivery_style.CHEVRON_AMPLITUDE
           * np.abs(((x / delivery_style.CHEVRON_PERIOD) % 1.0) * 2 - 1))
     band = ((y + zig) / delivery_style.CHEVRON_PITCH) % 1.0
@@ -413,10 +414,10 @@ def chevron(height: int, width: int) -> np.ndarray:
     return np.clip(img, 0, 255)
 
 
-def checker(height: int, width: int) -> np.ndarray:
+def checker(height: int, width: int, palette: BackdropPalette) -> np.ndarray:
     """Diagonal checkerboard, lavender and light, weak burst behind."""
     x, y = _grid(height, width)
-    base, light, _white = _palette()
+    base, light, _white = _palette(palette)
     diagonal = delivery_style.CHECKER_CELL * 2 ** 0.5
     u, v = (x + y) / diagonal, (x - y) / diagonal
     c = (np.floor(u) + np.floor(v)) % 2
@@ -444,16 +445,18 @@ PATTERNS = {
 }
 
 
-def render(backdrop: str | None, height: int, width: int) -> np.ndarray:
+def render(backdrop: str | None, height: int, width: int,
+           palette: BackdropPalette) -> np.ndarray:
     """The delivery backdrop as a full `(height, width, 3)` float array.
 
     `None` is the flat delivery default; a `PATTERNS` key is that procedural
-    pattern; anything else must be a `#RRGGBB` colour, broadcast flat.
+    pattern in `palette`; anything else must be a `#RRGGBB` colour,
+    broadcast flat.
     """
     from .delivery import parse_color
 
     if backdrop in PATTERNS:
-        return PATTERNS[backdrop](height, width)
+        return PATTERNS[backdrop](height, width, palette)
     color = parse_color(backdrop if backdrop is not None else delivery_style.BACKDROP)
     return np.broadcast_to(
         np.array(color, dtype=float), (height, width, 3)).copy()
@@ -472,11 +475,12 @@ def is_backdrop(value: str) -> bool:
     return True
 
 
-def thumbnail(name: str) -> bytes:
-    """PNG bytes of the named pattern alone, at the catalog's thumbnail size."""
+def thumbnail(name: str, palette: BackdropPalette) -> bytes:
+    """PNG bytes of the named pattern alone in `palette`, at the catalog's
+    thumbnail size."""
     width = delivery_style.BACKDROP_THUMBNAIL_WIDTH
     height = delivery_style.BACKDROP_THUMBNAIL_HEIGHT
-    pixels = np.clip(PATTERNS[name](height, width), 0, 255).astype(np.uint8)
+    pixels = np.clip(PATTERNS[name](height, width, palette), 0, 255).astype(np.uint8)
     output = io.BytesIO()
     Image.fromarray(pixels, "RGB").save(output, "PNG")
     return output.getvalue()

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 
+from ...domain.yukari.delivery_style import BackdropPalette
+
 # The delivered composite: background cut, outline bands.
 DELIVERED_SUFFIX = "-delivered"
 # What the delivered composite was made of, saved beside it.
@@ -104,12 +106,14 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
                   stroke_light: str | None, outlines: list[dict],
                   light_scene: str | None, light_from: str | None,
                   silhouette_ref: list | None = None,
-                  saturation: float = 0.0) -> list:
+                  saturation: float = 0.0,
+                  backdrop_palette: BackdropPalette | None = None) -> list:
     """Appends the composite stage onto `graph` (mutated), saving the
     delivered picture and its layers.
     `silhouette_ref` is the mask the bands follow when it is not the matte.
     `saturation` compresses the figure's saturation before the outlines are
-    drawn. Returns the delivered ref."""
+    drawn. `backdrop_palette`, when given, is what a pattern backdrop is
+    painted in (the node's default otherwise). Returns the delivered ref."""
     deliver_id = allocate()
     graph[deliver_id] = {"class_type": "YukariDeliver", "inputs": {
         "image": image_ref, "matte": matte_ref, "keep_scene": keep_scene,
@@ -119,7 +123,9 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
         **({"light_scene": light_scene, "light_from": light_from}
            if light_scene else {}),
         **({"silhouette": silhouette_ref} if silhouette_ref is not None else {}),
-        **({"saturation": saturation} if saturation > 0.0 else {})}}
+        **({"saturation": saturation} if saturation > 0.0 else {}),
+        **({"backdrop_palette": json.dumps(backdrop_palette._asdict())}
+           if backdrop_palette is not None else {})}}
     delivered_ref = [deliver_id, 0]
     save_delivered = allocate()
     graph[save_delivered] = {"class_type": "SaveImage", "inputs": {

@@ -60,23 +60,32 @@ STROKE_LIGHTS = {
 STROKE_EVEN = "even"
 STROKE_CHOICES = (STROKE_EVEN, *STROKE_LIGHTS)
 
-# `stripes` backdrop: diagonal bands in the hair's lavender with a white
+
+class BackdropPalette(NamedTuple):
+    """The colours every backdrop pattern paints with. `base` is the ground
+    (its light tint is derived via STRIPES_CONTRAST); `accent` the
+    ear/sticker/ornament motifs; `deep_stroke` pulls `base` darker for the
+    pencil/paper-cut motifs."""
+    base: str
+    accent: str
+    deep_stroke: str
+
+
+# Yukari's: the hair's lavender, a pink accent, and `deep` toward the
+# stroke's purple before saturation; the backdrop is never saturated.
+BACKDROP_PALETTE = BackdropPalette(
+    base="#d9c6ee", accent="#f4c9dc", deep_stroke="#885b80")
+BACKDROP_DEEP_LAVENDER_SHARE = 0.82
+BACKDROP_DEEP_STROKE_SHARE = 0.18
+
+# `stripes` backdrop: diagonal bands in the palette's base with a white
 # radial burst. Lengths are shares of the longest side.
-STRIPES_BASE = "#d9c6ee"
 STRIPES_PITCH = 0.12
 STRIPES_CONTRAST = 0.45
 STRIPES_BURST_RAYS = 16
 STRIPES_BURST = 0.6
 STRIPES_BURST_CENTER = (0.5, 0.55)
 STRIPES_BURST_REACH = 0.75
-
-# BACKDROP_PINK: ear/sticker/ornament accent. `deep` (pencil/paper-cut
-# motifs) is lavender pulled toward BACKDROP_DEEP_STROKE, the stroke's purple
-# before saturation; the backdrop is never saturated.
-BACKDROP_PINK = "#f4c9dc"
-BACKDROP_DEEP_LAVENDER_SHARE = 0.82
-BACKDROP_DEEP_STROKE = "#885b80"
-BACKDROP_DEEP_STROKE_SHARE = 0.18
 
 # `waveform`: VOICEROID-style voice-meter bars, loud behind the figure and
 # quiet at the edges. Lengths are shares of the longest side.

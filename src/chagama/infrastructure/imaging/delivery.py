@@ -14,6 +14,7 @@ from PIL import Image
 from scipy import ndimage
 
 from ...domain.yukari import delivery_style
+from ...domain.yukari.delivery_style import BACKDROP_PALETTE, BackdropPalette
 from . import backdrops
 
 # The cut figure's colour (float RGB) and coverage (0..1) in, its new colour out.
@@ -819,13 +820,14 @@ def clean_layers(data: bytes, matte: bytes, light: str | None = None,
                  backdrop: str | None = None, scene: str | None = None,
                  light_from: str | None = None, matted: bool = False,
                  outlines=None, silhouette: bytes | None = None,
-                 figure_colour: FigureColour | None = None) -> Layers:
+                 figure_colour: FigureColour | None = None,
+                 backdrop_palette: BackdropPalette = BACKDROP_PALETTE) -> Layers:
     """Frame the figure the matte cuts out, in the delivery's own colours.
 
     `light_from` is the scene light's direction: it tints the backdrop and
     throws the drop shadow whatever `light` does to the outermost band.
     `figure_colour` recolours the cut figure before anything is drawn
-    around it.
+    around it. A `backdrop` pattern is painted in `backdrop_palette`.
 
     The matte is the authority on the silhouette, not colour: repin moves
     the figure's own colours, and pale hair lands inside the backdrop's
@@ -860,7 +862,7 @@ def clean_layers(data: bytes, matte: bytes, light: str | None = None,
         coverage[outline_drawn] = 1.0
     if figure_colour is not None:
         px = figure_colour(px, coverage)
-    backdrop_rgb = backdrops.render(backdrop, height, width)
+    backdrop_rgb = backdrops.render(backdrop, height, width, backdrop_palette)
     if scene is not None:
         backdrop_rgb = scene_backdrop(backdrop_rgb, light_from or light, scene)
     flat, bands, outline, outline_alpha = _sticker_layers(
@@ -988,7 +990,8 @@ def deliver_pngs(data: bytes, matte: bytes, *, keep_scene: bool = False,
                  backdrop: str | None = None, scene: str | None = None,
                  light_from: str | None = None, matted: bool = False,
                  outlines=None, silhouette: bytes | None = None,
-                 figure_colour: FigureColour | None = None
+                 figure_colour: FigureColour | None = None,
+                 backdrop_palette: BackdropPalette = BACKDROP_PALETTE
                  ) -> tuple[bytes, bytes, bytes, bytes | None, str]:
     """The delivered picture and its `figure`, `outline` and `backdrop`
     layers as PNGs, and its tag. A kept scene is its own backdrop with the
@@ -1007,7 +1010,8 @@ def deliver_pngs(data: bytes, matte: bytes, *, keep_scene: bool = False,
         backdrop_png = None
     else:
         layers = clean_layers(data, matte, light, backdrop, scene, light_from,
-                              matted, outlines, silhouette, figure_colour)
+                              matted, outlines, silhouette, figure_colour,
+                              backdrop_palette)
         picture = _png(np.clip(layers.picture, 0, 255).astype(np.uint8), "RGB")
         backdrop_png = _png(np.clip(np.rint(layers.backdrop), 0, 255)
                             .astype(np.uint8), "RGB")

@@ -2,7 +2,7 @@
 
 The delivery identity (solid backdrop `#ffffff`, purple stroke, acceptance band)
 lives in `domain/yukari/delivery_style.py`, with each recipe's default bands
-in `domain/recipes.py`, both fingerprinted by `scripts/delivery_check.py`. When `--accept` records a change, rewrite
+and backdrop palette in `domain/recipes.py`, both fingerprinted by `scripts/delivery_check.py`. When `--accept` records a change, rewrite
 "The look now" below. Tags and `a<n> §` pointers: see
 [`docs/README.md`](../README.md).
 
@@ -18,8 +18,11 @@ in `domain/recipes.py`, both fingerprinted by `scripts/delivery_check.py`. When 
   yukari's `#7e6988` rim, akari's `#c27138` (picked from the swatch
   delivery 1vfghs), the same white band and widths for both. A request's
   `outlines` wins; the catalog publishes each recipe's default under
-  `deliver.outlines.default`. The backdrop patterns stay yukari's purples
-  for every recipe. `[Anima]`
+  `deliver.outlines.default`. `[Anima]`
+- Every backdrop pattern serves every recipe, painted (deliver and stage) in
+  the source recipe's `RecipeEntry.backdrop_palette`: yukari `#d9c6ee` /
+  pink `#f4c9dc` / deep toward `#885b80`, akari `#f7d3b5` / same pink / deep
+  toward `#c27138`. Thumbnails per recipe: `deliver.backdrops`. `[Anima]`
 - Saturation comes before the bands, so a band is exactly the colour it is
   given. The figure matches what a `saturation` request (strength 1) on a
   delivery makes of it, to the level (z0fus0's figure re-delivered against

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
-from ..domain.recipes import DEFAULT_RECIPE
+from ..domain.recipes import DEFAULT_RECIPE, backdrop_palette
 from ..infrastructure.comfyui.stage_graph import lighting_graph, saturation_graph, stage_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.stage import frame_canvas_share
@@ -223,7 +223,9 @@ def stage(generation_id: str, services: StageServices, *,
                                      prefix, backdrop=backdrop, shadow_from=shadow_from,
                                      outlines=parameters.get("outlines"),
                                      light=(light.scene, light.direction) if light else None,
-                                     frame=frame)
+                                     frame=frame,
+                                     backdrop_palette=backdrop_palette(
+                                         context["request"].get("recipe")))
         recorded = {"backdrop": backdrop, "shadow_from": shadow_from,
                     "light": {"scene": light.scene, "from": light.direction} if light else None,
                     **({"frame": frame} if frame is not None else {})}

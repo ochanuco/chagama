@@ -414,6 +414,17 @@ class DeliverSectionTest(unittest.TestCase):
 
 
 class BackdropsBlockTest(unittest.TestCase):
+    def test_each_recipe_publishes_thumbnails_in_its_own_palette(self):
+        catalog = build_catalog(GIT)
+        by_name = {recipe["name"]: recipe["deliver"]["backdrops"]
+                   for recipe in catalog["recipes"]}
+        self.assertEqual(by_name["yukari"], catalog["backdrops"])
+        for yukari, akari in zip(by_name["yukari"], by_name["akari"], strict=True):
+            with self.subTest(name=yukari["name"]):
+                self.assertEqual((akari["name"], akari["label"]),
+                                 (yukari["name"], yukari["label"]))
+                self.assertNotEqual(akari["thumbnail"], yukari["thumbnail"])
+
     def test_lists_every_pattern_in_registry_order_with_name_label_and_thumbnail(self):
         catalog = build_catalog(GIT)
         backdrops = catalog["backdrops"]
