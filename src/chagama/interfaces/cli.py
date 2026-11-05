@@ -11,12 +11,13 @@ from pathlib import Path
 from ..application import metadata, safety
 from ..application.catalog import build_catalog
 from ..application.catalog import publish_catalog as publish_catalog_document
-from ..application.deliver import deliver
+from ..application.deliver import deliver, saturate_drawing
 from ..application.dof import dof
 from ..application.generate import generate
 from ..application.ingest import import_images
 from ..application.lens import lens
 from ..application.photo import photo
+from ..application.picture_source import is_delivered
 from ..application.redraw import redraw
 from ..application.stage import lighting, saturation, stage
 from ..application.request_options import (
@@ -448,7 +449,9 @@ def parser() -> argparse.ArgumentParser:
              f"(default {LIGHTING_STRENGTH['default']})")
 
     saturation_parser = commands.add_parser(
-        "saturation", help="compress a delivery's layers' saturation")
+        "saturation",
+        help="compress a drawing's cut figure before its outlines, or a "
+             "delivery's layers")
     saturation_parser.add_argument("generation_id")
     saturation_parser.add_argument(
         "--strength", type=float, default=None,
@@ -665,14 +668,21 @@ def main(argv: list[str] | None = None) -> None:
         lighting(args.generation_id, services, **arguments)
         return
     if args.command == "saturation":
-        services = build_stage_services(
-            chimera, comfyui, notifier, repository, repository_metadata)
         options = {} if args.strength is None else {"strength": args.strength}
         try:
             arguments = saturation_arguments(options)
         except ValueError as error:
             raise SystemExit(str(error)) from error
-        saturation(args.generation_id, services, **arguments)
+        context = chimera.request(
+            "GET", f"/api/v1/generations/{args.generation_id}/context")
+        if is_delivered(context["request"]):
+            saturation(args.generation_id, build_stage_services(
+                chimera, comfyui, notifier, repository, repository_metadata),
+                context=context, **arguments)
+        else:
+            saturate_drawing(args.generation_id, build_deliver_services(
+                chimera, comfyui, notifier, repository, repository_metadata),
+                context=context, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()

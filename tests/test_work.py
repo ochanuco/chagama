@@ -520,14 +520,42 @@ class ExecuteTest(unittest.TestCase):
                 calls.append((generation_id, stage_services, kwargs))
                 return {"generation_ids": ["g6"]}
 
+            delivery = {"request": {"id": "request-1", "recipe": "yukari", "kind": "deliver",
+                                    "parameters": {"kind": "deliver"}}, "generations": []}
             services = dataclasses.replace(
-                make_services(directory, ManagementFake()), saturation=fake_saturation)
+                make_services(directory, ManagementFake(context=delivery)),
+                saturation=fake_saturation)
             result = execute(services, saturation_row())
             self.assertEqual(result["resolved_options"], {"strength": 0.5})
             generation_id, stage_services, kwargs = calls[0]
             self.assertEqual((generation_id, stage_services), ("gen-1", "stage-services"))
             self.assertEqual((kwargs["request_id"], kwargs["strength"]), ("req-11", 0.5))
             self.assertEqual(kwargs["key_prefix"], "request:req-11")
+
+    def test_saturation_of_a_drawing_cuts_it_out_with_the_deliver_services(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_drawing(generation_id, deliver_services, **kwargs):
+                calls.append((generation_id, deliver_services, kwargs))
+                return {"generation_ids": ["g7"], "saturation": 0.5}
+
+            def no_layers(*args, **kwargs):
+                raise AssertionError("a drawing has no layers to recolour")
+
+            drawing = {"request": {"id": "request-1", "recipe": "yukari", "kind": "redraw",
+                                   "parameters": {"kind": "redraw", "cut": True}},
+                       "generations": []}
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake(context=drawing)),
+                saturation=no_layers, saturate_drawing=fake_drawing)
+            result = execute(services, saturation_row())
+            self.assertEqual(result, {"generation_ids": ["g7"],
+                                      "resolved_options": {"strength": 0.5}})
+            generation_id, deliver_services, kwargs = calls[0]
+            self.assertEqual(generation_id, "gen-1")
+            self.assertIs(deliver_services, services.deliver_services)
+            self.assertEqual((kwargs["request_id"], kwargs["strength"]), ("req-11", 0.5))
 
     def test_saturation_kind_rejects_unknown_options_and_a_missing_source(self):
         with tempfile.TemporaryDirectory() as directory:
