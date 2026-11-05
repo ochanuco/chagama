@@ -16,11 +16,12 @@ from typing import TYPE_CHECKING, Protocol
 from urllib.parse import quote
 
 from .catalog import publish_catalog as publish_catalog_document
-from .deliver import DeliverServices, deliver
+from .deliver import DeliverServices, deliver, saturate_drawing
 from .dof import DofServices, dof
 from .generate import GenerateServices, generate, request_file_path
 from .lens import LensServices, lens
 from .photo import PhotoServices, photo
+from .picture_source import is_delivered
 from .stage import StageServices, lighting, saturation, stage
 from .redraw import RedrawServices, redraw
 from .reference import (
@@ -80,6 +81,7 @@ class WorkServices:
     stage: Callable[..., dict] = stage
     lighting: Callable[..., dict] = lighting
     saturation: Callable[..., dict] = saturation
+    saturate_drawing: Callable[..., dict] = saturate_drawing
     reference: Callable[..., dict] = reference
     reference_render: Callable[..., dict] = reference_render
     emit: Callable[[str], None] = print
@@ -157,7 +159,8 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
                               request_id=row["id"], context=context,
                               **arguments)
     result["resolved_options"] = {**options, "outlines": arguments["outlines"],
-                                  "saturation": arguments["saturation"]}
+                                  "saturation": result.pop("saturation",
+                                                           arguments["saturation"])}
     return result
 
 
@@ -280,9 +283,17 @@ def _execute_saturation(services: WorkServices, row: Mapping) -> dict:
         arguments = saturation_arguments(payload.get("options") or {})
     except ValueError as error:
         raise SystemExit(str(error)) from error
-    result = services.saturation(generation_id, services.stage_services,
-                                 key_prefix=f"request:{row['id']}",
-                                 request_id=row["id"], context=context, **arguments)
+    # A drawing is cut out here, before any outline; a delivery's layers are recoloured.
+    if is_delivered(context["request"]):
+        result = services.saturation(generation_id, services.stage_services,
+                                     key_prefix=f"request:{row['id']}",
+                                     request_id=row["id"], context=context, **arguments)
+    else:
+        result = services.saturate_drawing(generation_id, services.deliver_services,
+                                           key_prefix=f"request:{row['id']}",
+                                           request_id=row["id"], context=context,
+                                           **arguments)
+        result.pop("saturation", None)
     result["resolved_options"] = dict(arguments)
     return result
 

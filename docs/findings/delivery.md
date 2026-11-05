@@ -17,8 +17,11 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 - Saturation comes before the bands, so a band is exactly the colour it is
   given. The figure matches what a `saturation` request (strength 1) on a
   delivery makes of it, to the level (z0fus0's figure re-delivered against
-  0yansg). The `saturation` request still compresses both layers of a
-  delivery made with `saturation: 0`, and refuses one already compressed. `[Anima]`
+  0yansg). The workbench order is 描き直し, 彩度, フチ: a `saturation` on the
+  drawing is the deliver's figure at that strength with no bands, and the
+  `deliver` of it draws the bands at that strength from the drawing's cut.
+  On a delivery made with `saturation: 0` the request compresses both
+  layers, and it refuses one already compressed. `[Anima]`
 - The bands are a list (`OUTLINES`, the `outlines` deliver option), innermost
   first: a white band at 0.8% of the longest side, then the `#7e6988` rim at
   1.04%, each polygonised (Douglas–Peucker, eps 0.5%) for a hand-cut look.

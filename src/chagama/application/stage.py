@@ -37,8 +37,8 @@ from .picture_source import (
 
 STAGE_SOURCE = ("背景を付けられるのは納品の絵（deliver または saturation の出力）か"
                 "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
-SATURATION_SOURCE = ("彩度を調整できるのは納品の絵（deliver の出力）か"
-                     "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
+SATURATION_SOURCE = ("納品の絵で彩度を調整できるのは deliver の出力だけです。"
+                     "描いた絵か描き直した絵なら、その絵の saturation を指定してください")
 SATURATION_TWICE = ("この納品は deliver の saturation で彩度を圧縮済みです。"
                     "強さを変えるなら元の絵を saturation を指定して deliver し直してください")
 LIGHTING_SOURCE = ("光を当てられるのは stage の出力、deliver / saturation の出力、"
@@ -309,7 +309,8 @@ def saturation(generation_id: str, services: StageServices, *, strength: float,
                context: dict | None = None) -> dict:
     """Compress the saturation of the delivery `generation_id`'s figure and
     outline layers on repin's curve (`strength` 0..1 blends it in) and put
-    them back together over its backdrop, if it has one."""
+    them back together over its backdrop, if it has one. A drawing is
+    compressed before its outlines instead (`deliver.saturate_drawing`)."""
     state_path, state = _load_state(services, "saturation", key_prefix)
     if state.get("status") == "completed" and state.get("result"):
         return state["result"]
@@ -317,7 +318,7 @@ def saturation(generation_id: str, services: StageServices, *, strength: float,
     if context is None:
         context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
     parameters = _parameters(context)
-    if parameters.get("kind") != "deliver" and not is_cut_redraw(parameters):
+    if parameters.get("kind") != "deliver":
         raise SystemExit(SATURATION_SOURCE)
     if parameters.get("saturation"):
         raise SystemExit(SATURATION_TWICE)

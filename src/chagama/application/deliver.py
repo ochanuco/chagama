@@ -37,6 +37,9 @@ RECIPE_DEFAULT = object()
 
 LINEAGE_HOPS = 10
 PICTURE_ONLY = "納品済みの絵は deliver できません。納品の元になる絵を指定してください"
+SATURATION_TWICE = ("この絵は彩度を調整済みです。強さを変えるなら元の絵から"
+                    "saturation をやり直してください")
+KEEP_SCENE_SATURATED = "彩度を調整した絵は keep_scene で deliver できません"
 
 
 @dataclass(frozen=True)
@@ -111,6 +114,22 @@ def _request_parameters(generation_id: str, *,
     }
 
 
+def _drawing_under(generation_id: str, services: DeliverServices,
+                   context: dict) -> tuple[str, dict, float | None]:
+    """The drawing the delivery is cut from, its context, and the strength
+    its figure is compressed with when the source is a saturation of that
+    drawing (None otherwise): such a delivery is the drawing's, at that
+    strength, so the figure is compressed once."""
+    parameters = context["request"].get("parameters") or {}
+    if parameters.get("kind") == "saturation" and parameters.get("base_generation"):
+        base_id = parameters["base_generation"]
+        base = services.management.request(
+            "GET", f"/api/v1/generations/{base_id}/context")
+        if not is_delivered(base["request"]):
+            return base_id, base, float(parameters.get("strength", 0.0))
+    return generation_id, context, None
+
+
 def deliver(generation_id: str, services: DeliverServices, *,
             keep_scene: bool = False,
             transparent: bool = False,
@@ -121,7 +140,39 @@ def deliver(generation_id: str, services: DeliverServices, *,
             saturation: float = delivery_style.DELIVER_DEFAULTS["saturation"],
             key_prefix: str | None = None, request_id: str | None = None,
             context: dict | None = None) -> dict:
-    state_path = operation_state_path(services.output_root, "deliver", key_prefix)
+    """Cut the picture out, compress its figure's saturation and draw the
+    outlines around it. A saturation of a drawing is delivered from that
+    drawing at the saturation's strength, whatever `saturation` says."""
+    return _deliver(generation_id, services, keep_scene=keep_scene,
+                    transparent=transparent, backdrop=backdrop,
+                    stroke_light=stroke_light, outlines=outlines, light=light,
+                    see_through=see_through, saturation=saturation,
+                    key_prefix=key_prefix, request_id=request_id,
+                    context=context, as_saturation=False)
+
+
+def saturate_drawing(generation_id: str, services: DeliverServices, *,
+                     strength: float, key_prefix: str | None = None,
+                     request_id: str | None = None,
+                     context: dict | None = None) -> dict:
+    """The saturation step before the outlines: cut the drawing out with no
+    outline and compress its figure at `strength`, as a deliver of it at
+    that strength would, and record it as a saturation of the drawing."""
+    return _deliver(generation_id, services, keep_scene=False, transparent=True,
+                    backdrop=None, stroke_light=None, outlines=[], light=None,
+                    see_through=1.0, saturation=strength,
+                    key_prefix=key_prefix, request_id=request_id,
+                    context=context, as_saturation=True)
+
+
+def _deliver(generation_id: str, services: DeliverServices, *,
+             keep_scene: bool, transparent: bool, backdrop: str | None,
+             stroke_light: str | None | object, outlines: list[dict] | None,
+             light: Light | None, see_through: float, saturation: float,
+             key_prefix: str | None, request_id: str | None,
+             context: dict | None, as_saturation: bool) -> dict:
+    state_path = operation_state_path(
+        services.output_root, "saturation" if as_saturation else "deliver", key_prefix)
     if state_path:
         state_path.parent.mkdir(parents=True, exist_ok=True)
     state = services.state.load(state_path) if state_path else {}
@@ -131,9 +182,16 @@ def deliver(generation_id: str, services: DeliverServices, *,
     if context is None:
         context = management.request(
             "GET", f"/api/v1/generations/{generation_id}/context")
-    picked = management.fetch_generation_image(generation_id)
-    _check_source(generation_id, services, context, picked)
-    if light is None:
+    drawing_id, drawing, compressed = _drawing_under(generation_id, services, context)
+    if as_saturation and compressed is not None:
+        raise SystemExit(SATURATION_TWICE)
+    picked = management.fetch_generation_image(drawing_id)
+    _check_source(drawing_id, services, drawing, picked)
+    if compressed is not None:
+        if keep_scene:
+            raise SystemExit(KEEP_SCENE_SATURATED)
+        saturation = compressed
+    if light is None and not as_saturation:
         light = inherited_light(management, generation_id, context)
         if (light is not None and stroke_light in delivery_style.STROKE_LIGHTS
                 and stroke_light != light.direction):
@@ -148,8 +206,8 @@ def deliver(generation_id: str, services: DeliverServices, *,
 
     prefix = f"dlv-{generation_id}"
     current = current_cut()
-    stored, roles = stored_cut(services, generation_id)
-    alpha_bytes = reusable(services, generation_id, ALPHA_ROLE, stored, roles, current)
+    stored, roles = stored_cut(services, drawing_id)
+    alpha_bytes = reusable(services, drawing_id, ALPHA_ROLE, stored, roles, current)
 
     token = uuid.uuid4().hex[:8]
     source_image = services.comfyui.upload_image(f"{prefix}-source-{token}.png", picked)
@@ -201,22 +259,30 @@ def deliver(generation_id: str, services: DeliverServices, *,
             f"p90 {summary['fig_sat_p90']:.0f} light {summary['light_sat']:.1f}")
 
     git = services.git_metadata()
+    if as_saturation:
+        parameters = {"kind": "saturation", "base_generation": generation_id,
+                      "strength": saturation}
+        raw_instruction, instruction = (f"{generation_id} の彩度を調整",
+                                        "この絵の人物を切り抜いて彩度を調整する")
+    else:
+        parameters = _request_parameters(
+            generation_id,
+            keep_scene=keep_scene, transparent=transparent,
+            backdrop=backdrop, stroke_light=stroke_light,
+            outlines=outlines, light=light, see_through=see_through,
+            saturation=saturation)
+        raw_instruction, instruction = f"{generation_id} を納品", "この絵の納品"
     request = open_request(
         management, request_id=request_id,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
-            "raw_instruction": f"{generation_id} を納品",
+            "raw_instruction": raw_instruction,
             "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
-            "parameters": _request_parameters(
-                generation_id,
-                keep_scene=keep_scene, transparent=transparent,
-                backdrop=backdrop, stroke_light=stroke_light,
-                outlines=outlines, light=light, see_through=see_through,
-                saturation=saturation),
+            "parameters": parameters,
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",
-                            "instruction": "この絵の納品"}],
+                            "instruction": instruction}],
         })
     job = record_job(management, request["id"], key_prefix=key_prefix, index=0,
                      seed=0, prompt_id=prompt_id, graph=graph,
@@ -231,18 +297,18 @@ def deliver(generation_id: str, services: DeliverServices, *,
                      idempotency_key=asset_key(key_prefix, 0, role))
         services.emit(f"{name} -> {role} on {rendered['id']}")
 
-    attach_cut(management, services.emit, generation_id, key_prefix=key_prefix,
+    attach_cut(management, services.emit, drawing_id, key_prefix=key_prefix,
                fetched=fetched, stored=stored, roles=roles, current=current,
                cut_roles=cut_roles)
 
     management.request("PATCH", f"/api/v1/jobs/{job['id']}", {"status": "ingested"})
     note_ingested(services.comfyui, prompt_id)
     services.notifier.send(
-        f"**deliver** `{generation_id}`\n"
+        f"**{'saturation' if as_saturation else 'deliver'}** `{generation_id}`\n"
         f"**file** `{delivered_name}`\n"
         f"**chimera** {rendered['canonical_url']}", delivered_name, delivered)
     services.emit(f"request {request.get('short_id') or request['id']} done")
-    result = {"generation_ids": [rendered["id"]]}
+    result = {"generation_ids": [rendered["id"]], "saturation": saturation}
     if state_path:
         state.update({"status": "completed", "result": result})
         services.state.save(state_path, state)

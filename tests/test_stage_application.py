@@ -439,27 +439,20 @@ class CutRedrawSourceTest(unittest.TestCase):
             "cr": (CUT_REDRAW, CUT_ASSETS), "plain": (UNCUT_REDRAW, {"depth": b"d"}),
             "nocut": (CUT_REDRAW, {"alpha": b"a"}), "src": ({"kind": "generate"}, {})})
 
-    def test_a_cut_redraw_is_a_transparent_delivery_with_no_outlines(self):
+    def test_a_drawing_has_no_layers_to_recolour(self):
         management = self.records()
         with tempfile.TemporaryDirectory() as directory:
             services = services_for(StageServices, management, directory)
-            saturation("cr", services, strength=0.5)
-        figure, outline = uploaded_data(services)
-        self.assertEqual(figure, CUTOUT)
-        blank = Image.open(io.BytesIO(outline))
-        self.assertEqual(blank.size, (40, 30))
-        self.assertEqual(blank.getextrema()[3], (0, 0))
-        self.assertNotIn("backdrop", node(services, "YukariSaturation")["inputs"])
-        self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
-        self.assertEqual(management.resolution()["parameters"], {
-            "kind": "saturation", "base_generation": "cr", "strength": 0.5})
+            for drawing in ("cr", "plain", "src"):
+                with self.subTest(drawing=drawing), \
+                        self.assertRaisesRegex(SystemExit, "deliver の出力だけ"):
+                    saturation(drawing, services, strength=0.5)
+        self.assertEqual(services.comfyui.submitted, [])
 
     def test_a_redraw_that_was_not_cut_is_refused(self):
         management = self.records()
         with tempfile.TemporaryDirectory() as directory:
             services = services_for(StageServices, management, directory)
-            with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
-                saturation("plain", services, strength=0.5)
             with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
                 stage("plain", services, backdrop="dots")
             with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
