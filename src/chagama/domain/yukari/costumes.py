@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from ..anima.character import Wardrobe
+from .prompt_style import GARMENT_BLACK_BAN, HOOD_BAN, SHEER_TONE_BAN
 
 COSTUMES = {
     "roomwear": ("(oversized shirt:1.35), (sleeves past wrists:1.3), "
@@ -47,9 +48,7 @@ LEGWEAR = {
                  "(gradient legwear:1.2), (purple gradient:1.1), "),
 }
 
-# The `sheer-gloss` legwear: one block for every costume. `recipe.negative`
-# pairs it with SHEER_BAN, drops GARMENT_GLOSS_TAGS, and appends
-# SHEER_GLOSS_BAN at the end.
+# The `sheer-gloss` legwear: one block for every costume.
 SHEER_GLOSS_LEGWEAR = (
     "(sheer black pantyhose:1.5), (dark violet tint:1.2), "
     "(see-through legwear:1.4), (skin visible through legwear:1.3), "
@@ -57,57 +56,23 @@ SHEER_GLOSS_LEGWEAR = (
     "(anime coloring:1.2), ")
 
 # The `sheer` legwear: one flat black-purple tone for every costume, no
-# gradient direction words. `recipe.negative` treats it like `sheer-gloss`
-# and adds SHEER_TONE_BAN.
+# gradient direction words; paired with SHEER_TONE_BAN.
 SHEER_LEGWEAR = (
     "(sheer dark purple pantyhose:1.5), (see-through black tights:1.2), "
     "(skin clearly visible through pantyhose:1.4), "
     "(thin translucent legwear:1.3), (pantyhose:1.4), "
     "(subtle sheen on legwear:1.15), ")
 
-LEGWEARS = ("opaque", "sheer-gloss", "sheer")
-DEFAULT_LEGWEAR = "sheer"
-
-
-def legwear_block(costume: str, legwear: str) -> str:
-    if legwear == "sheer-gloss":
-        return SHEER_GLOSS_LEGWEAR
-    if legwear == "sheer":
-        return SHEER_LEGWEAR
-    if legwear != "opaque":
-        raise KeyError(legwear)
-    return LEGWEAR[costume]
-
-# Costumes whose garments include a hood or cardigan; `recipe.negative`
-# skips HOOD_BAN for them.
-HOODED_COSTUMES = frozenset({"standard"})
-
-
-class LegwearState(Enum):
-    WORN = "worn"
-    REMOVING = "removing"
-    OFF = "off"
-
-
-LEGWEAR_STATES = ("worn", "removing", "off")
-DEFAULT_LEGWEAR_STATE = "worn"
-
-# OFF replaces the worn block outright: no costume's legwear tags belong
-# on bare legs.
-REMOVING_LEGWEAR = ("(pantyhose pull:1.3), (pulled by self:1.25), "
-                    "(pantyhose around knees:1.35), "
-                    "(pantyhose pulled down:1.3), (bare thighs:1.2), ")
-OFF_LEGWEAR = "(bare legs:1.3), (no legwear:1.3), "
-
-REMOVING_LEGWEAR_BAN = "(thighhighs:1.4), (kneehighs:1.4), (socks:1.3), "
-OFF_LEGWEAR_BAN = ("(pantyhose:1.3), (thighhighs:1.3), (kneehighs:1.2), "
-                   "(socks:1.2), ")
-
-
-def legwear_text(costume: str, legwear: str, state: LegwearState) -> str:
-    if state is LegwearState.OFF:
-        return OFF_LEGWEAR
-    text = legwear_block(costume, legwear)
-    if state is LegwearState.REMOVING:
-        return text + REMOVING_LEGWEAR
-    return text
+WARDROBE = Wardrobe(
+    costumes=COSTUMES,
+    behind=BEHIND_COSTUMES,
+    behind_ban=BEHIND_COSTUME_BAN,
+    garment_ban={"standard": GARMENT_BLACK_BAN},
+    costume_ban=COSTUME_BAN,
+    hooded=frozenset({"standard"}),
+    hood_ban=HOOD_BAN,
+    opaque=LEGWEAR,
+    sheer=SHEER_LEGWEAR,
+    sheer_gloss=SHEER_GLOSS_LEGWEAR,
+    sheer_tone_ban=SHEER_TONE_BAN,
+)

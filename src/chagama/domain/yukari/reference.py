@@ -1,9 +1,9 @@
 """A reference picture's tags onto `yukari_persona`: which tags, which part
 patches.
 
-`yukari_persona` is the layers alone (`layers.py`), so the composition, the
-gesture and the expression all come from the picture and no prepared pose
-pulls them back. Legwear tags replace the customization's tights; the
+`yukari_persona` is the style and `YUKARI` alone (`Recipe.persona`), so the
+composition, the gesture and the expression all come from the picture and no
+prepared pose pulls them back. Legwear tags replace the default tights; the
 character stays the recipe's (the identity part is never touched).
 """
 

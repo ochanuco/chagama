@@ -1,40 +1,14 @@
-"""Every pose: its own tag blocks plus the expression/costume it defaults to,
-on top of the layers in `layers.py`."""
+"""Every yukari pose: its own tag blocks plus the expression/costume it
+defaults to, on top of the style and `YUKARI`."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
-from .components import Framing
-from .costumes import LegwearState
-from .layers import CHARACTER, CUSTOMIZATION
+from ..anima.components import Framing
+from ..anima.pose import Pose
+from .character import YUKARI
 from .prompt_style import FACE, HAIR_ORNAMENT_BAN, NO_HAIR_ORNAMENT
-
-
-@dataclass(frozen=True)
-class Pose:
-    action: str
-    mood: str
-    gesture: str
-    framing: Framing | None
-    leg_display: str
-    expression: str | None
-    costume: str
-    negative: str = ""
-    negative_tail: str = ""
-    canvas: tuple[int, int] | None = None
-    legwear: bool = True
-    legwear_kind: str = CUSTOMIZATION.legwear_kind
-    legwear_state: LegwearState = LegwearState.WORN
-    body: str | None = None
-    style: str | None = None
-    face: str | None = None
-    identity: str | None = None
-    nails: str | None = None
-    background: str | None = None
-    loras: tuple[tuple[str, float], ...] = ()
-    angle: str = ""
-    angle_action: str = ""
 
 
 POSES = {
@@ -197,7 +171,7 @@ POSES = {
 _NOMAKEUP = replace(
     POSES["bust"],
     costume="roomwear",
-    identity=CHARACTER.identity.replace("hair ornament, ", NO_HAIR_ORNAMENT),
+    identity=YUKARI.identity.replace("hair ornament, ", NO_HAIR_ORNAMENT),
     nails="(natural nails:1.2), ",
     face=FACE.replace(
         "(thick eyelashes:1.3), (long eyelashes:1.15), ",
@@ -212,17 +186,7 @@ POSES["nomakeup-bangs-up"] = replace(
     identity=(_NOMAKEUP.identity + "(parted bangs:1.3), "
               "(bangs pinned back:1.2), (bobby pin:1.2), forehead, "))
 
-# The layers alone, for a reference render: no pose, framing, angle or
-# expression of its own, so the reference's tags decide them; the tights come
-# from `CUSTOMIZATION` until a reference's legwear tag replaces them. Kept out
-# of POSES so the catalog never lists it as a look.
-PERSONA_POSE = "yukari_persona"
-PERSONA = Pose(action="", mood="", gesture="", framing=None, leg_display="",
-               expression=None, costume=CHARACTER.costume)
-
-
-def pose_record(name: str) -> Pose:
-    return PERSONA if name == PERSONA_POSE else POSES[name]
+PERSONA_POSE = YUKARI.persona_pose
 
 
 POSE_LABELS = {

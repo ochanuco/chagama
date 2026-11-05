@@ -2,7 +2,7 @@
 
 `Section` follows the Anima model card's own tag-section order; `Priority`
 only orders components within `Section.GENERAL`. The sorted component
-names double as `recipe.positive_parts()` and the patch targets
+names double as `Recipe.positive_parts()` and the patch targets
 `patches.py` resolves.
 """
 
@@ -44,7 +44,13 @@ class Component(NamedTuple):
     text: str
 
 
-# Which external part (a `recipe.PART_NAMES` entry) each component name
+# `PART_GROUPS` maps each legacy part name to its component names;
+# `patches.py` resolves `prompt.positive.<part>` against a legacy name through it.
+PART_NAMES = ("quality", "identity", "pose", "mouth", "mood", "eyes",
+              "gesture", "nails", "costume", "scene", "body", "background", "face",
+              "style")
+
+# Which external part (a `PART_NAMES` entry) each component name
 # belongs to. A part's components must stay contiguous once `assemble` sorts.
 PART_OF: dict[str, str] = {
     "quality": "quality", "count": "quality",
@@ -74,3 +80,6 @@ def part_groups(part_names: tuple[str, ...]) -> dict[str, tuple[str, ...]]:
     for component_name, part_name in PART_OF.items():
         groups[part_name].append(component_name)
     return {name: tuple(members) for name, members in groups.items()}
+
+
+PART_GROUPS = part_groups(PART_NAMES)

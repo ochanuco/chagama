@@ -78,8 +78,10 @@ rejects an empty list; a zero-strength LoRA is left out of the graph) and
 remove `(sketch style:1.2), ` from `prompt.positive.style`. The recipe's
 plain `stand` still wears the pre-official costume.
 
-One recipe is live, `yukari` under `src/chagama/domain/`: the Anima
-Turbo checkpoint's identity, costumes, poses and prompt edit order.
+One recipe is live, `yukari` under `src/chagama/domain/`: the shared Anima
+Turbo style (`domain/anima/`: render settings, artist and style tags,
+structural bans, the prompt assembler) drawing the `YUKARI` character
+(`domain/yukari/`: identity, costumes, poses, expressions).
 `docs/yukari/anima.md` maps where each part lives. `domain/yukari/delivery_style.py`
 holds both the delivery identity (backdrop, purple stroke, acceptance band)
 every delivered picture wears, read by imaging, catalog, work and cli
@@ -276,7 +278,7 @@ tracked file.
   semantic 判断（prompt 組み立て、reference の意味付け、検品）は呼び出し元
   エージェントの仕事で、chimera と worker は実行と記録だけを担う。例外は
   参考画像で、worker が `reference` でタグを提案し、GUI で選ばれたタグから
-  `reference_render` が `yukari_persona`（pose を持たない 3 層、`layers.py`）への
+  `reference_render` が `yukari_persona`（pose を持たない画風とキャラクターだけ、`Recipe.persona`）への
   part patch を組んで（`domain/yukari/reference.py`）、`reference` が DWPose で
   読んだ人物の骨格、または anime-seg で切り出したシルエットか線画か
   Depth Anything V2 の深度を `render.pose` patch（骨格は Anima のポーズ
