@@ -19,12 +19,13 @@ from dataclasses import dataclass, field
 
 from PIL import Image
 
+from ..domain.recipes import DEFAULT_RECIPE, RECIPES
 from ..domain.yukari import reference as rules
-from ..domain.yukari.recipe import render_spec
 from .generate import validate_request
 from .worker_channels import Management
 
-RECIPE = "yukari"
+# The tag rules in `rules` are written for this recipe's persona pose.
+RECIPE = DEFAULT_RECIPE
 # ComfyUI unloads on its own prompt thread after /free returns.
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
@@ -97,7 +98,7 @@ def pose_patch(figure: Mapping, follow: str, *,
 def pose_canvas(pose: str, aspect: float) -> tuple[int, int]:
     """The pose's default canvas area at the reference's width over height
     (held to `POSE_ASPECTS`), each side a multiple of 16."""
-    default = render_spec(pose, 0, "")
+    default = RECIPES[RECIPE].recipe.render_spec(pose, 0, "")
     pixels = default.width * default.height
     aspect = min(max(aspect, POSE_ASPECTS[0]), POSE_ASPECTS[1])
     return (round(math.sqrt(pixels * aspect) / 16) * 16,

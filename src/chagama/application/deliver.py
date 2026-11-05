@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ..domain.yukari import delivery_style
 from ..domain.yukari.delivery_style import Light
+from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.deliver_graph import deliver_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -201,7 +202,7 @@ def deliver(generation_id: str, services: DeliverServices, *,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": f"{generation_id} を納品",
-            "recipe": context["request"].get("recipe") or "yukari",
+            "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": _request_parameters(
                 generation_id,
                 keep_scene=keep_scene, transparent=transparent,

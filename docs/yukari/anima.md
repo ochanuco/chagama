@@ -54,6 +54,14 @@ never names a character; a second character fills a `Character` and reuses
 
 The graph is built by `infrastructure/comfyui/anima_graph.py`.
 
+`src/chagama/domain/recipes.py` registers the recipe under the name a
+request gives in `generation.recipe`: its `Recipe`, pose labels, dials and
+rejected parameters. The worker's graph build and identity guard,
+`validate_request`, the catalog and `chagama <recipe> prompt` all read that
+table; another character is one entry there. `DEFAULT_RECIPE` is what a
+refining request records when its source names none, and the recipe the
+`reference` tag rules are written for.
+
 ## Contracts that span files
 
 - Components sort by Anima's card sections (`QUALITY`, `COUNT`,

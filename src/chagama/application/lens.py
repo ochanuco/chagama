@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.lens_graph import lens_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -113,7 +114,7 @@ def lens(generation_id: str, services: LensServices, *,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": f"{generation_id} に lens",
-            "recipe": context["request"].get("recipe") or "yukari",
+            "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": _request_parameters(
                 generation_id, center=center, strength=strength, shape=shape,
                 radius=radius),

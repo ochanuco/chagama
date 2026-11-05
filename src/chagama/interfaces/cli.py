@@ -34,7 +34,7 @@ from ..application.work import work
 from ..domain.anima.angles import ANGLES
 from ..domain.anima.components import Framing
 from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
-from ..domain.yukari.costumes import COSTUMES
+from ..domain.recipes import RECIPES
 from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
@@ -52,9 +52,6 @@ from ..domain.yukari.delivery_style import (
     STROKE_LIGHTS,
     Light,
 )
-from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.poses import PERSONA_POSE, POSES
-from ..domain.yukari.recipe import negative, positive
 from ..infrastructure.chimera.client import ChimeraClient
 from ..infrastructure.comfyui.client import ComfyUIClient
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
@@ -490,33 +487,40 @@ def parser() -> argparse.ArgumentParser:
     safety_backfill.add_argument("--published", action="store_true")
     safety_backfill.add_argument("--limit", type=int, default=None)
 
-    yukari_parser = commands.add_parser("yukari", help="inspect the Yukari domain")
-    yukari_commands = yukari_parser.add_subparsers(dest="yukari_command", required=True)
-    yukari_prompt = yukari_commands.add_parser("prompt")
-    yukari_prompt.add_argument("--pose", required=True, choices=sorted(POSES) + [PERSONA_POSE])
-    yukari_prompt.add_argument("--costume", choices=sorted(COSTUMES))
-    yukari_prompt.add_argument("--expression", choices=sorted(EXPRESSIONS))
-    yukari_prompt.add_argument("--legwear", choices=LEGWEARS, default=None)
-    yukari_prompt.add_argument("--legwear-state", dest="legwear_state",
-                               choices=LEGWEAR_STATES, default=None)
-    yukari_prompt.add_argument("--angle", default=None,
-                               help=f"comma-separated: {', '.join(ANGLES)}")
-    yukari_prompt.add_argument("--framing", default=None,
-                               choices=[framing.value for framing in Framing])
-    yukari_prompt.add_argument("--json", action="store_true")
+    for name, entry in RECIPES.items():
+        recipe = entry.recipe
+        recipe_parser = commands.add_parser(name, help=f"inspect the {name} recipe")
+        recipe_commands = recipe_parser.add_subparsers(dest="recipe_command",
+                                                       required=True)
+        recipe_prompt = recipe_commands.add_parser("prompt")
+        recipe_prompt.add_argument(
+            "--pose", required=True,
+            choices=sorted(recipe.poses) + [recipe.character.persona_pose])
+        recipe_prompt.add_argument(
+            "--costume", choices=sorted(recipe.character.wardrobe.costumes))
+        recipe_prompt.add_argument("--expression", choices=sorted(recipe.expressions))
+        recipe_prompt.add_argument("--legwear", choices=LEGWEARS, default=None)
+        recipe_prompt.add_argument("--legwear-state", dest="legwear_state",
+                                   choices=LEGWEAR_STATES, default=None)
+        recipe_prompt.add_argument("--angle", default=None,
+                                   help=f"comma-separated: {', '.join(ANGLES)}")
+        recipe_prompt.add_argument("--framing", default=None,
+                                   choices=[framing.value for framing in Framing])
+        recipe_prompt.add_argument("--json", action="store_true")
     return root
 
 
 def main(argv: list[str] | None = None) -> None:
     args = parser().parse_args(argv)
-    if args.command == "yukari":
+    if args.command in RECIPES:
+        recipe = RECIPES[args.command].recipe
         prompts = {
-            "positive": positive(args.pose, args.costume, args.expression,
-                                 args.legwear, args.legwear_state,
-                                 args.angle, args.framing),
-            "negative": negative(args.pose, args.costume, args.expression,
-                                 args.legwear, args.legwear_state, args.framing,
-                                 args.angle),
+            "positive": recipe.positive(args.pose, args.costume, args.expression,
+                                        args.legwear, args.legwear_state,
+                                        args.angle, args.framing),
+            "negative": recipe.negative(args.pose, args.costume, args.expression,
+                                        args.legwear, args.legwear_state,
+                                        args.framing, args.angle),
         }
         if args.json:
             print(json.dumps(prompts, ensure_ascii=False, indent=2))

@@ -21,6 +21,7 @@ from chagama.application.request_options import (
     redraw_arguments,
 )
 from chagama.domain.generation.fingerprint import prompt_fingerprint
+from chagama.domain.recipes import RECIPES
 from chagama.domain.generation.patches import (
     LORAS_TARGETS,
     NUMBER_TARGETS,
@@ -83,7 +84,7 @@ class BuildCatalogTest(unittest.TestCase):
     def test_every_recipe_has_every_pose_with_non_empty_prompts_and_canvas(self):
         catalog = build_catalog(GIT)
         names = {recipe["name"] for recipe in catalog["recipes"]}
-        self.assertEqual(names, {"yukari"})
+        self.assertEqual(names, set(RECIPES))
         for recipe in catalog["recipes"]:
             self.assertTrue(recipe["poses"], recipe["name"])
             for pose in recipe["poses"]:
