@@ -8,20 +8,22 @@ import json
 from pathlib import Path
 
 from chagama.domain.generation.prompt_lint import conflicts
-from chagama.domain.yukari.recipe import negative, positive
+from chagama.domain.recipes import DEFAULT_RECIPE, RECIPES
 
 
 def request_prompts(request: dict) -> tuple[str, str]:
     generation = request.get("generation", {})
     parameters = generation.get("parameters", {})
+    recipe = RECIPES[generation.get("recipe") or DEFAULT_RECIPE].recipe
     pose = parameters["pose"]
     costume = parameters.get("costume")
     expression = parameters.get("expression")
     legwear = parameters.get("legwear")
     return (
-        generation.get("prompt") or positive(pose, costume, expression, legwear),
+        generation.get("prompt")
+        or recipe.positive(pose, costume, expression, legwear),
         generation.get("negative_prompt")
-        or negative(pose, costume, expression, legwear),
+        or recipe.negative(pose, costume, expression, legwear),
     )
 
 

@@ -82,6 +82,9 @@ One recipe is live, `yukari` under `src/chagama/domain/`: the shared Anima
 Turbo style (`domain/anima/`: render settings, artist and style tags,
 structural bans, the prompt assembler) drawing the `YUKARI` character
 (`domain/yukari/`: identity, costumes, poses, expressions).
+`domain/recipes.py` is the one table of recipes a request can name; the
+worker, `validate_request`, the catalog and `chagama <recipe> prompt` all
+read it, so a new recipe is one entry there plus its own package.
 `docs/yukari/anima.md` maps where each part lives. `domain/yukari/delivery_style.py`
 holds both the delivery identity (backdrop, purple stroke, acceptance band)
 every delivered picture wears, read by imaging, catalog, work and cli

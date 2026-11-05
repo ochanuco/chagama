@@ -13,6 +13,7 @@ from ..domain.yukari.delivery_style import (
     PHOTO_NEARER,
     PHOTO_TILT,
 )
+from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.dof_graph import dof_graph, photo_dof_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.delivery import image_size
@@ -235,7 +236,7 @@ def dof(generation_id: str, services: DofServices, *,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": f"{generation_id} に dof",
-            "recipe": context["request"].get("recipe") or "yukari",
+            "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": _request_parameters(
                 generation_id, focus=focus, f_number=f_number, scope=scope,
                 viewfinder=viewfinder, photo_blur=photo_blur),

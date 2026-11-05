@@ -22,11 +22,10 @@ from ..domain.generation.patches import (
 )
 from ..domain.anima.angles import ANGLE_LABELS, ANGLES
 from ..domain.anima.components import PART_GROUPS, Framing
-from ..domain.anima.dials import DIALS
 from ..domain.anima.framing import FRAMING, FRAMING_LABELS
 from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
 from ..domain.anima.style import HEIGHT, WIDTH
-from ..domain.yukari.costumes import COSTUMES
+from ..domain.recipes import RECIPES, RecipeEntry
 from ..domain.yukari.delivery_style import (
     BACKDROP,
     BACKDROP_LABELS,
@@ -67,9 +66,6 @@ from ..domain.yukari.delivery_style import (
     STROKE_CHOICES,
     STROKE_LIGHTS,
 )
-from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.poses import PERSONA_POSE, POSE_LABELS, POSES
-from ..domain.yukari.recipe import identity_tags, render_spec
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
 from ..infrastructure.imaging.depth_blur import sharp_reach_per_f
@@ -92,10 +88,11 @@ def _parameters(recipe: str) -> dict:
     }
 
 
-def _base_pose() -> dict:
-    spec = render_spec(PERSONA_POSE, _SEED, _PREFIX)
+def _base_pose(entry: RecipeEntry) -> dict:
+    persona = entry.recipe.character.persona_pose
+    spec = entry.recipe.render_spec(persona, _SEED, _PREFIX)
     return {
-        "name": PERSONA_POSE,
+        "name": persona,
         "canvas": [spec.width, spec.height],
         "positive": spec.prompts.positive,
         "negative": spec.prompts.negative,
@@ -104,11 +101,14 @@ def _base_pose() -> dict:
     }
 
 
-def _yukari_recipe() -> dict:
+def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
+    recipe = entry.recipe
+    render_spec = recipe.render_spec
+    first_pose = sorted(recipe.poses)[0]
     poses = []
     model = None
-    for name in sorted(POSES):
-        pose = POSES[name]
+    for name in sorted(recipe.poses):
+        pose = recipe.poses[name]
         spec = render_spec(name, _SEED, _PREFIX)
         model = spec.model_path
         poses.append({
@@ -118,21 +118,22 @@ def _yukari_recipe() -> dict:
             "expression": pose.expression,
             "legwear": pose.legwear_kind if pose.legwear else None,
             "legwear_state": pose.legwear_state.value if pose.legwear else None,
-            "label": POSE_LABELS[name],
+            "label": entry.pose_labels[name],
             "framing": pose.framing.value,
             "canvas": [spec.width, spec.height],
             "positive": spec.prompts.positive,
             "negative": spec.prompts.negative,
-            "fingerprint": prompt_fingerprint("yukari", name, spec.prompts.positive,
+            "fingerprint": prompt_fingerprint(recipe_name, name,
+                                              spec.prompts.positive,
                                               spec.prompts.negative),
             "parts":[{"name": part_name, "text": text}
                      for part_name, text in spec.positive_parts],
         })
     return {
-        "name": "yukari",
+        "name": recipe_name,
         "model": model,
-        "parameters": _parameters("yukari"),
-        "costumes": sorted(COSTUMES),
+        "parameters": _parameters(recipe_name),
+        "costumes": sorted(recipe.character.wardrobe.costumes),
         "legwear": list(LEGWEARS),
         "legwear_state": list(LEGWEAR_STATES),
         "angles": list(ANGLES),
@@ -143,15 +144,15 @@ def _yukari_recipe() -> dict:
         "angle_labels": ANGLE_LABELS,
         "framing_labels": {framing.value: FRAMING_LABELS[framing]
                            for framing in Framing},
-        "expressions": sorted(EXPRESSIONS),
+        "expressions": sorted(recipe.expressions),
         "poses": poses,
-        "base_pose": _base_pose(),
+        "base_pose": _base_pose(entry),
         "parts": [name for name, _ in
-                 render_spec(sorted(POSES)[0], _SEED, _PREFIX).positive_parts],
+                 render_spec(first_pose, _SEED, _PREFIX).positive_parts],
         "part_groups": {name: list(members)
                         for name, members in PART_GROUPS.items()},
-        "identity_tags": sorted(identity_tags(sorted(POSES)[0])),
-        "dials": DIALS,
+        "identity_tags": sorted(recipe.identity_tags(first_pose)),
+        "dials": entry.dials,
         "deliver": {
             "defaults": {key: value for key, value in DELIVER_DEFAULTS.items()
                          if key != "outlines"},
@@ -332,7 +333,7 @@ def build_catalog(git: dict) -> dict:
         "git_branch": git.get("branch"),
         "git_dirty": bool(git.get("dirty")),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "recipes": [_yukari_recipe()],
+        "recipes": [_recipe(name, entry) for name, entry in RECIPES.items()],
         "patches": _patches_block(),
         "dof": _dof_block(),
         "lens": _lens_block(),

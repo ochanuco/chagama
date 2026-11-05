@@ -10,10 +10,10 @@ from dataclasses import dataclass, replace as spec_replace
 from pathlib import Path
 from typing import Protocol
 
-from ..domain.anima.dials import DIALS
 from ..domain.generation.models import PromptPair, RenderSpec
 from ..domain.generation.patches import apply_patches, parse_patches
 from ..domain.generation.prompt_lint import tags as prompt_tags
+from ..domain.recipes import RECIPES
 from ..infrastructure.comfyui.base_graph import conditioning_text
 from ..infrastructure.comfyui.timings import note_ingested
 from .ingest import create_job, open_request, rate_generation
@@ -21,9 +21,9 @@ from .ingest import create_job, open_request, rate_generation
 PresetFetcher = Callable[[str, str, str, int], dict]
 
 # `generation.recipe` -> its `dials.patches` vocabulary (target -> word ->
-# number). Mirrored by request_options.py's _RECIPE_DIALS for the other request kinds.
+# number).
 PATCH_DIALS: dict[str, Mapping[str, Mapping[str, float]]] = {
-    "yukari": DIALS.get("patches", {}),
+    name: entry.dials.get("patches", {}) for name, entry in RECIPES.items()
 }
 
 
@@ -69,7 +69,7 @@ KNOWN_PARAMETERS = frozenset(
 
 # Read by validate_request and by the published catalog.
 RECIPE_REJECTED_PARAMETERS: dict[str, frozenset[str]] = {
-    "yukari": frozenset(),
+    name: entry.rejected_parameters for name, entry in RECIPES.items()
 }
 
 
@@ -134,10 +134,10 @@ def validate_request(req: object) -> None:
             raise SystemExit("generation.graph must be a non-empty graph dict")
         if not generation.get("recipe"):
             raise SystemExit("generation.recipe must name what this graph is")
-    elif generation.get("recipe") not in ("yukari",):
+    elif generation.get("recipe") not in RECIPES:
         raise SystemExit(
             f"recipe {generation.get('recipe')} は使えません。使えるのは "
-            "yukari です")
+            f"{', '.join(sorted(RECIPES))} です")
     elif not parameters.get("pose") and not _pins_pose(generation):
         raise SystemExit(
             f"generation.parameters.pose is required for {generation['recipe']} "

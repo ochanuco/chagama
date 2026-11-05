@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
+from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.stage_graph import lighting_graph, saturation_graph, stage_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.stage import frame_canvas_share
@@ -125,7 +126,7 @@ def _record(services: StageServices, *, generation_id: str, context: dict,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": raw_instruction,
-            "recipe": context["request"].get("recipe") or "yukari",
+            "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": parameters,
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": references,

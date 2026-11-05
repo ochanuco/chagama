@@ -25,7 +25,7 @@ from ..application.generate import GenerateServices, request_graph
 from ..application.work import WorkServices, work
 from ..domain.generation.fingerprint import prompt_fingerprint
 from ..domain.generation.prompt_lint import conflicts
-from ..domain.yukari.recipe import identity_tags, render_spec
+from ..domain.recipes import RECIPES as RECIPE_ENTRIES
 from ..infrastructure.chimera.client import USER_AGENT, ChimeraClient
 from ..infrastructure.comfyui.anima_graph import build_graph as anima_build_graph
 from ..infrastructure.comfyui.client import ComfyUIClient
@@ -56,12 +56,13 @@ def default_worker_id() -> str:
 
 # `generation.recipe` -> (RenderSpec builder, ComfyUI graph builder).
 RECIPES = {
-    "yukari": (render_spec, anima_build_graph),
+    name: (entry.recipe.render_spec, anima_build_graph)
+    for name, entry in RECIPE_ENTRIES.items()
 }
 
 # `generation.recipe` -> its identity_tags(pose, costume, expression) function.
 IDENTITY_TAGS = {
-    "yukari": identity_tags,
+    name: entry.recipe.identity_tags for name, entry in RECIPE_ENTRIES.items()
 }
 
 
