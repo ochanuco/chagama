@@ -95,7 +95,7 @@ def _request_parameters(generation_id: str, *,
                         keep_scene: bool, transparent: bool,
                         backdrop: str | None, stroke_light: str | None,
                         outlines: list[dict], light: Light | None,
-                        see_through: float = 1.0) -> dict:
+                        see_through: float = 1.0, saturation: float = 0.0) -> dict:
     return {
         "kind": "deliver",
         "base_generation": generation_id,
@@ -107,6 +107,7 @@ def _request_parameters(generation_id: str, *,
         **({"light": {"scene": light.scene, "from": light.direction}}
            if light is not None else {}),
         **({"see_through": see_through} if see_through != 1.0 else {}),
+        **({"saturation": saturation} if saturation > 0.0 else {}),
     }
 
 
@@ -117,6 +118,7 @@ def deliver(generation_id: str, services: DeliverServices, *,
             stroke_light: str | None | object = RECIPE_DEFAULT,
             outlines: list[dict] | None = None,
             light: Light | None = None, see_through: float = 1.0,
+            saturation: float = delivery_style.DELIVER_DEFAULTS["saturation"],
             key_prefix: str | None = None, request_id: str | None = None,
             context: dict | None = None) -> dict:
     state_path = operation_state_path(services.output_root, "deliver", key_prefix)
@@ -141,6 +143,8 @@ def deliver(generation_id: str, services: DeliverServices, *,
                         else delivery_style.DELIVER_DEFAULTS["stroke_light"])
     if outlines is None:
         outlines = delivery_style.DELIVER_DEFAULTS["outlines"]
+    if keep_scene:
+        saturation = 0.0
 
     prefix = f"dlv-{generation_id}"
     current = current_cut()
@@ -159,7 +163,7 @@ def deliver(generation_id: str, services: DeliverServices, *,
         outlines=outlines,
         light_scene=light.scene if light is not None else None,
         light_from=light.direction if light is not None else None,
-        see_through=see_through)
+        see_through=see_through, saturation=saturation)
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
@@ -207,7 +211,8 @@ def deliver(generation_id: str, services: DeliverServices, *,
                 generation_id,
                 keep_scene=keep_scene, transparent=transparent,
                 backdrop=backdrop, stroke_light=stroke_light,
-                outlines=outlines, light=light, see_through=see_through),
+                outlines=outlines, light=light, see_through=see_through,
+                saturation=saturation),
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": [{"source_generation_id": generation_id,
                             "purpose": "rebuild", "aspect": "composition",

@@ -272,7 +272,7 @@ def deliver_row(**overrides):
     return row
 
 
-DEFAULT_OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]
+DEFAULT_OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#7e6988", "width": 1.04}]
 
 
 def dof_row(**overrides):
@@ -422,7 +422,8 @@ class ExecuteTest(unittest.TestCase):
             self.assertEqual(result, {
                 "generation_ids": ["g2"],
                 "resolved_options": {"transparent": True,
-                                     "outlines": DEFAULT_OUTLINES}})
+                                     "outlines": DEFAULT_OUTLINES,
+                                     "saturation": 1.0}})
             generation_id, deliver_services, kwargs = calls[0]
             self.assertEqual(generation_id, "gen-1")
             self.assertEqual(deliver_services, "deliver-services-sentinel")

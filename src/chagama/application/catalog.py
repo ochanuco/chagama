@@ -160,6 +160,10 @@ def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
                          "max_count": OUTLINES_MAX,
                          "max_width": OUTLINE_WIDTH_MAX_PCT},
             "stroke_light": list(STROKE_CHOICES),
+            "saturation": {**SATURATION_STRENGTH,
+                           "help": "the figure's saturation compressed on repin's curve "
+                                   "before the outlines are drawn; the outlines keep "
+                                   "their colours. 0 for none"},
             "backdrop_color": BACKDROP,
         },
         "redraw": {
@@ -340,7 +344,10 @@ def build_catalog(git: dict) -> dict:
         "photo": _photo_block(),
         "stage": _stage_block(),
         "lighting": _lighting_block(),
-        "saturation": {"strength": SATURATION_STRENGTH},
+        "saturation": {"strength": SATURATION_STRENGTH,
+                       "help": "compresses a delivery's figure and outline layers, "
+                               "outline colours included; refused for a deliver that "
+                               "already compressed its figure (saturation > 0)"},
         "backdrops": _backdrops_block(),
     }
 

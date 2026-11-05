@@ -24,7 +24,7 @@ from chagama.domain.yukari import delivery_style as d
 BASELINE = Path(__file__).resolve().parent.parent / "assets/delivery-fingerprint.json"
 
 # Bump when a field is added/removed below -- a schema change must move the hash too.
-FINGERPRINT_SCHEMA = 6
+FINGERPRINT_SCHEMA = 7
 
 
 def delivery_fingerprint() -> str:
@@ -33,6 +33,7 @@ def delivery_fingerprint() -> str:
         "schema": FINGERPRINT_SCHEMA,
         "backdrop": d.BACKDROP,
         "outlines": [dict(sorted(o.items())) for o in d.OUTLINES],
+        "deliver_saturation": d.DELIVER_DEFAULTS["saturation"],
         "sat_band": list(d.SAT_BAND),
         "bg_sat_max": d.BG_SAT_MAX,
         "figure_midtone_v": d.FIGURE_MIDTONE_V,

@@ -92,14 +92,16 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
                   light_scene: str | None, light_from: str | None,
-                  see_through: float = 1.0) -> dict:
+                  see_through: float = 1.0, saturation: float = 0.0) -> dict:
     """The deliver graph over the uploaded `source_image`.
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
     computing; without it the graph cuts the source itself and
     saves the result under `prefix` + ALPHA_SUFFIX. `see_through` scales the
     key showing through see-through clothing after the colour is solved;
-    the saved alpha stays unscaled.
+    the saved alpha stays unscaled. `saturation` is the strength the
+    figure's saturation is compressed with before the outlines are drawn;
+    a kept scene is never compressed.
     """
     if stroke_light is not None and stroke_light not in STROKE_CHOICES:
         valid = ", ".join(repr(key) for key in STROKE_CHOICES)
@@ -138,5 +140,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         keep_scene=keep_scene, transparent=transparent, backdrop=backdrop,
         stroke_light=stroke_light, outlines=outlines,
         light_scene=light_scene, light_from=light_from,
-        silhouette_ref=silhouette_ref)
+        silhouette_ref=silhouette_ref,
+        saturation=0.0 if keep_scene else saturation)
     return graph

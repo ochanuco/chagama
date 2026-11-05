@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import string
+from collections.abc import Callable
 from typing import NamedTuple
 
 import cv2
@@ -14,6 +15,9 @@ from scipy import ndimage
 
 from ...domain.yukari import delivery_style
 from . import backdrops
+
+# The cut figure's colour (float RGB) and coverage (0..1) in, its new colour out.
+FigureColour = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 
 def image_size(data: bytes) -> tuple[int, int]:
@@ -814,11 +818,14 @@ def _png(array: np.ndarray, mode: str) -> bytes:
 def clean_layers(data: bytes, matte: bytes, light: str | None = None,
                  backdrop: str | None = None, scene: str | None = None,
                  light_from: str | None = None, matted: bool = False,
-                 outlines=None, silhouette: bytes | None = None) -> Layers:
+                 outlines=None, silhouette: bytes | None = None,
+                 figure_colour: FigureColour | None = None) -> Layers:
     """Frame the figure the matte cuts out, in the delivery's own colours.
 
     `light_from` is the scene light's direction: it tints the backdrop and
     throws the drop shadow whatever `light` does to the outermost band.
+    `figure_colour` recolours the cut figure before anything is drawn
+    around it.
 
     The matte is the authority on the silhouette, not colour: repin moves
     the figure's own colours, and pale hair lands inside the backdrop's
@@ -851,6 +858,8 @@ def clean_layers(data: bytes, matte: bytes, light: str | None = None,
                      figure_rim(figure, band), key)
         px[outline_drawn] = 255.0
         coverage[outline_drawn] = 1.0
+    if figure_colour is not None:
+        px = figure_colour(px, coverage)
     backdrop_rgb = backdrops.render(backdrop, height, width)
     if scene is not None:
         backdrop_rgb = scene_backdrop(backdrop_rgb, light_from or light, scene)
@@ -896,21 +905,23 @@ def _matted_figure(soft: np.ndarray, silhouette: bytes | None) -> np.ndarray:
 
 def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
                        matted: bool = False, outlines=None,
-                       silhouette: bytes | None = None) -> Layers:
+                       silhouette: bytes | None = None,
+                       figure_colour: FigureColour | None = None) -> Layers:
     """Cut the figure out and frame it with the sticker bands on alpha 0.
 
     Same silhouette authority as `clean_layers`. The figure gets a
     sub-pixel ramp so retraced strands keep partial coverage, and the soft
     matte only adds coverage inside a 1-px ring around it. Outside the
     bands, alpha is 0 instead of the backdrop colour.
-    `matted` takes `matte` as the matting stage's alpha, as `clean_layers`.
+    `matted` and `figure_colour` as in `clean_layers`.
     """
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(np.uint8)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
     height, width = px.shape[:2]
     if matted:
         return _transparent_over_bands(px, _matted_figure(soft, silhouette),
-                                       soft / 255.0, light, "-matted", outlines)
+                                       soft / 255.0, light, "-matted", outlines,
+                                       figure_colour)
     band = int(max(height, width) * delivery_style.MATTE_EDGE_BAND_PCT / 100)
     soft = fill_unkeyed_holes(px.astype(float), soft)
     figure = refine_matte(
@@ -931,7 +942,7 @@ def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
     coverage[outline_drawn] = 1.0
     return _transparent_over_bands(
         px, figure, coverage, light, "-outline" if outline_drawn.any() else "",
-        outlines)
+        outlines, figure_colour)
 
 
 def transparent(data: bytes, matte: bytes, light: str | None = None,
@@ -943,7 +954,10 @@ def transparent(data: bytes, matte: bytes, light: str | None = None,
 
 def _transparent_over_bands(px: np.ndarray, figure: np.ndarray,
                             coverage: np.ndarray, light: str | None,
-                            suffix: str, outlines) -> Layers:
+                            suffix: str, outlines,
+                            figure_colour: FigureColour | None = None) -> Layers:
+    if figure_colour is not None:
+        px = figure_colour(px.astype(float), coverage)
     height, width = px.shape[:2]
     alphas = band_alphas(figure, outlines, light)
     band_alpha = np.clip(sum(alphas, np.zeros(figure.shape)), 0.0, 1.0)
@@ -973,12 +987,13 @@ def deliver_pngs(data: bytes, matte: bytes, *, keep_scene: bool = False,
                  transparent: bool = False, light: str | None = None,
                  backdrop: str | None = None, scene: str | None = None,
                  light_from: str | None = None, matted: bool = False,
-                 outlines=None, silhouette: bytes | None = None
+                 outlines=None, silhouette: bytes | None = None,
+                 figure_colour: FigureColour | None = None
                  ) -> tuple[bytes, bytes, bytes, bytes | None, str]:
     """The delivered picture and its `figure`, `outline` and `backdrop`
     layers as PNGs, and its tag. A kept scene is its own backdrop with the
-    matte's figure over it and no outline; a transparent delivery has no
-    backdrop."""
+    matte's figure over it and no outline, never recoloured; a transparent
+    delivery has no backdrop."""
     if keep_scene:
         scene_rgb = np.array(Image.open(io.BytesIO(data)).convert("RGB"))
         alpha = np.array(Image.open(io.BytesIO(matte)).convert("L"))
@@ -987,12 +1002,12 @@ def deliver_pngs(data: bytes, matte: bytes, *, keep_scene: bool = False,
                 _png(empty, "RGBA"), _png(scene_rgb, "RGB"), "scene")
     if transparent:
         layers = transparent_layers(data, matte, light, matted, outlines,
-                                    silhouette)
+                                    silhouette, figure_colour)
         picture = _png(layers.picture, "RGBA")
         backdrop_png = None
     else:
         layers = clean_layers(data, matte, light, backdrop, scene, light_from,
-                              matted, outlines, silhouette)
+                              matted, outlines, silhouette, figure_colour)
         picture = _png(np.clip(layers.picture, 0, 255).astype(np.uint8), "RGB")
         backdrop_png = _png(np.clip(np.rint(layers.backdrop), 0, 255)
                             .astype(np.uint8), "RGB")

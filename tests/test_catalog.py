@@ -336,15 +336,21 @@ class DeliverSectionTest(unittest.TestCase):
     def test_defaults_are_the_delivery_recipe_and_valid_options(self):
         defaults = self.section()["defaults"]
         self.assertEqual(defaults, {"stroke_light": "n",
-                                    "backdrop": "dots"})
+                                    "backdrop": "dots", "saturation": 1.0})
         self.assertLessEqual(set(defaults), _KNOWN_DELIVER_OPTIONS)
         deliver_arguments(defaults)
+
+    def test_publishes_the_saturation_range_the_figure_is_compressed_with(self):
+        saturation = self.section()["saturation"]
+        self.assertEqual((saturation["min"], saturation["max"], saturation["default"]),
+                         (0.0, 1.0, 1.0))
+        self.assertIsInstance(saturation["help"], str)
 
     def test_publishes_the_outline_default_and_limits_without_a_dof(self):
         section = self.section()
         self.assertEqual(section["outlines"], {
             "default": [{"color": "#ffffff", "width": 0.8},
-                        {"color": "#885b80", "width": 1.04}],
+                        {"color": "#7e6988", "width": 1.04}],
             "max_count": 6, "max_width": 5})
         self.assertNotIn("dof", section)
         self.assertNotIn("dof", section["defaults"])
@@ -361,8 +367,9 @@ class DeliverSectionTest(unittest.TestCase):
                           lens["radius"]["default"]), (0.05, 1.0, 0.3))
 
     def test_publishes_the_saturation_section_at_the_catalog_root(self):
-        self.assertEqual(build_catalog(GIT)["saturation"],
-                         {"strength": {"min": 0.0, "max": 1.0, "default": 1.0}})
+        saturation = build_catalog(GIT)["saturation"]
+        self.assertEqual(saturation["strength"], {"min": 0.0, "max": 1.0, "default": 1.0})
+        self.assertIn("refused", saturation["help"])
 
     def test_publishes_the_photo_section_at_the_catalog_root(self):
         photo = build_catalog(GIT)["photo"]

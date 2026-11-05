@@ -39,6 +39,8 @@ STAGE_SOURCE = ("背景を付けられるのは納品の絵（deliver または 
                 "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
 SATURATION_SOURCE = ("彩度を調整できるのは納品の絵（deliver の出力）か"
                      "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
+SATURATION_TWICE = ("この納品は deliver の saturation で彩度を圧縮済みです。"
+                    "強さを変えるなら元の絵を saturation を指定して deliver し直してください")
 LIGHTING_SOURCE = ("光を当てられるのは stage の出力、deliver / saturation の出力、"
                    "切り抜いた描き直し（redraw の cut）だけです。先に stage してください")
 LIGHTING_NOTHING = ("背景の無い絵に当てられるのは direction か scene の光だけです。"
@@ -317,6 +319,8 @@ def saturation(generation_id: str, services: StageServices, *, strength: float,
     parameters = _parameters(context)
     if parameters.get("kind") != "deliver" and not is_cut_redraw(parameters):
         raise SystemExit(SATURATION_SOURCE)
+    if parameters.get("saturation"):
+        raise SystemExit(SATURATION_TWICE)
     _require_layers(services, generation_id, context, FIGURE_ROLES)
     has_backdrop = "layer-backdrop" in layer_roles_present(management, generation_id, context)
     roles = LAYER_ROLES if has_backdrop else FIGURE_ROLES

@@ -302,6 +302,11 @@ def parser() -> argparse.ArgumentParser:
              f"({', '.join(sorted(LIGHT_SCENES))}) from a direction "
              f"({', '.join(sorted(STROKE_LIGHTS))}; default "
              f"{LIGHT_FROM_DEFAULT}) and tint the backdrop to match")
+    deliver_parser.add_argument(
+        "--saturation", type=float, default=None,
+        help="strength the figure's saturation is compressed with before the "
+             f"outlines are drawn, {SATURATION_STRENGTH['min']}.."
+             f"{SATURATION_STRENGTH['max']} (default {SATURATION_STRENGTH['default']})")
 
     dof_parser = commands.add_parser(
         "dof", help="blur one delivered picture's layers by depth")
@@ -604,6 +609,7 @@ def main(argv: list[str] | None = None) -> None:
             **({"outlines": outlines} if outlines is not None else {}),
             **({"light": {"scene": light.scene, "from": light.direction}}
                if light is not None else {}),
+            **({"saturation": args.saturation} if args.saturation is not None else {}),
         }
         try:
             arguments = deliver_arguments(options)
