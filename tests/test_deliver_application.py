@@ -403,6 +403,29 @@ class DeliverUseCaseTest(unittest.TestCase):
         self.assertEqual(parameters["outlines"],
                          delivery_style.DELIVER_DEFAULTS["outlines"])
 
+    def test_the_outlines_default_to_the_source_s_recipe(self):
+        for recipe, rim in (("yukari", "#7e6988"), ("akari", "#c27138"), (None, "#7e6988")):
+            management = ManagementFake()
+            management.context["request"]["recipe"] = recipe
+            with self.subTest(recipe=recipe), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                result = deliver("src", svc)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                expected = [{"color": "#ffffff", "width": 0.8},
+                            {"color": rim, "width": 1.04}]
+                self.assertEqual(json.loads(delivered["inputs"]["outlines"]), expected)
+                self.assertEqual(result["outlines"], expected)
+
+    def test_explicit_outlines_win_over_the_recipe_default(self):
+        management = ManagementFake()
+        management.context["request"]["recipe"] = "akari"
+        given = [{"color": "#123456", "width": 2.0}]
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            deliver("src", svc, outlines=given)
+        [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+        self.assertEqual(json.loads(delivered["inputs"]["outlines"]), given)
+
     def test_the_figure_is_compressed_by_default_and_the_strength_recorded(self):
         for kwargs, recorded in (({}, 1.0), ({"saturation": 0.0}, None),
                                  ({"keep_scene": True}, None)):
