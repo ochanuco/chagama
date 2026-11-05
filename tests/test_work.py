@@ -512,6 +512,27 @@ class ExecuteTest(unittest.TestCase):
                              {"backdrop": "stripes", "frame": resolved})
             self.assertNotIn("frame", {k for k in result if k != "resolved_options"})
 
+    def test_stage_kind_draws_the_frame_in_the_staged_pictures_recipe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_stage(generation_id, stage_services, **kwargs):
+                calls.append(kwargs)
+                return {"generation_ids": ["g5"]}
+
+            management = ManagementFake(context={
+                "request": {"id": "request-1", "recipe": "akari"}, "generations": []})
+            services = dataclasses.replace(
+                make_services(directory, management), stage=fake_stage)
+            result = execute(services, {
+                "id": "req-9", "kind": "stage", "status": "running",
+                "recipe_ref": "dev/requests-worker", "run_id": None, "attempt": 1,
+                "payload": {"generation_id": "gen-1", "options": {
+                    "frame": {"box": [0.1, 0.2, 1, 1]}}}})
+            self.assertEqual(calls[0]["frame"]["line"]["color"], "#56321a")
+            self.assertEqual(calls[0]["frame"]["rim"]["color"], "#33200f")
+            self.assertEqual(result["resolved_options"]["frame"]["rim"]["color"], "#33200f")
+
     def test_saturation_kind_maps_options_and_uses_the_stage_services(self):
         with tempfile.TemporaryDirectory() as directory:
             calls = []

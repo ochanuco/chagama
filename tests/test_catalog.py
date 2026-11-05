@@ -413,6 +413,17 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertEqual(section["backdrop_color"], "#ffffff")
 
 
+class StageFrameTest(unittest.TestCase):
+    def test_each_recipe_publishes_its_frame_colours(self):
+        catalog = build_catalog(GIT)
+        frames = {recipe["name"]: recipe["stage"]["frame"] for recipe in catalog["recipes"]}
+        shared = catalog["stage"]["frame"]
+        self.assertEqual(frames["yukari"], {"line": shared["line"], "rim": shared["rim"]})
+        self.assertEqual(frames["akari"], {
+            "line": {**shared["line"], "color": "#56321a"},
+            "rim": {**shared["rim"], "color": "#33200f"}})
+
+
 class BackdropsBlockTest(unittest.TestCase):
     def test_each_recipe_publishes_thumbnails_in_its_own_palette(self):
         catalog = build_catalog(GIT)
