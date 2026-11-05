@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw
 from scipy import ndimage
 
 from ...domain.yukari import delivery_style
+from ...domain.yukari.delivery_style import BACKDROP_PALETTE, BackdropPalette
 from . import backdrops, photo_stage
 from .delivery import (
     _band_widths,
@@ -98,17 +99,19 @@ def _shadowed(outline: np.ndarray, outline_alpha: np.ndarray,
 
 def on_pattern(figure: np.ndarray, outline: np.ndarray, backdrop: str | None,
                shadow_from: str | None = None, outlines=None, scene: str | None = None,
-               light_from: str | None = None) -> Staged:
+               light_from: str | None = None,
+               backdrop_palette: BackdropPalette = BACKDROP_PALETTE) -> Staged:
     """`figure` and `outline` (straight HxWx4 0..255) on the `backdrop`
-    pattern or #RRGGBB colour (the delivery default when None) at their own
-    canvas, with a drop shadow away from `shadow_from` when it names a
+    pattern (in `backdrop_palette`) or #RRGGBB colour (the delivery default
+    when None) at their own canvas, with a drop shadow away from `shadow_from` when it names a
     direction. A light `scene` tints the backdrop toward its colour and
     brightens it toward `light_from`, as a delivery in that scene does, and
     its shadow takes the scene's cast colour, painted into the backdrop."""
     height, width = figure.shape[:2]
     return _on_backdrop(figure[..., :3].astype(float), figure[..., 3] / 255.0,
                         outline[..., :3].astype(float), outline[..., 3] / 255.0,
-                        backdrops.render(backdrop, height, width), shadow_from, outlines,
+                        backdrops.render(backdrop, height, width, backdrop_palette),
+                        shadow_from, outlines,
                         scene, light_from)
 
 
@@ -447,10 +450,11 @@ def frame_canvas_share(figure_png: bytes, outline_png: bytes,
 
 def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
              backdrop: str | None, shadow_from: str | None = None, outlines=None,
-             scene: str | None = None, light_from: str | None = None) -> Staged:
+             scene: str | None = None, light_from: str | None = None,
+             backdrop_palette: BackdropPalette = BACKDROP_PALETTE) -> Staged:
     """`figure` and `outline` (straight HxWx4 0..255) in the `frame`: on
     the framed canvas painted `paper`, the box filled with the `backdrop`
-    pattern rendered at the box's size, a hand-drawn dry-brush border over its
+    pattern rendered at the box's size in `backdrop_palette`, a hand-drawn dry-brush border over its
     edge: the line (solid, or `slash`: pairs of "/" on the paper colour) with
     the rim along both its sides, and the figure and outline kept by
     `frame_keep` over all of it; the light `scene` and drop shadow as
@@ -470,12 +474,13 @@ def in_frame(figure: np.ndarray, outline: np.ndarray, frame: Mapping,
         layers.append((placed[..., :3], placed[..., 3]))
     x0, y0, x1, y1 = np.subtract(_share_px(frame["box"], width, height),
                                  (left, top, left, top))
-    backdrop_rgb = backdrops.render(frame["paper"], *size)
+    backdrop_rgb = backdrops.render(frame["paper"], *size, backdrop_palette)
     panel_x0, panel_y0 = int(np.ceil(x0 - 0.5)), int(np.ceil(y0 - 0.5))
     panel_x1, panel_y1 = int(np.ceil(x1 - 0.5)), int(np.ceil(y1 - 0.5))
     if panel_x1 > panel_x0 and panel_y1 > panel_y0:
         _paste(backdrop_rgb, backdrops.render(backdrop, panel_y1 - panel_y0,
-                                              panel_x1 - panel_x0), panel_x0, panel_y0)
+                                              panel_x1 - panel_x0, backdrop_palette),
+               panel_x0, panel_y0)
     longest = max(height, width)
     widths = _brush_bands(frame, longest)
     drawn = _drawn_border(frame, (height, width), (left, top), size, widths)
@@ -552,7 +557,9 @@ def stage_pngs(figure_png: bytes, outline_png: bytes, *, photo_png: bytes | None
                outlines=None, place: tuple[float, float] = (0.5, 1.0),
                height: float = 1.0, scene: str | None = None,
                light_from: str | None = None,
-               frame: Mapping | None = None) -> tuple[bytes, bytes, bytes, bytes]:
+               frame: Mapping | None = None,
+               backdrop_palette: BackdropPalette = BACKDROP_PALETTE
+               ) -> tuple[bytes, bytes, bytes, bytes]:
     """`on_photo` when `photo_png` is given, `in_frame` when a `frame` is,
     `on_pattern` otherwise, over PNG bytes; returns `layer_pngs`."""
     figure, outline = _decode(figure_png, "RGBA"), _decode(outline_png, "RGBA")
@@ -561,10 +568,10 @@ def stage_pngs(figure_png: bytes, outline_png: bytes, *, photo_png: bytes | None
                           place=place, height=height)
     elif frame is not None:
         staged = in_frame(figure, outline, frame, backdrop, shadow_from, outlines, scene,
-                          light_from)
+                          light_from, backdrop_palette)
     else:
         staged = on_pattern(figure, outline, backdrop, shadow_from, outlines, scene,
-                            light_from)
+                            light_from, backdrop_palette)
     return layer_pngs(staged)
 
 

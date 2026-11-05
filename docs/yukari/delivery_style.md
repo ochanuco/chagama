@@ -13,7 +13,7 @@ in [`findings/delivery.md`](../findings/delivery.md).
 | `BACKDROP`, `OUTLINES`, `OUTLINES_MAX`, `OUTLINE_WIDTH_MAX_PCT` | band drawing in `infrastructure/imaging/delivery.py`, the `outlines` deliver option; `OUTLINES` is yukari's default, and another recipe swaps its rim colour through `RecipeEntry.outlines` (akari: `domain/akari/delivery.py`) |
 | `STROKE_CUT_EPS_PCT`, `STROKE_EDGE_SMOOTH` | `band_alphas`: hand-cut outline and edge rounding |
 | `STROKE_LIGHT_*`, `STROKE_LIGHTS`, `STROKE_CHOICES`, `STICKER_SHADOW_*` | the `stroke_light` deliver option |
-| `STRIPES_*`, `WAVEFORM_*`, `EARS_*`, `BACKDROP_*` | named backdrops in `infrastructure/imaging/backdrops.py` |
+| `STRIPES_*`, `WAVEFORM_*`, `EARS_*`, `BACKDROP_*` | named backdrops in `infrastructure/imaging/backdrops.py`; `BACKDROP_PALETTE` is yukari's pattern colours, and another recipe swaps them through `RecipeEntry.backdrop_palette` (akari: `domain/akari/delivery.py`) |
 | `SAT_BAND`, `BG_SAT_MAX`, `FIGURE_SAT_*`, `BACKDROP_SPREAD_MAX` | `measure`/`verdict` in `palette.py`: the gate at ingest and in `palette_check.py` |
 | `FIGURE_LIGHT_*`, `PALETTE_WINDOWS`, `REPIN_*` | `repin` in `infrastructure/imaging/palette.py`, applied through `infrastructure/imaging/saturation.py` by deliver (figure only, before the bands) and by the `saturation` request (both layers) |
 | `SATURATION_STRENGTH` | the deliver `saturation` option, the `saturation` request's `strength` and the catalog's `deliver.saturation` and top-level `saturation` sections |

@@ -416,6 +416,26 @@ class DeliverUseCaseTest(unittest.TestCase):
                 self.assertEqual(json.loads(delivered["inputs"]["outlines"]), expected)
                 self.assertEqual(result["outlines"], expected)
 
+    def test_the_backdrop_is_painted_in_the_source_s_recipe_palette(self):
+        for recipe, base in (("yukari", "#d9c6ee"), ("akari", "#f7d3b5"), (None, "#d9c6ee")):
+            management = ManagementFake()
+            management.context["request"]["recipe"] = recipe
+            with self.subTest(recipe=recipe), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                deliver("src", svc, backdrop="dots")
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                self.assertEqual(json.loads(delivered["inputs"]["backdrop_palette"])["base"],
+                                 base)
+
+    def test_a_transparent_delivery_sends_no_palette(self):
+        management = ManagementFake()
+        management.context["request"]["recipe"] = "akari"
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            deliver("src", svc, transparent=True)
+        [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+        self.assertNotIn("backdrop_palette", delivered["inputs"])
+
     def test_explicit_outlines_win_over_the_recipe_default(self):
         management = ManagementFake()
         management.context["request"]["recipe"] = "akari"

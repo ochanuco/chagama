@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ..domain.yukari import delivery_style
 from ..domain.yukari.delivery_style import Light
-from ..domain.recipes import DEFAULT_RECIPE, deliver_outlines
+from ..domain.recipes import DEFAULT_RECIPE, backdrop_palette, deliver_outlines
 from ..infrastructure.comfyui.deliver_graph import deliver_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -221,7 +221,9 @@ def _deliver(generation_id: str, services: DeliverServices, *,
         outlines=outlines,
         light_scene=light.scene if light is not None else None,
         light_from=light.direction if light is not None else None,
-        see_through=see_through, saturation=saturation)
+        see_through=see_through, saturation=saturation,
+        backdrop_palette=(None if transparent or keep_scene
+                          else backdrop_palette(drawing["request"].get("recipe"))))
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)

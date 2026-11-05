@@ -2,7 +2,7 @@
 """Hold the delivery identity to a contract.
 
 Fingerprints `domain/yukari/delivery_style.py` and each recipe's default
-outlines (`domain/recipes.py`) from an explicit payload (a value edit moves
+outlines and backdrop palette (`domain/recipes.py`) from an explicit payload (a value edit moves
 the hash, a comment edit doesn't) and fails unless the change was told to
 --accept.
 
@@ -26,7 +26,7 @@ from chagama.domain.yukari import delivery_style as d
 BASELINE = Path(__file__).resolve().parent.parent / "assets/delivery-fingerprint.json"
 
 # Bump when a field is added/removed below -- a schema change must move the hash too.
-FINGERPRINT_SCHEMA = 8
+FINGERPRINT_SCHEMA = 9
 
 
 def delivery_fingerprint() -> str:
@@ -37,6 +37,8 @@ def delivery_fingerprint() -> str:
         "outlines": [dict(sorted(o.items())) for o in d.OUTLINES],
         "recipe_outlines": {name: [dict(sorted(o.items())) for o in entry.outlines]
                             for name, entry in RECIPES.items()},
+        "recipe_backdrop_palettes": {name: entry.backdrop_palette._asdict()
+                                     for name, entry in RECIPES.items()},
         "deliver_saturation": d.DELIVER_DEFAULTS["saturation"],
         "sat_band": list(d.SAT_BAND),
         "bg_sat_max": d.BG_SAT_MAX,
