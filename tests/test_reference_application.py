@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import dataclasses
 import io
 import json
@@ -20,8 +21,10 @@ from chagama.application.reference import (
     pose_patch,
     reference,
     reference_render,
+    with_headroom,
 )
 from chagama.application.work import work_once
+from chagama.infrastructure.imaging.pose_skeleton import HEAD_POINTS, head_overflow
 from chagama.domain.yukari.reference import Plan
 from chagama.infrastructure.reference.analyze import analyze
 from chagama.infrastructure.reference.anima_tagger import TagGroup
@@ -402,3 +405,51 @@ class WorkerReferenceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def cropped_head_figure():
+    points = [[0.5, 0.6, 0.9]] * 133
+    for index in HEAD_POINTS:
+        points[index] = [0.5, 0.02, 0.9]
+    points[0], points[3], points[4] = [0.5, 0.06, 0.9], [0.45, 0.02, 0.9], [0.55, 0.02, 0.9]
+    depth = io.BytesIO()
+    Image.new("L", (20, 10), 200).save(depth, format="PNG")
+    return {"points": points, "aspect": 2.0,
+            "depth": base64.b64encode(depth.getvalue()).decode("ascii")}
+
+
+class HeadroomTest(unittest.TestCase):
+    def test_a_head_the_reference_crops_gets_room_above_it(self):
+        figure = cropped_head_figure()
+        grown = with_headroom(figure)
+        self.assertLess(grown["aspect"], figure["aspect"])
+        self.assertEqual(head_overflow(grown["points"], grown["aspect"]), (0.0, 0.0, 0.0, 0.0))
+        depth = np.asarray(Image.open(io.BytesIO(base64.b64decode(grown["depth"]))))
+        self.assertEqual(depth.shape[1], 20)
+        self.assertGreater(depth.shape[0], 10)
+        self.assertEqual(depth[0].max(), 0)
+        self.assertEqual(depth[-1].min(), 200)
+
+    def test_a_head_inside_the_frame_is_left_alone(self):
+        figure = cropped_head_figure()
+        figure["points"] = [[x, y + 0.4, score] for x, y, score in figure["points"]]
+        self.assertIs(with_headroom(figure), figure)
+
+    def test_a_cropped_head_is_drawn_whole_without_the_cropping_tags(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        chimera.source["result"]["figure"] = cropped_head_figure()
+        chimera.source["result"]["candidates"].append(
+            {"tag": "head out of frame", "part": "framing_tags", "score": 0.6,
+             "kept": True, "d1": None, "applied": True})
+        reference_render(render_row(pose_follow="firm", applied={
+            "gesture": ["sitting"], "framing_tags": ["from above", "head out of frame"]}),
+            make(chimera, []))
+        payload = chimera.calls[-1][2]["payload"]
+        framing = [patch["value"] for patch in payload["generation"]["patches"]
+                   if patch["target"] == "prompt.positive.framing_tags"]
+        self.assertTrue(framing)
+        self.assertNotIn("head out of frame", "".join(framing))
+        pose = next(patch["value"] for patch in payload["generation"]["patches"]
+                    if patch["target"] == "render.pose")
+        self.assertLess(pose["aspect"], 2.0)
