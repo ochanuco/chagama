@@ -5,8 +5,8 @@ and costs a session an hour to rediscover.
 
 ## What this repository makes
 
-Pictures of Yuzuki Yukari that are **hand-drawn in look, leg-forward in
-composition, in tights**. Those four -- the drawn look, the legs, the tights,
+Pictures of Yuzuki Yukari -- and, in the same drawn style, Kizuna Akari --
+that are **hand-drawn in look, leg-forward in composition, in tights**. Those four -- the drawn look, the legs, the tights,
 the character -- are the user's whole requirement; a model, a LoRA or a
 pipeline stage is kept for as long as it serves them and swapped when
 something serves them better.
@@ -51,12 +51,16 @@ the pose at its defaults with `derive_request` from the pin,
 patches this request asks for, and build the round from there.
 `plain_render` draws the default canvas, so it only reproduces a pin.
 
-A new picture an agent queues is a draft: patch `render.width` /
-`render.height` to about 1.3 megapixels at the pose's default aspect ratio,
-each side a multiple of 8. The aspect carries the look (a squarer bust
-canvas draws a child's face), so take it from the canvas the pose resolves
-to, not from the pose's kind: 896x1440 for a 1024x1640 or 1280x2048 canvas,
-1024x1280 for a 1024x1280 one. Only a picture
+A new picture an agent queues is a draft, whatever its pose or framing,
+unless the request names a `canvas_override` reason. A draft is about 1.3
+megapixels (1,300,000 px) at the aspect ratio of the canvas the pose
+resolves to, each side rounded down to a multiple of 8, set by patching
+`render.width` / `render.height`. The aspect carries the look (a squarer
+bust canvas draws a child's face), so take it from that canvas, not from
+the pose's kind: 896x1440 for a 1024x1640 or 1280x2048 canvas, 1024x1280
+for a 1024x1280 one; `close`'s 1152x1152 is already a draft. chimera's
+`create_request` / `derive_request` append the draft patches to anything
+above about 1.4 MP. Only a picture
 the user picks is re-rendered with `redraw` method `hires` (2048,
 denoise 0.45). A smaller draft is not a shortcut: the hires latent upscale
 breaks past about 1.4x (see `docs/findings/composition.md`).
@@ -74,9 +78,17 @@ rejects an empty list; a zero-strength LoRA is left out of the graph) and
 remove `(sketch style:1.2), ` from `prompt.positive.style`. The recipe's
 plain `stand` still wears the pre-official costume.
 
-One recipe is live, `yukari` under `src/chagama/domain/`: the Anima
-Turbo checkpoint's identity, costumes, poses and prompt edit order.
-`docs/yukari/anima.md` maps where each part lives. `domain/yukari/delivery_style.py`
+Two recipes are live, `yukari` and `akari` under `src/chagama/domain/`:
+the shared Anima Turbo style (`domain/anima/`: render settings, artist and
+style tags, structural bans, the prompt assembler, and the poses and
+expressions both characters share by name) drawing the `YUKARI` or `AKARI`
+character (`domain/yukari/`, `domain/akari/`: identity, eyes, costumes,
+and each one's looks on the shared poses and expressions).
+`domain/recipes.py` is the one table of recipes a request can name; the
+worker, `validate_request`, the catalog and `chagama <recipe> prompt` all
+read it, so a new recipe is one entry there plus its own package.
+`docs/yukari/anima.md` maps where each part lives, `docs/akari/anima.md`
+what is akari's own. `domain/yukari/delivery_style.py`
 holds both the delivery identity (backdrop, purple stroke, acceptance band)
 every delivered picture wears, read by imaging, catalog, work and cli
 alike, and the redraw settings (stage-2 model, sampler,
@@ -89,55 +101,55 @@ redrawn, and a LayerDiffuse base is refused by both `redraw` and `deliver`.
 The ComfyUI node encoding is under `infrastructure/comfyui/`.
 `chagama yukari prompt --pose …` prints what the recipe sends.
 
-Everything measured is recorded — see "Where information lives" below for
-which store. The records are the point of the repository; the scripts are how
-they were produced.
+Everything measured is recorded on chimera — see "Where information lives"
+below. This repository holds the implementation and the conclusions that are
+true now; the renders and what they showed live on chimera.
 
 Run everything through `uv run` — the client env is pillow, numpy,
 opencv-python and scipy, and nothing here imports torch.
 
 ## Where information lives (hard rule)
 
-> Research logs are append-only. Code comments are current-state-only.
-
-Four stores, one job each:
+> The repository holds implementation and current conclusions. Data lives
+> on chimera, split into permanent and temporary records.
 
 ```text
 src/          current recipe (What). Comments hold only the non-obvious
               constraints that guard today's values — a few lines per
               definition, no history.
-experiments/  one observation per JSONL record (seed, render_id, parameter,
-              value, outcome accepted|rejected|inconclusive, reason).
-              Append-only: a refuted hypothesis gets a NEW record, the old
-              one is never rewritten. Schema in experiments/README.md.
-              An A/B round with arms and a chimera Request is recorded as a
-              chimera Experiment/Run instead of a JSONL record; plain
-              observations still append here. The JSONL stays the source
-              of truth; chimera holds a derived index kept in sync by
-              `scripts/observation_sync.py`.
 docs/         conclusions, current state only. Lessons in
               docs/findings/<topic>.md, index in docs/README.md.
               docs/archive/ is the frozen pre-split log: grep, never edit.
 tests/        invariants that must hold across models and seeds (prompt
               byte-stability is already pinned by the snapshot contract).
+
+chimera, permanent   every Generation: image, prompt, model, seed,
+                     parameters, lineage, the semantic written at queue
+                     time and the human rating; pairwise judgments. This
+                     is the record of what was tried and how it went.
+chimera, temporary   Experiment / Run / Observation: a round's working
+                     memory. They expire 14 days after the last activity;
+                     the Generations they made stay.
 ```
 
 Rules that follow from it — enforced by `tests/test_comment_discipline.py`,
 which bans dates, render IDs, `1.45 -> 1.3` walk-downs, 「」 quotes and
 comment blocks over 8 lines in `src/**`:
 
-- A new failure is an `experiments/` record first, never a code comment. If
-  the code needs anything, it is one short line stating the constraint that
-  is now in force.
+- A new failure is recorded on the render that showed it (its semantic on
+  chimera) and in the commit message, never as a code comment. If the code
+  needs anything, it is one short line stating the constraint now in force.
 - New knowledge REPLACES a comment; it never stacks on top of one. If old
   and new disagree, the old line is deleted.
-- Before changing a pose or tag, grep `experiments/` for the same
-  character/pose/parameter. Do not repeat a rejected trial without stating
+- Before changing a pose or tag, search chimera for the same word or
+  parameter (`list_generations` with `q`, and `rating: "bad"` for what was
+  rejected) and `git log -S`. Do not repeat a rejected trial without stating
   what is different this time.
-- An experiment result is an observation under its conditions (pose, prompt,
-  checkpoint, seed), not a universal rule.
-- chimera stays the per-render channel (every render is recorded there);
-  `experiments/` is the greppable ledger the comments can point to.
+- A render's result holds under its conditions (pose, prompt, checkpoint,
+  seed), not as a universal rule; one made on a retired checkpoint is
+  history, not evidence for today.
+- A conclusion worth keeping past a round goes into the recipe or
+  `docs/findings/`; everything else may expire with the round.
 - The `PENDING_CLEANUP` list in the discipline test names the files written
   before this rule; it may only shrink.
 
@@ -272,7 +284,7 @@ tracked file.
   semantic 判断（prompt 組み立て、reference の意味付け、検品）は呼び出し元
   エージェントの仕事で、chimera と worker は実行と記録だけを担う。例外は
   参考画像で、worker が `reference` でタグを提案し、GUI で選ばれたタグから
-  `reference_render` が `yukari_persona`（pose を持たない 3 層、`layers.py`）への
+  `reference_render` が `yukari_persona`（pose を持たない画風とキャラクターだけ、`Recipe.persona`）への
   part patch を組んで（`domain/yukari/reference.py`）、`reference` が DWPose で
   読んだ人物の骨格、または anime-seg で切り出したシルエットか線画か
   Depth Anything V2 の深度を `render.pose` patch（骨格は Anima のポーズ
@@ -365,14 +377,14 @@ put it in the blocks (`yukari/costumes.py`'s `COSTUMES`/`LEGWEAR`).
 
 `.local/` is untracked (`.gitignore`) and is where analysis scripts, sweeps and
 logs go — `uv run .local/foo.py`. It is not the repo: anything worth keeping
-moves into `scripts/`, `experiments/` or `docs/findings/`. Request JSON no longer lives
+moves into `scripts/` or `docs/findings/`. Request JSON no longer lives
 here: a round is queued with `derive_request`, and the record on chimera is the
 reproducible artefact.
 
 ### Writing docs: rewrite, never append
 
-A measurement, null results included, is an `experiments/` record (append-only).
-A doc holds only the conclusion that is true now:
+A measurement, null results included, is the render's semantic and rating
+on chimera. A doc holds only the conclusion that is true now:
 
 - New knowledge rewrites the finding it touches. A contradicted line is
   replaced, not corrected underneath; the old version is in git.

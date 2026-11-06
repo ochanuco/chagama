@@ -10,13 +10,13 @@ in [`findings/delivery.md`](../findings/delivery.md).
 
 | Group | Read by |
 |---|---|
-| `BACKDROP`, `OUTLINES`, `OUTLINES_MAX`, `OUTLINE_WIDTH_MAX_PCT` | band drawing in `infrastructure/imaging/delivery.py`, the `outlines` deliver option |
+| `BACKDROP`, `OUTLINES`, `OUTLINES_MAX`, `OUTLINE_WIDTH_MAX_PCT` | band drawing in `infrastructure/imaging/delivery.py`, the `outlines` deliver option; `OUTLINES` is yukari's default, and another recipe swaps its rim colour through `RecipeEntry.outlines` (akari: `domain/akari/delivery.py`) |
 | `STROKE_CUT_EPS_PCT`, `STROKE_EDGE_SMOOTH` | `band_alphas`: hand-cut outline and edge rounding |
 | `STROKE_LIGHT_*`, `STROKE_LIGHTS`, `STROKE_CHOICES`, `STICKER_SHADOW_*` | the `stroke_light` deliver option |
-| `STRIPES_*`, `WAVEFORM_*`, `EARS_*`, `BACKDROP_*` | named backdrops in `infrastructure/imaging/backdrops.py` |
+| `STRIPES_*`, `WAVEFORM_*`, `EARS_*`, `BACKDROP_*` | named backdrops in `infrastructure/imaging/backdrops.py`; `BACKDROP_PALETTE` is yukari's pattern colours, and another recipe swaps them through `RecipeEntry.backdrop_palette` (akari: `domain/akari/delivery.py`) |
 | `SAT_BAND`, `BG_SAT_MAX`, `FIGURE_SAT_*`, `BACKDROP_SPREAD_MAX` | `measure`/`verdict` in `palette.py`: the gate at ingest and in `palette_check.py` |
-| `FIGURE_LIGHT_*`, `PALETTE_WINDOWS`, `REPIN_*` | `repin` in `infrastructure/imaging/palette.py`, applied by the `saturation` request through `infrastructure/imaging/saturation.py` |
-| `SATURATION_STRENGTH` | the `saturation` request's `strength` and the catalog's top-level `saturation` section |
+| `FIGURE_LIGHT_*`, `PALETTE_WINDOWS`, `REPIN_*` | `repin` in `infrastructure/imaging/palette.py`, applied through `infrastructure/imaging/saturation.py` by deliver (figure only, before the bands) and by the `saturation` request (both layers) |
+| `SATURATION_STRENGTH` | the deliver `saturation` option, the `saturation` request's `strength` and the catalog's `deliver.saturation` and top-level `saturation` sections |
 
 | `MATTE_*`, `KEY_*`, `ENCLOSED_*`, `FRAME_WINDOW_*`, `DRAWN_OUTLINE_*` | matte, keyed edge, pocket cuts and the drawn outline in `delivery.py` |
 | `DELIVER_DEFAULTS` | the deliver defaults the catalog publishes |
@@ -75,8 +75,8 @@ A `stage` request's `frame` sets the delivery in a square panel:
   widths are percent of its longest side.
 - The canvas is painted `paper` and the box filled with the request's
   `backdrop` rendered at the box's size. The `line` and the `rim` along both
-  its edges (either null or width 0 for none, an omitted color or width the
-  default) are the border: a hand-drawn dry-brush line on each side, slightly
+  its edges (either null or width 0 for none, an omitted width the default,
+  an omitted color the staged picture's recipe's) are the border: a hand-drawn dry-brush line on each side, slightly
   wobbly, overshooting the corners, of overlapping dabs with a few thin
   streaks where the brush skipped (`FRAME_BRUSH`; the same frame and
   delivery size always draw the same pixels). The line's `pattern` is `solid`,

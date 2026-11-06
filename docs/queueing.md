@@ -31,7 +31,7 @@ Options, defaults and ranges live here:
 | `generate` | a request.json body | render the recipe with its parameters and patches |
 | `redraw` | `{generation_id, options}` | one pixel-changing `method` (`hires`) on a picture Generation; uploads one green-background picture |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: backdrop, outline bands; never redraws |
-| `saturation` | `{generation_id, options}` | compress a delivery's figure and outline layers' saturation and recompose the picture |
+| `saturation` | `{generation_id, options}` | on a drawing: cut the figure out with no outline and compress its saturation, for a later `deliver` to outline; on a delivery: compress its figure and outline layers and recompose the picture |
 | `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern, in a frame or in a photo, unblurred |
 | `lighting` | `{generation_id, options}` | light a staged picture's figure and outline by its backdrop: exposure, colour cast, optional side shading |
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
@@ -40,14 +40,13 @@ Options, defaults and ranges live here:
 | `reference` | `{recipe}`, the picture uploaded on chimera | read the picture into tags: the proposed tags and every candidate; draws nothing |
 | `reference_render` | `{reference_request_id, pose, seed?, applied, pose_follow?}` | queue one `generate` that draws the tags picked from a done `reference` on `yukari_persona`, the layers with no pose (`pose` is always `yukari_persona`); `pose_follow` is `off` (the tags only), `loose` (the default: the skeleton) or `firm` (the depth, smoothed of hems and folds, with the head and the chest left to the tags; the skeleton for a reference read before depth was kept); when the reference crops the head, either follow grows the frame past it so the head is drawn whole and drops `head out of frame` and `close-up`; no GPU |
 
-A `finalize`, `repair` or `masked_redraw` row is refused. `redraw` leaves a
-picture on the green key; `deliver` makes the delivered picture, and
-`saturation`, `dof` and `lens` make another delivered picture from it. They
-stack as separate requests in one order: `deliver` (transparent, for the
-workbench), `saturation`, `stage`, `lighting`, `dof`, then `lens` (as often as
-wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
-`cutout` and `alpha`) stands in for a transparent delivery with no outlines
-(figure `cutout`, no backdrop). `photo` is the older one-step stage-and-blur.
+A `finalize`, `repair` or `masked_redraw` row is refused. They stack as
+separate requests in the workbench's order: `redraw` (green key),
+`saturation` (on the drawing), `deliver` (transparent; with no `saturation`
+before it, it compresses the figure itself), `stage`, `lighting`, `dof`,
+then `lens`. A cut `redraw` (`cut: true`, with `cutout` and `alpha`) and a
+`saturation` of a drawing stand in for a transparent delivery with no
+outlines. `photo` is the older one-step stage-and-blur.
 
 ## Rules the code spreads across files
 
@@ -82,21 +81,24 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 
 ### Deliver options
 
-- The source must be a picture: a delivered picture and a LayerDiffuse
-  picture are refused. Any other recipe or model is delivered as drawn.
+- The source must be a picture (not a delivered or LayerDiffuse one), of any
+  recipe or model. A `saturation` of a drawing is delivered from the drawing
+  and its cut at the saturation's `strength`, not the option's (never `keep_scene`).
 - The options are `keep_scene`, `transparent`, `backdrop`, `stroke_light`,
-  `outlines`, `light` and `see_through`; any other key is an error. An absent
-  `stroke_light` or
-  `backdrop` takes the recipe's `deliver.defaults`, the same values the WebUI
-  sends. `light` only shades the stroke and tints the backdrop; it does not
-  redraw. An explicit `backdrop: null` without `transparent` delivers a
-  transparent picture; `transparent: false` keeps the white background.
+  `outlines`, `light`, `see_through` and `saturation`; any other key is an
+  error. An absent `stroke_light`, `backdrop` or `saturation` takes the
+  recipe's `deliver.defaults`, as the WebUI sends. `light` only shades the
+  stroke and tints the backdrop. `backdrop: null` without `transparent` is
+  transparent; `transparent: false` keeps the white background.
 - `outlines` lists the bands around the figure, innermost first, each
   `{"color": "#rrggbb", "width": w}` with `w` a percent of the longest side,
   0 < w <= 5, at most 6 bands. Absent or `null` takes
   `deliver.outlines.default` from the catalog; `[]` delivers without bands
   and without a drop shadow. Each band starts at the previous band's outer
   edge; the innermost also runs under the figure's soft edge.
+- `saturation` 0..1 (default 1) compresses the cut figure on the `REPIN_*`
+  curve before the bands are drawn, so the bands keep the `outlines` colours
+  exactly; it is recorded when above 0, and a `keep_scene` delivery is never compressed.
 - `stroke_light` is a light direction (`n` .. `nw`) or `even` (a uniform outermost
   band, the same as `null`); it shades and extrudes the outermost band only. Only a
   direction throws the drop shadow, straight away from the light, in the outermost
@@ -148,14 +150,11 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
 
 ### Saturation options
 
-- The source must be a deliver output with its layers, or a cut redraw.
-  `strength` 0..1 (default 1) blends the `REPIN_*` compression in; 0 leaves
-  the layers as they are.
-- Each layer is compressed through its own alpha (every pixel above 0), the
-  outline colour included; `layer-backdrop` passes through. The picture is
-  backdrop, outline, figure composited as stage does (RGBA without a
-  backdrop). The output records `kind: "saturation"`, `base_generation` and
-  `strength`, and later kinds take it as the delivery it came from.
+- On a drawing: the deliver graph, transparent with `outlines: []`, at `strength`
+  0..1 (default 1) on the drawing's `alpha` cut, the figure its `deliver` outlines.
+  Records `kind: "saturation"`, `base_generation` and `strength`.
+- On a deliver output not yet compressed: each layer through its own alpha,
+  outline colour included. Any other delivered picture is refused.
 
 ### Lighting options
 
@@ -294,7 +293,7 @@ wanted); all but `deliver` may be skipped. A cut `redraw` (`cut: true`, with
   in a subprocess and deletes the picture; a 404 re-queues while attempts remain.
 - `reference_render` rechecks each `(part, tag)` against the source's
   `candidates` and posts a `generate` (`system`, key `reference_render:{id}`).
-- The render draws on `BASE` (`domain/yukari/poses.py`, not in the catalog):
+- The render draws on `yukari_persona` (`Recipe.persona`, not among the catalog's poses):
   the character with no pose, framing, angle, expression or legwear of its own.
 - The analysis runs in the reference env (`docs/release.md`) with the
   `reference/` models of `worker-models.toml`; without them only reference rows fail.

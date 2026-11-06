@@ -15,7 +15,7 @@ from chagama.domain.generation.patches import (
     apply_patches,
     parse_patches,
 )
-from chagama.domain.yukari.dials import DIALS as ANIMA_DIALS
+from chagama.domain.anima.dials import DIALS as ANIMA_DIALS
 from chagama.domain.yukari.recipe import render_spec as anima_render_spec
 from chagama.infrastructure.comfyui import anima_graph
 

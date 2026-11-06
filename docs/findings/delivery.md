@@ -1,22 +1,44 @@
 # Delivery: deliver, palette, matte, stroke
 
-The delivery identity (solid backdrop `#ffffff`, purple stroke, acceptance band)
-lives in `domain/yukari/delivery_style.py`, fingerprinted by
-`scripts/delivery_check.py`. When `--accept` records a change, rewrite
-"The look now" below. Tags and `a<n> §` pointers: see
-[`docs/README.md`](../README.md).
+The delivery identity (solid backdrop `#ffffff`, purple stroke, acceptance band) is
+in `domain/yukari/delivery_style.py`, each recipe's bands, backdrop palette and frame
+colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`. On
+`--accept`, rewrite "The look now". Tags and `a<n> §` pointers: [`docs/README.md`](../README.md).
 
 ## The look now
 
-- Deliver delivers the raw Anima pick: matte, repin, backdrop and purple
-  stroke, no redraw. A `redraw` (method `hires`) is opt-in per request and
-  is delivered afterwards.
+- Deliver delivers the raw Anima pick: matte, then the figure's saturation
+  compressed on repin's curve, then backdrop and bands, no redraw. A
+  `redraw` (method `hires`) is opt-in per request and is delivered afterwards.
   Defaults: `DELIVER_DEFAULTS` in `delivery_style.py`. `[Anima]`
-- Deliver defaults: repin on, backdrop `dots`, stroke light from `n`. The
-  diagonal stripes + faint focus lines backdrop is `backdrop=stripes`. `[Anima]`
-- The bands are a list (`OUTLINES`, the `outlines` deliver option), innermost
-  first: a white band at 0.8% of the longest side, then the `#885b80` rim at
+- Deliver defaults: `saturation` 1, backdrop `dots`, stroke light from `n`.
+  The diagonal stripes + faint focus lines backdrop is `backdrop=stripes`. `[Anima]`
+- The default bands are the source's recipe's (`RecipeEntry.outlines`):
+  yukari's `#7e6988` rim, akari's `#c27138` (picked from the swatch
+  delivery 1vfghs), the same white band and widths for both. A request's
+  `outlines` wins; the catalog publishes each recipe's default under
+  `deliver.outlines.default`. `[Anima]`
+- Every backdrop pattern serves every recipe, painted (deliver and stage) in
+  the source recipe's `RecipeEntry.backdrop_palette`: yukari `#d9c6ee` /
+  pink `#f4c9dc` / deep toward `#885b80`, akari `#f7d3b5` / same pink / deep
+  toward `#c27138`. Thumbnails per recipe: `deliver.backdrops`. A framed stage's
+  line / rim default to the recipe's `frame_line` / `frame_rim` (catalog
+  `stage.frame`): yukari `#4a3152` / `#2e2236`, akari `#56321a` / `#33200f`. `[Anima]`
+- Saturation comes before the bands, so a band is exactly the colour it is
+  given. The figure matches what a `saturation` request (strength 1) on a
+  delivery makes of it, to the level (z0fus0's figure re-delivered against
+  0yansg). The workbench order is 描き直し, 彩度, フチ: a `saturation` on the
+  drawing is the deliver's figure at that strength with no bands, and the
+  `deliver` of it draws the bands at that strength from the drawing's cut.
+  On a delivery made with `saturation: 0` the request compresses both
+  layers, and it refuses one already compressed. `[Anima]`
+- The bands are a list (`OUTLINES` for yukari, the `outlines` deliver option),
+  innermost first: a white band at 0.8% of the longest side, then the `#7e6988` rim at
   1.04%, each polygonised (Douglas–Peucker, eps 0.5%) for a hand-cut look.
+  `#7e6988` is what the curve makes of the earlier `#885b80` rim (measured
+  on 0yansg's outline layer, 89k flat pixels), so a delivery looks as one
+  delivered and then saturated did. The white band stays `#ffffff` under the
+  curve. The `deep` backdrop motifs still mix the uncompressed `#885b80`.
   0.8 was picked over 0.2 and 0.4 on a raw drawn without a white outline
   (5e5p2h against fjci20 / ocym2i). The innermost band also runs under the
   figure's own edge pixels, so a soft edge blends into the band, not the
@@ -75,6 +97,10 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 - Seat layered delivery: backdrop → seat → frame → figure, re-running
   `clean_background` with the seat pasted into the backdrop. `[Anima]`
 
+- The green key is read from the top-left 8x8 patch only. When steam or the
+  figure covers that corner the key is None and `see_through` stops too.
+  Steam that floats free of the figure is cut away. `[Anima]`
+
 ## Palette (repin)
 
 - Repin per hue window, not one saturation scale; a light-band normalisation
@@ -120,3 +146,5 @@ lives in `domain/yukari/delivery_style.py`, fingerprinted by
 - See-through part decomposition off-front: drops legs and legwear, and its
   output is a redraw. `[all]` (a5 §See-through)
 - Chaining two same-size image-space passes to rough then colour. `[IL]` (a5 §2026-08-29 再考)
+- An acrylic-plate rim: 2D line, transparency and glint effects and a Qwen
+  edit redraw of the rim both read as cheap CG. `[Anima]`

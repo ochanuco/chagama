@@ -11,12 +11,13 @@ from pathlib import Path
 from ..application import metadata, safety
 from ..application.catalog import build_catalog
 from ..application.catalog import publish_catalog as publish_catalog_document
-from ..application.deliver import deliver
+from ..application.deliver import deliver, saturate_drawing
 from ..application.dof import dof
 from ..application.generate import generate
 from ..application.ingest import import_images
 from ..application.lens import lens
 from ..application.photo import photo
+from ..application.picture_source import is_delivered
 from ..application.redraw import redraw
 from ..application.stage import lighting, saturation, stage
 from ..application.request_options import (
@@ -31,9 +32,10 @@ from ..application.request_options import (
 )
 from ..application.watch import WatchServices, watch
 from ..application.work import work
-from ..domain.yukari.angles import ANGLES
-from ..domain.yukari.components import Framing
-from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
+from ..domain.anima.angles import ANGLES
+from ..domain.anima.components import Framing
+from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
+from ..domain.recipes import RECIPES
 from ..domain.yukari.delivery_style import (
     DOF_F_NUMBER,
     DOF_SCOPE,
@@ -51,9 +53,6 @@ from ..domain.yukari.delivery_style import (
     STROKE_LIGHTS,
     Light,
 )
-from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.poses import PERSONA_POSE, POSES
-from ..domain.yukari.recipe import negative, positive
 from ..infrastructure.chimera.client import ChimeraClient
 from ..infrastructure.comfyui.client import ComfyUIClient
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
@@ -304,6 +303,11 @@ def parser() -> argparse.ArgumentParser:
              f"({', '.join(sorted(LIGHT_SCENES))}) from a direction "
              f"({', '.join(sorted(STROKE_LIGHTS))}; default "
              f"{LIGHT_FROM_DEFAULT}) and tint the backdrop to match")
+    deliver_parser.add_argument(
+        "--saturation", type=float, default=None,
+        help="strength the figure's saturation is compressed with before the "
+             f"outlines are drawn, {SATURATION_STRENGTH['min']}.."
+             f"{SATURATION_STRENGTH['max']} (default {SATURATION_STRENGTH['default']})")
 
     dof_parser = commands.add_parser(
         "dof", help="blur one delivered picture's layers by depth")
@@ -445,7 +449,9 @@ def parser() -> argparse.ArgumentParser:
              f"(default {LIGHTING_STRENGTH['default']})")
 
     saturation_parser = commands.add_parser(
-        "saturation", help="compress a delivery's layers' saturation")
+        "saturation",
+        help="compress a drawing's cut figure before its outlines, or a "
+             "delivery's layers")
     saturation_parser.add_argument("generation_id")
     saturation_parser.add_argument(
         "--strength", type=float, default=None,
@@ -489,33 +495,40 @@ def parser() -> argparse.ArgumentParser:
     safety_backfill.add_argument("--published", action="store_true")
     safety_backfill.add_argument("--limit", type=int, default=None)
 
-    yukari_parser = commands.add_parser("yukari", help="inspect the Yukari domain")
-    yukari_commands = yukari_parser.add_subparsers(dest="yukari_command", required=True)
-    yukari_prompt = yukari_commands.add_parser("prompt")
-    yukari_prompt.add_argument("--pose", required=True, choices=sorted(POSES) + [PERSONA_POSE])
-    yukari_prompt.add_argument("--costume", choices=sorted(COSTUMES))
-    yukari_prompt.add_argument("--expression", choices=sorted(EXPRESSIONS))
-    yukari_prompt.add_argument("--legwear", choices=LEGWEARS, default=None)
-    yukari_prompt.add_argument("--legwear-state", dest="legwear_state",
-                               choices=LEGWEAR_STATES, default=None)
-    yukari_prompt.add_argument("--angle", default=None,
-                               help=f"comma-separated: {', '.join(ANGLES)}")
-    yukari_prompt.add_argument("--framing", default=None,
-                               choices=[framing.value for framing in Framing])
-    yukari_prompt.add_argument("--json", action="store_true")
+    for name, entry in RECIPES.items():
+        recipe = entry.recipe
+        recipe_parser = commands.add_parser(name, help=f"inspect the {name} recipe")
+        recipe_commands = recipe_parser.add_subparsers(dest="recipe_command",
+                                                       required=True)
+        recipe_prompt = recipe_commands.add_parser("prompt")
+        recipe_prompt.add_argument(
+            "--pose", required=True,
+            choices=sorted(recipe.poses) + [recipe.character.persona_pose])
+        recipe_prompt.add_argument(
+            "--costume", choices=sorted(recipe.character.wardrobe.costumes))
+        recipe_prompt.add_argument("--expression", choices=sorted(recipe.expressions))
+        recipe_prompt.add_argument("--legwear", choices=LEGWEARS, default=None)
+        recipe_prompt.add_argument("--legwear-state", dest="legwear_state",
+                                   choices=LEGWEAR_STATES, default=None)
+        recipe_prompt.add_argument("--angle", default=None,
+                                   help=f"comma-separated: {', '.join(ANGLES)}")
+        recipe_prompt.add_argument("--framing", default=None,
+                                   choices=[framing.value for framing in Framing])
+        recipe_prompt.add_argument("--json", action="store_true")
     return root
 
 
 def main(argv: list[str] | None = None) -> None:
     args = parser().parse_args(argv)
-    if args.command == "yukari":
+    if args.command in RECIPES:
+        recipe = RECIPES[args.command].recipe
         prompts = {
-            "positive": positive(args.pose, args.costume, args.expression,
-                                 args.legwear, args.legwear_state,
-                                 args.angle, args.framing),
-            "negative": negative(args.pose, args.costume, args.expression,
-                                 args.legwear, args.legwear_state, args.framing,
-                                 args.angle),
+            "positive": recipe.positive(args.pose, args.costume, args.expression,
+                                        args.legwear, args.legwear_state,
+                                        args.angle, args.framing),
+            "negative": recipe.negative(args.pose, args.costume, args.expression,
+                                        args.legwear, args.legwear_state,
+                                        args.framing, args.angle),
         }
         if args.json:
             print(json.dumps(prompts, ensure_ascii=False, indent=2))
@@ -599,6 +612,7 @@ def main(argv: list[str] | None = None) -> None:
             **({"outlines": outlines} if outlines is not None else {}),
             **({"light": {"scene": light.scene, "from": light.direction}}
                if light is not None else {}),
+            **({"saturation": args.saturation} if args.saturation is not None else {}),
         }
         try:
             arguments = deliver_arguments(options)
@@ -636,11 +650,14 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "stage":
         services = build_stage_services(
             chimera, comfyui, notifier, repository, repository_metadata)
+        context = chimera.request(
+            "GET", f"/api/v1/generations/{args.generation_id}/context")
         try:
-            arguments = stage_arguments(_stage_options_from_args(args))
+            arguments = stage_arguments(_stage_options_from_args(args),
+                                        recipe=context["request"].get("recipe"))
         except ValueError as error:
             raise SystemExit(str(error)) from error
-        stage(args.generation_id, services, **arguments)
+        stage(args.generation_id, services, context=context, **arguments)
         return
     if args.command == "lighting":
         services = build_stage_services(
@@ -654,14 +671,21 @@ def main(argv: list[str] | None = None) -> None:
         lighting(args.generation_id, services, **arguments)
         return
     if args.command == "saturation":
-        services = build_stage_services(
-            chimera, comfyui, notifier, repository, repository_metadata)
         options = {} if args.strength is None else {"strength": args.strength}
         try:
             arguments = saturation_arguments(options)
         except ValueError as error:
             raise SystemExit(str(error)) from error
-        saturation(args.generation_id, services, **arguments)
+        context = chimera.request(
+            "GET", f"/api/v1/generations/{args.generation_id}/context")
+        if is_delivered(context["request"]):
+            saturation(args.generation_id, build_stage_services(
+                chimera, comfyui, notifier, repository, repository_metadata),
+                context=context, **arguments)
+        else:
+            saturate_drawing(args.generation_id, build_deliver_services(
+                chimera, comfyui, notifier, repository, repository_metadata),
+                context=context, **arguments)
         return
     if args.command == "catalog":
         git = repository_metadata()

@@ -20,9 +20,12 @@ from ..domain.generation.patches import (
     TEXT_OP_KEYS,
     TEXT_TARGETS,
 )
-from ..domain.yukari.angles import ANGLE_LABELS, ANGLES
-from ..domain.yukari.components import Framing
-from ..domain.yukari.costumes import COSTUMES, LEGWEAR_STATES, LEGWEARS
+from ..domain.anima.angles import ANGLE_LABELS, ANGLES
+from ..domain.anima.components import PART_GROUPS, Framing
+from ..domain.anima.framing import FRAMING, FRAMING_LABELS
+from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
+from ..domain.anima.style import HEIGHT, WIDTH
+from ..domain.recipes import DEFAULT_RECIPE, RECIPES, RecipeEntry, deliver_outlines
 from ..domain.yukari.delivery_style import (
     BACKDROP,
     BACKDROP_LABELS,
@@ -62,12 +65,8 @@ from ..domain.yukari.delivery_style import (
     SATURATION_STRENGTH,
     STROKE_CHOICES,
     STROKE_LIGHTS,
+    BackdropPalette,
 )
-from ..domain.yukari.dials import DIALS
-from ..domain.yukari.expressions import EXPRESSIONS
-from ..domain.yukari.framing import FRAMING_LABELS
-from ..domain.yukari.poses import PERSONA_POSE, POSE_LABELS, POSES
-from ..domain.yukari.recipe import PART_GROUPS, identity_tags, render_spec
 from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
 from ..infrastructure.imaging.depth_blur import sharp_reach_per_f
@@ -90,10 +89,11 @@ def _parameters(recipe: str) -> dict:
     }
 
 
-def _base_pose() -> dict:
-    spec = render_spec(PERSONA_POSE, _SEED, _PREFIX)
+def _base_pose(entry: RecipeEntry) -> dict:
+    persona = entry.recipe.character.persona_pose
+    spec = entry.recipe.render_spec(persona, _SEED, _PREFIX)
     return {
-        "name": PERSONA_POSE,
+        "name": persona,
         "canvas": [spec.width, spec.height],
         "positive": spec.prompts.positive,
         "negative": spec.prompts.negative,
@@ -102,11 +102,14 @@ def _base_pose() -> dict:
     }
 
 
-def _yukari_recipe() -> dict:
+def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
+    recipe = entry.recipe
+    render_spec = recipe.render_spec
+    first_pose = sorted(recipe.poses)[0]
     poses = []
     model = None
-    for name in sorted(POSES):
-        pose = POSES[name]
+    for name in sorted(recipe.poses):
+        pose = recipe.poses[name]
         spec = render_spec(name, _SEED, _PREFIX)
         model = spec.model_path
         poses.append({
@@ -116,45 +119,57 @@ def _yukari_recipe() -> dict:
             "expression": pose.expression,
             "legwear": pose.legwear_kind if pose.legwear else None,
             "legwear_state": pose.legwear_state.value if pose.legwear else None,
-            "label": POSE_LABELS[name],
+            "label": entry.pose_labels[name],
             "framing": pose.framing.value,
             "canvas": [spec.width, spec.height],
             "positive": spec.prompts.positive,
             "negative": spec.prompts.negative,
-            "fingerprint": prompt_fingerprint("yukari", name, spec.prompts.positive,
+            "fingerprint": prompt_fingerprint(recipe_name, name,
+                                              spec.prompts.positive,
                                               spec.prompts.negative),
             "parts":[{"name": part_name, "text": text}
                      for part_name, text in spec.positive_parts],
         })
     return {
-        "name": "yukari",
+        "name": recipe_name,
         "model": model,
-        "parameters": _parameters("yukari"),
-        "costumes": sorted(COSTUMES),
+        "parameters": _parameters(recipe_name),
+        "costumes": sorted(recipe.character.wardrobe.costumes),
         "legwear": list(LEGWEARS),
         "legwear_state": list(LEGWEAR_STATES),
         "angles": list(ANGLES),
         "framings": [framing.value for framing in Framing],
+        "canvas": [WIDTH, HEIGHT],
+        "framing_canvases": {framing.value: list(FRAMING[framing].canvas)
+                             for framing in Framing if FRAMING[framing].canvas},
         "angle_labels": ANGLE_LABELS,
         "framing_labels": {framing.value: FRAMING_LABELS[framing]
                            for framing in Framing},
-        "expressions": sorted(EXPRESSIONS),
+        "expressions": sorted(recipe.expressions),
         "poses": poses,
-        "base_pose": _base_pose(),
+        "base_pose": _base_pose(entry),
         "parts": [name for name, _ in
-                 render_spec(sorted(POSES)[0], _SEED, _PREFIX).positive_parts],
+                 render_spec(first_pose, _SEED, _PREFIX).positive_parts],
         "part_groups": {name: list(members)
                         for name, members in PART_GROUPS.items()},
-        "identity_tags": sorted(identity_tags(sorted(POSES)[0])),
-        "dials": DIALS,
+        "identity_tags": sorted(recipe.identity_tags(first_pose)),
+        "dials": entry.dials,
         "deliver": {
             "defaults": {key: value for key, value in DELIVER_DEFAULTS.items()
                          if key != "outlines"},
-            "outlines": {"default": DELIVER_DEFAULTS["outlines"],
+            "outlines": {"default": deliver_outlines(recipe_name),
                          "max_count": OUTLINES_MAX,
                          "max_width": OUTLINE_WIDTH_MAX_PCT},
             "stroke_light": list(STROKE_CHOICES),
+            "saturation": {**SATURATION_STRENGTH,
+                           "help": "the figure's saturation compressed on repin's curve "
+                                   "before the outlines are drawn; the outlines keep "
+                                   "their colours. 0 for none"},
             "backdrop_color": BACKDROP,
+            "backdrops": _backdrops_block(entry.backdrop_palette),
+        },
+        "stage": {
+            "frame": {"line": dict(entry.frame_line), "rim": dict(entry.frame_rim)},
         },
         "redraw": {
             "defaults": {
@@ -190,13 +205,14 @@ def _patches_block() -> dict:
     }
 
 
-def _backdrops_block() -> list[dict]:
+def _backdrops_block(palette: BackdropPalette) -> list[dict]:
     return [
         {
             "name": name,
             "label": BACKDROP_LABELS[name],
             "thumbnail": ("data:image/png;base64,"
-                         + base64.b64encode(backdrop_thumbnail(name)).decode("ascii")),
+                         + base64.b64encode(backdrop_thumbnail(name, palette))
+                         .decode("ascii")),
         }
         for name in BACKDROP_PATTERNS
     ]
@@ -327,15 +343,18 @@ def build_catalog(git: dict) -> dict:
         "git_branch": git.get("branch"),
         "git_dirty": bool(git.get("dirty")),
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "recipes": [_yukari_recipe()],
+        "recipes": [_recipe(name, entry) for name, entry in RECIPES.items()],
         "patches": _patches_block(),
         "dof": _dof_block(),
         "lens": _lens_block(),
         "photo": _photo_block(),
         "stage": _stage_block(),
         "lighting": _lighting_block(),
-        "saturation": {"strength": SATURATION_STRENGTH},
-        "backdrops": _backdrops_block(),
+        "saturation": {"strength": SATURATION_STRENGTH,
+                       "help": "compresses a delivery's figure and outline layers, "
+                               "outline colours included; refused for a deliver that "
+                               "already compressed its figure (saturation > 0)"},
+        "backdrops": _backdrops_block(RECIPES[DEFAULT_RECIPE].backdrop_palette),
     }
 
 

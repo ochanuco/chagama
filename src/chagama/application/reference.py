@@ -15,18 +15,19 @@ import io
 import math
 import random
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from PIL import Image
 
+from ..domain.recipes import DEFAULT_RECIPE, RECIPES
 from ..domain.yukari import reference as rules
-from ..domain.yukari.recipe import render_spec
 from ..infrastructure.imaging.pose_skeleton import head_overflow
 from .generate import validate_request
 from .worker_channels import Management
 
-RECIPE = "yukari"
+# The tag rules in `rules` are written for this recipe's persona pose.
+RECIPE = DEFAULT_RECIPE
 # ComfyUI unloads on its own prompt thread after /free returns.
 FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
@@ -111,11 +112,20 @@ def with_headroom(figure: Mapping) -> Mapping:
     return grown
 
 
-def pose_patch(figure: Mapping, follow: str) -> dict:
+def shows_back(applied: Mapping[str, Sequence[str]]) -> bool:
+    return any(tag in rules.BACK_TAGS for tags in applied.values() for tag in tags)
+
+
+def pose_patch(figure: Mapping, follow: str, *,
+               applied: Mapping[str, Sequence[str]] | None = None) -> dict:
+    applied = applied or {}
+    back = shows_back(applied)
     if follow == "firm" and "depth" in figure:
+        # A back view's head and chest are her back: the prompt would turn them round.
+        looking_back = any(rules.LOOKING_BACK in tags for tags in applied.values())
         value = {"control": "depth", "picture": figure["depth"],
-                 "free_head": True, "free_chest": True, "points": figure["points"],
-                 "blur": DEPTH_BLUR}
+                 "free_head": not back or looking_back, "free_chest": not back,
+                 "points": figure["points"], "blur": DEPTH_BLUR}
     else:
         value = {"points": figure["points"]}
     return {"target": "render.pose", "op": "set",
@@ -126,7 +136,7 @@ def pose_patch(figure: Mapping, follow: str) -> dict:
 def pose_canvas(pose: str, aspect: float) -> tuple[int, int]:
     """The pose's default canvas area at the reference's width over height
     (held to `POSE_ASPECTS`), each side a multiple of 16."""
-    default = render_spec(pose, 0, "")
+    default = RECIPES[RECIPE].recipe.render_spec(pose, 0, "")
     pixels = default.width * default.height
     aspect = min(max(aspect, POSE_ASPECTS[0]), POSE_ASPECTS[1])
     return (round(math.sqrt(pixels * aspect) / 16) * 16,
@@ -145,11 +155,14 @@ def generate_request(plan: rules.Plan, *, seed: int, source: str,
     patches = list(plan.patches)
     if figure and pose_follow != "off":
         patches += canvas_patches(plan.pose, figure["aspect"])
-        patches.append(pose_patch(figure, pose_follow))
+        patches.append(pose_patch(figure, pose_follow, applied=plan.applied))
+    parameters = {"pose": plan.pose}
+    if shows_back(plan.applied):
+        parameters["angle"] = "from_behind"
     return {
         "schema_version": 1,
         "request": {"instruction": "参考画像から描く", "count": 1, "seeds": [seed]},
-        "generation": {"recipe": RECIPE, "parameters": {"pose": plan.pose},
+        "generation": {"recipe": RECIPE, "parameters": parameters,
                        "patches": patches},
         "semantic": {
             "summary": f"参考画像から: {plan.pose}",

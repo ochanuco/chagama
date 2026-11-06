@@ -16,6 +16,7 @@ from chagama.application.deliver import (
     DeliverServices,
     current_cut,
     deliver,
+    saturate_drawing,
 )
 from chagama.application.ingest import classify_deliver_outputs
 from chagama.domain.yukari import delivery_style
@@ -24,7 +25,7 @@ from chagama.infrastructure.comfyui.deliver_graph import deliver_graph
 from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
 
 LAYERS = ["dlv-g-layer-figure", "dlv-g-layer-outline", "dlv-g-layer-backdrop"]
-OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]
+OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#7e6988", "width": 1.04}]
 GRAPH_KWARGS = dict(
     keep_scene=False,
     transparent=False, backdrop="dots", stroke_light="n", outlines=OUTLINES,
@@ -161,8 +162,10 @@ class DeliverGraphTest(unittest.TestCase):
 
 class ManagementFake:
     def __init__(self, *, parameters=None, request_kind="generate", assets=None,
-                 graph=None, records=None):
+                 graph=None, records=None, contexts=None, generation_assets=None):
         self.records = records or {}
+        self.contexts = contexts or {}
+        self.generation_assets = generation_assets or {}
         self.calls = []
         self.assets = dict(assets or {})
         self.context = {"request": {"id": "source-request", "recipe": "yukari",
@@ -174,7 +177,7 @@ class ManagementFake:
     def request(self, method, path, payload=None, multipart=None):
         self.calls.append((method, path, payload, multipart))
         if path.endswith("/context"):
-            return self.context
+            return self.contexts.get(path.split("/")[4], self.context)
         if (method == "GET" and path.startswith("/api/v1/generations/")
                 and path.count("/") == 4):
             if path.rsplit("/", 1)[1] in self.records:
@@ -193,13 +196,16 @@ class ManagementFake:
         return {}
 
     def fetch_generation_image(self, generation_id):
-        return b"picked"
+        return b"picked" if generation_id == "src" else f"picked:{generation_id}".encode()
+
+    def assets_of(self, generation_id):
+        return self.generation_assets.get(generation_id, self.assets)
 
     def list_assets(self, generation_id):
-        return [{"role": role} for role in self.assets]
+        return [{"role": role} for role in self.assets_of(generation_id)]
 
     def fetch_asset(self, generation_id, role):
-        return self.assets.get(role)
+        return self.assets_of(generation_id).get(role)
 
     def asset_uploads(self):
         return [call for call in self.calls
@@ -397,6 +403,63 @@ class DeliverUseCaseTest(unittest.TestCase):
         self.assertEqual(parameters["outlines"],
                          delivery_style.DELIVER_DEFAULTS["outlines"])
 
+    def test_the_outlines_default_to_the_source_s_recipe(self):
+        for recipe, rim in (("yukari", "#7e6988"), ("akari", "#c27138"), (None, "#7e6988")):
+            management = ManagementFake()
+            management.context["request"]["recipe"] = recipe
+            with self.subTest(recipe=recipe), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                result = deliver("src", svc)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                expected = [{"color": "#ffffff", "width": 0.8},
+                            {"color": rim, "width": 1.04}]
+                self.assertEqual(json.loads(delivered["inputs"]["outlines"]), expected)
+                self.assertEqual(result["outlines"], expected)
+
+    def test_the_backdrop_is_painted_in_the_source_s_recipe_palette(self):
+        for recipe, base in (("yukari", "#d9c6ee"), ("akari", "#f7d3b5"), (None, "#d9c6ee")):
+            management = ManagementFake()
+            management.context["request"]["recipe"] = recipe
+            with self.subTest(recipe=recipe), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                deliver("src", svc, backdrop="dots")
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                self.assertEqual(json.loads(delivered["inputs"]["backdrop_palette"])["base"],
+                                 base)
+
+    def test_a_transparent_delivery_sends_no_palette(self):
+        management = ManagementFake()
+        management.context["request"]["recipe"] = "akari"
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            deliver("src", svc, transparent=True)
+        [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+        self.assertNotIn("backdrop_palette", delivered["inputs"])
+
+    def test_explicit_outlines_win_over_the_recipe_default(self):
+        management = ManagementFake()
+        management.context["request"]["recipe"] = "akari"
+        given = [{"color": "#123456", "width": 2.0}]
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            deliver("src", svc, outlines=given)
+        [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+        self.assertEqual(json.loads(delivered["inputs"]["outlines"]), given)
+
+    def test_the_figure_is_compressed_by_default_and_the_strength_recorded(self):
+        for kwargs, recorded in (({}, 1.0), ({"saturation": 0.0}, None),
+                                 ({"keep_scene": True}, None)):
+            management = ManagementFake()
+            with self.subTest(kwargs=kwargs), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                deliver("src", svc, **kwargs)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                parameters = next(call for call in management.calls
+                                  if call[0] == "POST" and call[1] == "/api/v1/requests"
+                                  )[2]["parameters"]
+                self.assertEqual(delivered["inputs"].get("saturation"), recorded)
+                self.assertEqual(parameters.get("saturation"), recorded)
+
     def test_delivered_outputs_are_refused_as_sources(self):
         cases = [
             dict(request_kind="deliver"),
@@ -553,6 +616,102 @@ class InheritedLightTest(unittest.TestCase):
         svc, _ = self.run_deliver(management)
         [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
         self.assertEqual(delivered["inputs"]["light_scene"], "moon")
+
+
+def context_of(kind, parameters):
+    return {"request": {"id": f"{kind}-request", "recipe": "yukari", "kind": kind,
+                        "parameters": parameters}, "generations": []}
+
+
+DRAWING = context_of("redraw", {"kind": "redraw", "method": "hires", "cut": True,
+                                "base_generation": "raw"})
+
+
+class SaturationBeforeOutlinesTest(unittest.TestCase):
+    def resolution(self, management):
+        return next(call for call in management.calls
+                    if call[0] == "PUT" and call[1].endswith("/resolution"))[2]
+
+    def test_a_drawing_is_cut_out_with_no_outline_and_compressed(self):
+        management = ManagementFake(contexts={"drw": DRAWING})
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            result = saturate_drawing("drw", svc, strength=0.6, request_id="r1",
+                                      key_prefix="request:r1")
+        [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+        self.assertEqual(delivered["inputs"]["saturation"], 0.6)
+        self.assertIs(delivered["inputs"]["transparent"], True)
+        self.assertEqual(json.loads(delivered["inputs"]["outlines"]), [])
+        self.assertEqual(svc.comfyui.uploaded[0][1], b"picked:drw")
+        resolution = self.resolution(management)
+        self.assertEqual(resolution["parameters"], {
+            "kind": "saturation", "base_generation": "drw", "strength": 0.6})
+        self.assertEqual(resolution["references"][0]["source_generation_id"], "drw")
+        job = next(call for call in management.calls
+                   if call[0] == "POST" and call[1].endswith("/jobs"))
+        self.assertEqual(job[2]["source_generation_id"], "drw")
+        self.assertEqual(roles_uploaded(management),
+                         ["layer-figure", "layer-outline", "alpha", "cut"])
+        self.assertEqual(result["saturation"], 0.6)
+
+    def test_its_delivery_is_the_drawing_s_at_that_strength_with_the_drawing_s_cut(self):
+        saturated = context_of("saturation", {"kind": "saturation",
+                                              "base_generation": "drw", "strength": 0.6})
+        management = ManagementFake(
+            contexts={"src": saturated, "drw": DRAWING},
+            generation_assets={"drw": {"alpha": b"drawing-alpha", "cut": cut_asset()},
+                               "src": {"layer-figure": b"f", "layer-outline": b"o"}})
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            result = deliver("src", svc, request_id="r2", key_prefix="request:r2")
+        graph = svc.comfyui.submitted[0]
+        [(_, delivered)] = nodes_of(graph, "YukariDeliver")
+        self.assertEqual(delivered["inputs"]["saturation"], 0.6)
+        self.assertNotIn("YukariMatting", classes(graph))
+        self.assertEqual([data for _, data in svc.comfyui.uploaded],
+                         [b"picked:drw", b"drawing-alpha"])
+        parameters = self.resolution(management)["parameters"]
+        self.assertEqual((parameters["kind"], parameters["base_generation"],
+                          parameters["saturation"]), ("deliver", "src", 0.6))
+        self.assertEqual(parameters["outlines"], delivery_style.DELIVER_DEFAULTS["outlines"])
+        job = next(call for call in management.calls
+                   if call[0] == "POST" and call[1].endswith("/jobs"))
+        self.assertEqual(job[2]["source_generation_id"], "src")
+        self.assertEqual(result["saturation"], 0.6)
+
+    def test_its_strength_wins_over_the_deliver_option(self):
+        for strength in (0.0, 0.3):
+            saturated = context_of("saturation", {"kind": "saturation",
+                                                  "base_generation": "drw",
+                                                  "strength": strength})
+            management = ManagementFake(contexts={"src": saturated, "drw": DRAWING})
+            with self.subTest(strength=strength), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                deliver("src", svc, saturation=1.0)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                self.assertEqual(delivered["inputs"].get("saturation"), strength or None)
+
+    def test_a_saturated_drawing_is_neither_compressed_again_nor_kept_in_its_scene(self):
+        saturated = context_of("saturation", {"kind": "saturation",
+                                              "base_generation": "drw", "strength": 0.6})
+        management = ManagementFake(contexts={"src": saturated, "drw": DRAWING})
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            with self.assertRaisesRegex(SystemExit, "彩度を調整済み"):
+                saturate_drawing("src", svc, strength=0.4)
+            with self.assertRaisesRegex(SystemExit, "keep_scene"):
+                deliver("src", svc, keep_scene=True)
+        self.assertEqual(svc.comfyui.submitted, [])
+
+    def test_a_saturation_of_a_delivery_is_still_refused(self):
+        saturated = context_of("saturation", {"kind": "saturation",
+                                              "base_generation": "dlv", "strength": 0.6})
+        delivery = context_of("deliver", {"kind": "deliver"})
+        management = ManagementFake(contexts={"src": saturated, "dlv": delivery})
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management=management)
+            with self.assertRaisesRegex(SystemExit, "納品済み"):
+                deliver("src", svc)
 
 
 if __name__ == "__main__":

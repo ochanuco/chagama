@@ -16,6 +16,8 @@ from PIL import Image
 from chagama.application.cut_assets import current_cut
 from chagama.application.dof import DofServices, dof
 from chagama.application.stage import StageServices, lighting, saturation, stage
+from chagama.domain.recipes import RECIPES
+from chagama.domain.yukari.delivery_style import BACKDROP_PALETTE
 from chagama.infrastructure.imaging.stage import _png
 
 LAYERS = {"layer-figure": b"figure-png", "layer-outline": b"outline-png",
@@ -27,15 +29,16 @@ DELIVERY = {"kind": "deliver", "base_generation": "src", "transparent": True,
 class ManagementFake:
     """Generations by id, each with its request parameters and assets."""
 
-    def __init__(self, records):
+    def __init__(self, records, recipe="yukari"):
         self.records = records
+        self.recipe = recipe
         self.calls = []
 
     def request(self, method, path, payload=None, multipart=None):
         self.calls.append((method, path, payload, multipart))
         if path.endswith("/context"):
             generation_id = path.split("/")[-2]
-            return {"request": {"id": f"req-{generation_id}", "recipe": "yukari",
+            return {"request": {"id": f"req-{generation_id}", "recipe": self.recipe,
                                 "kind": self.records[generation_id][0]["kind"],
                                 "parameters": self.records[generation_id][0]},
                     "generations": []}
@@ -122,6 +125,16 @@ class StageTest(unittest.TestCase):
             "shadow_from": "nw", "light": None})
         self.assertEqual(management.asset_roles(),
                          ["layer-figure", "layer-outline", "layer-backdrop"])
+
+    def test_a_pattern_is_painted_in_the_delivery_s_recipe_palette(self):
+        for recipe, palette in (("yukari", BACKDROP_PALETTE),
+                                ("akari", RECIPES["akari"].backdrop_palette)):
+            management = ManagementFake({"dlv": (DELIVERY, LAYERS)}, recipe=recipe)
+            with self.subTest(recipe=recipe), tempfile.TemporaryDirectory() as directory:
+                services = services_for(StageServices, management, directory)
+                stage("dlv", services, backdrop="stripes")
+            inputs = node(services, "YukariStage")["inputs"]
+            self.assertEqual(json.loads(inputs["backdrop_palette"]), palette._asdict())
 
     def test_a_pattern_inherits_the_light_redraw_of_its_lineage(self):
         management = ManagementFake({"dlv": (DELIVERY, LAYERS)})
@@ -306,6 +319,14 @@ class SaturationTest(unittest.TestCase):
                 saturation("bare", services, strength=1.0)
         self.assertEqual(services.comfyui.submitted, [])
 
+    def test_a_delivery_that_compressed_its_figure_is_not_compressed_again(self):
+        management = ManagementFake({"dlv": ({**OPAQUE_DELIVERY, "saturation": 1.0}, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            with self.assertRaisesRegex(SystemExit, "圧縮済み"):
+                saturation("dlv", services, strength=1.0)
+        self.assertEqual(services.comfyui.submitted, [])
+
 
 class SaturatedSourceTest(unittest.TestCase):
     def records(self):
@@ -431,27 +452,20 @@ class CutRedrawSourceTest(unittest.TestCase):
             "cr": (CUT_REDRAW, CUT_ASSETS), "plain": (UNCUT_REDRAW, {"depth": b"d"}),
             "nocut": (CUT_REDRAW, {"alpha": b"a"}), "src": ({"kind": "generate"}, {})})
 
-    def test_a_cut_redraw_is_a_transparent_delivery_with_no_outlines(self):
+    def test_a_drawing_has_no_layers_to_recolour(self):
         management = self.records()
         with tempfile.TemporaryDirectory() as directory:
             services = services_for(StageServices, management, directory)
-            saturation("cr", services, strength=0.5)
-        figure, outline = uploaded_data(services)
-        self.assertEqual(figure, CUTOUT)
-        blank = Image.open(io.BytesIO(outline))
-        self.assertEqual(blank.size, (40, 30))
-        self.assertEqual(blank.getextrema()[3], (0, 0))
-        self.assertNotIn("backdrop", node(services, "YukariSaturation")["inputs"])
-        self.assertEqual(management.asset_roles(), ["layer-figure", "layer-outline"])
-        self.assertEqual(management.resolution()["parameters"], {
-            "kind": "saturation", "base_generation": "cr", "strength": 0.5})
+            for drawing in ("cr", "plain", "src"):
+                with self.subTest(drawing=drawing), \
+                        self.assertRaisesRegex(SystemExit, "deliver の出力だけ"):
+                    saturation(drawing, services, strength=0.5)
+        self.assertEqual(services.comfyui.submitted, [])
 
     def test_a_redraw_that_was_not_cut_is_refused(self):
         management = self.records()
         with tempfile.TemporaryDirectory() as directory:
             services = services_for(StageServices, management, directory)
-            with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
-                saturation("plain", services, strength=0.5)
             with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):
                 stage("plain", services, backdrop="dots")
             with self.assertRaisesRegex(SystemExit, "切り抜いた描き直し"):

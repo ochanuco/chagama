@@ -14,7 +14,18 @@ $key = ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace("-", "").ToL
 $envDir = Join-Path (Join-Path $Data "reference-env") $key
 $python = Join-Path $envDir "Scripts\python.exe"
 $ready = Join-Path $envDir "ready"
-if (Test-Path $ready) { "reference env: up to date ($envDir)"; exit 0 }
+$check = "import sys, numpy, PIL, safetensors, timm, torch, transformers, yaml; from transformers import AutoModel; " +
+    "assert sys.prefix != sys.base_prefix, 'not running in the venv'; " +
+    "assert tuple(int(p) for p in transformers.__version__.split('.')[:2]) >= (5, 14), transformers.__version__; " +
+    "assert torch.cuda.is_available(), 'torch ' + torch.__version__ + ' has no CUDA'; " +
+    "print('torch', torch.__version__, 'transformers', transformers.__version__, 'timm', timm.__version__)"
+
+# Files can vanish from a built env, so ready is trusted only while the check passes.
+if (Test-Path $ready) {
+    & $python -c $check 2>&1 | Out-Null
+    if ($LASTEXITCODE -eq 0) { "reference env: up to date ($envDir)"; exit 0 }
+    "reference env: marked ready but the import check failed, rebuilding"
+}
 
 $uv = $env:UV
 if (-not $uv) {
@@ -29,12 +40,6 @@ if (-not $uv -or -not (Test-Path $uv)) {
     "reference env: uv not found (PATH, `$env:UV, or `"uv`" in $Config\worker.json)"
     exit 1
 }
-
-$check = "import sys, numpy, PIL, safetensors, timm, torch, transformers, yaml; from transformers import AutoModel; " +
-    "assert sys.prefix != sys.base_prefix, 'not running in the venv'; " +
-    "assert tuple(int(p) for p in transformers.__version__.split('.')[:2]) >= (5, 14), transformers.__version__; " +
-    "assert torch.cuda.is_available(), 'torch ' + torch.__version__ + ' has no CUDA'; " +
-    "print('torch', torch.__version__, 'transformers', transformers.__version__, 'timm', timm.__version__)"
 
 function Reset-Env {
     if (Test-Path $envDir) { Remove-Item -Recurse -Force $envDir }

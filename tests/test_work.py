@@ -272,7 +272,7 @@ def deliver_row(**overrides):
     return row
 
 
-DEFAULT_OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#885b80", "width": 1.04}]
+DEFAULT_OUTLINES = [{"color": "#ffffff", "width": 0.8}, {"color": "#7e6988", "width": 1.04}]
 
 
 def dof_row(**overrides):
@@ -422,7 +422,8 @@ class ExecuteTest(unittest.TestCase):
             self.assertEqual(result, {
                 "generation_ids": ["g2"],
                 "resolved_options": {"transparent": True,
-                                     "outlines": DEFAULT_OUTLINES}})
+                                     "outlines": DEFAULT_OUTLINES,
+                                     "saturation": 1.0}})
             generation_id, deliver_services, kwargs = calls[0]
             self.assertEqual(generation_id, "gen-1")
             self.assertEqual(deliver_services, "deliver-services-sentinel")
@@ -511,6 +512,27 @@ class ExecuteTest(unittest.TestCase):
                              {"backdrop": "stripes", "frame": resolved})
             self.assertNotIn("frame", {k for k in result if k != "resolved_options"})
 
+    def test_stage_kind_draws_the_frame_in_the_staged_pictures_recipe(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_stage(generation_id, stage_services, **kwargs):
+                calls.append(kwargs)
+                return {"generation_ids": ["g5"]}
+
+            management = ManagementFake(context={
+                "request": {"id": "request-1", "recipe": "akari"}, "generations": []})
+            services = dataclasses.replace(
+                make_services(directory, management), stage=fake_stage)
+            result = execute(services, {
+                "id": "req-9", "kind": "stage", "status": "running",
+                "recipe_ref": "dev/requests-worker", "run_id": None, "attempt": 1,
+                "payload": {"generation_id": "gen-1", "options": {
+                    "frame": {"box": [0.1, 0.2, 1, 1]}}}})
+            self.assertEqual(calls[0]["frame"]["line"]["color"], "#56321a")
+            self.assertEqual(calls[0]["frame"]["rim"]["color"], "#33200f")
+            self.assertEqual(result["resolved_options"]["frame"]["rim"]["color"], "#33200f")
+
     def test_saturation_kind_maps_options_and_uses_the_stage_services(self):
         with tempfile.TemporaryDirectory() as directory:
             calls = []
@@ -519,14 +541,42 @@ class ExecuteTest(unittest.TestCase):
                 calls.append((generation_id, stage_services, kwargs))
                 return {"generation_ids": ["g6"]}
 
+            delivery = {"request": {"id": "request-1", "recipe": "yukari", "kind": "deliver",
+                                    "parameters": {"kind": "deliver"}}, "generations": []}
             services = dataclasses.replace(
-                make_services(directory, ManagementFake()), saturation=fake_saturation)
+                make_services(directory, ManagementFake(context=delivery)),
+                saturation=fake_saturation)
             result = execute(services, saturation_row())
             self.assertEqual(result["resolved_options"], {"strength": 0.5})
             generation_id, stage_services, kwargs = calls[0]
             self.assertEqual((generation_id, stage_services), ("gen-1", "stage-services"))
             self.assertEqual((kwargs["request_id"], kwargs["strength"]), ("req-11", 0.5))
             self.assertEqual(kwargs["key_prefix"], "request:req-11")
+
+    def test_saturation_of_a_drawing_cuts_it_out_with_the_deliver_services(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_drawing(generation_id, deliver_services, **kwargs):
+                calls.append((generation_id, deliver_services, kwargs))
+                return {"generation_ids": ["g7"], "saturation": 0.5}
+
+            def no_layers(*args, **kwargs):
+                raise AssertionError("a drawing has no layers to recolour")
+
+            drawing = {"request": {"id": "request-1", "recipe": "yukari", "kind": "redraw",
+                                   "parameters": {"kind": "redraw", "cut": True}},
+                       "generations": []}
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake(context=drawing)),
+                saturation=no_layers, saturate_drawing=fake_drawing)
+            result = execute(services, saturation_row())
+            self.assertEqual(result, {"generation_ids": ["g7"],
+                                      "resolved_options": {"strength": 0.5}})
+            generation_id, deliver_services, kwargs = calls[0]
+            self.assertEqual(generation_id, "gen-1")
+            self.assertIs(deliver_services, services.deliver_services)
+            self.assertEqual((kwargs["request_id"], kwargs["strength"]), ("req-11", 0.5))
 
     def test_saturation_kind_rejects_unknown_options_and_a_missing_source(self):
         with tempfile.TemporaryDirectory() as directory:

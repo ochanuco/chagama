@@ -1,4 +1,5 @@
-"""Compress a delivery's layers' saturation on repin's curve.
+"""Compress a figure's saturation on repin's curve: inside a deliver,
+before the outlines are drawn, or over a delivery's layers afterwards.
 
 Each layer is read through its own alpha: the pixels with any coverage are
 the range the curve works on, and the rest stay as they are. The layers are
@@ -12,6 +13,7 @@ import numpy as np
 from PIL import Image
 
 from . import stage
+from .delivery import FigureColour
 from .palette import repin
 
 
@@ -36,6 +38,22 @@ def saturate_layer(layer: np.ndarray, strength: float) -> np.ndarray:
     out = layer.copy()
     out[..., :3] = np.where(covered[..., None], rgb, layer[..., :3])
     return out
+
+
+def figure_colour(strength: float) -> FigureColour | None:
+    """The deliver's figure recolouring for `strength`: the curve over the
+    figure as its layer is saved, so it matches `saturate_layer` on that
+    layer; None when there is nothing to do."""
+    if strength <= 0.0:
+        return None
+
+    def recolour(px: np.ndarray, coverage: np.ndarray) -> np.ndarray:
+        layer = np.dstack([np.clip(np.rint(px), 0, 255),
+                           np.clip(np.rint(coverage * 255.0), 0, 255)]).astype(np.float32)
+        covered = layer[..., 3] > 0
+        return np.where(covered[..., None], saturate_layer(layer, strength)[..., :3], px)
+
+    return recolour
 
 
 def recompose(figure: np.ndarray, outline: np.ndarray,

@@ -77,6 +77,28 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 - The same seed and prompt draw a different picture across a ComfyUI restart;
   A/B controls are re-rendered in the same process. `[all]` (observed 2026-09-21, after the archive)
 
+## Words that draw something else (SilvermoonMix)
+
+- `holding credit card` → a trading card; `coffee jar` / `instant coffee` →
+  a large filled jar; `body pillow` / `plush` → a printed face or a plush (use
+  `long cushion`, `seamless velvet bolster`); `pov headpat` → a selfie arm.
+  `[Anima]`
+- `hoodie` → a closed pullover; an open front needs `open jacket` /
+  `hooded zip-up jacket` with `kangaroo pocket` / `pullover hoodie` banned,
+  and `hand in pocket` → `hand in jacket side pocket`. `[Anima]`
+- `track shorts` / `gym shorts` → dolphin shorts; `side stripes` moves onto
+  the top. `light steam rising from body` → a manga steam cloud. `floating`
+  reads as motion. `[Anima]`
+- A pose's own negative can ban what a new request wants (the coffee pose
+  bans mugs); remove the ban, not just add the word. `[Anima]`
+- A legwear colour claim raises the saturation of hair and dress too: they
+  share one purple band, so separating them belongs after the sampler. `[all]`
+- The oshiki black fill (inside the hood, hem, back of the head) survives
+  every negative, all-step CFG, the non-Turbo model and NAG; NAG also changes
+  the style. `[Anima]`
+- Skin sheen appears only with the shiny bans removed, and then the skin
+  turns to a pink gradient with thin lines, off the bust style. `[Anima]`
+
 ## Does not work
 
 - Duplicate-figure bans in the negative (`2girls`, `duplicate`, `clone`) —

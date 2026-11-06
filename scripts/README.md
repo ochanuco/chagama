@@ -15,7 +15,6 @@ they still need to exist:
   request checks.
 - `repin.py`, `glitch.py` — manual image utilities.
 - `atlas.py` — where things are, without reading them.
-- `observation_sync.py` — mirror `experiments/` into chimera.
 - `worker/*.ps1`, `fetch-models-windows.ps1` — GPU box setup and deploy.
 - `worker_models.py` — the Hugging Face and Civitai models in
   `manifests/worker-models.toml`, fetched onto the GPU box by the

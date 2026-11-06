@@ -12,21 +12,22 @@ from unittest.mock import patch
 
 from chagama.application.generate import request_graph, validate_request
 from chagama.domain.generation.prompt_lint import tags as prompt_tags
+from chagama.domain.anima import style as st
+from chagama.domain.anima.components import PART_NAMES
+from chagama.domain.anima.expression import Expression, EyeQuality
+from chagama.domain.anima.legwear import (OFF_LEGWEAR, OFF_LEGWEAR_BAN,
+                                          REMOVING_LEGWEAR,
+                                          REMOVING_LEGWEAR_BAN, SHEER_BAN,
+                                          LegwearState)
 from chagama.domain.yukari import prompt_style as ps
+from chagama.domain.yukari.character import YUKARI
 from chagama.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
-                                                    OFF_LEGWEAR,
-                                                    OFF_LEGWEAR_BAN,
-                                                    REMOVING_LEGWEAR,
-                                                    REMOVING_LEGWEAR_BAN,
-                                                    SHEER_GLOSS_LEGWEAR,
-                                                    SHEER_LEGWEAR,
-                                                    LegwearState)
-from chagama.domain.yukari.expressions import (
-    EXPRESSIONS, EYE_QUALITY, Expression, EyeQuality)
+                                            SHEER_GLOSS_LEGWEAR,
+                                            SHEER_LEGWEAR)
+from chagama.domain.yukari.expressions import EXPRESSIONS
 from chagama.domain.yukari.poses import POSES
 from chagama.domain.yukari.recipe import (
-    PART_NAMES, identity_tags, negative, positive, positive_parts,
-    render_spec,
+    identity_tags, negative, positive, positive_parts, render_spec,
 )
 from chagama.infrastructure.comfyui import anima_graph
 from chagama.interfaces import cli
@@ -56,10 +57,14 @@ def _current_defaults(fixture):
         .replace("masterpiece, best quality, score_7, ", "")
         .replace("hitoshi:0.85)", "hitoshi:1.3)")
         .replace("seven heads tall, ", "seven heads tall, (collarbone:1.2), ")
+        .replace("(dark irises:1.2), hair ornament, ", "(dark irises:1.2), hair ornament, "
+                 "(pale pink pupils:1.05), (vertical oval pupils:1.0), "
+                 "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
         .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "))
     out["negative"] = fixture["negative"].replace(
         "(aged down:1.2)", "(aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-        "(english text:1.2), signature, watermark", 1)
+        "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+        "(mechanical parts:1.2), (android joints:1.2)", 1)
     return out
 
 
@@ -72,6 +77,7 @@ COFFEE_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
@@ -110,7 +116,8 @@ COFFEE_NEGATIVE = (
     "(muscular:1.3), (toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged "
     "down:1.2)"
     ", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-    "(english text:1.2), signature, watermark"
+    "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2)"
     "(glossy:1.3), (specular highlights:1.3), (reflection:1.2), "
     "(ribbed legwear:1.3), (vertical-striped legwear:1.3), "
 )
@@ -120,6 +127,7 @@ AMAE_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
@@ -146,6 +154,7 @@ STAND_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (from front:1.3), (full body:1.45), (wide "
     "shot:1.3), (thighs:1.1), (mature female:1.3), (adult:1.2), (wide "
@@ -186,7 +195,8 @@ STAND_NEGATIVE = (
     "(muscular:1.3), (toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged "
     "down:1.2)"
     ", (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
-    "(english text:1.2), signature, watermark"
+    "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2)"
     "(glossy:1.3), (specular highlights:1.3), (reflection:1.2), "
     "(ribbed legwear:1.3), (vertical-striped legwear:1.3), "
 )
@@ -196,6 +206,7 @@ BUST_POSITIVE = (
     "voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed eyes:1.35), "
     "(unamused:1.35), (expressionless:1.2), "
     "(from front:1.3), (portrait:1.5), (head and shoulders:1.4), "
@@ -230,7 +241,8 @@ BUST_NEGATIVE_TAG_SOURCE = (
     " (black hoodie:1.35), score_1, score_2, score_3, (fat:1.35),"
     " (chubby:1.35), (short legs:1.35), (muscular:1.3), (toned:1.2), "
     "(child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3),"
-    " (english text:1.2), signature, watermark, (wavy mouth:1.4),"
+    " (english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2), (wavy mouth:1.4),"
     " (:3:1.3), (pout:1.3), (pursed lips:1.3), (puckered lips:1.2), "
     "(smile:1.2), "
 )
@@ -239,7 +251,8 @@ GAO_POSITIVE = (
     "1girl, solo, yuzuki yukari, vocaloid, voiceroid, (@oshiki "
     "hitoshi:1.3), (@yoshikawa hideaki:0.5), light purple hair, short hair "
     "with long locks, very long sidelocks, (dark greyish purple eyes:1.4), "
-    "(dark irises:1.2), hair ornament, (jitome:2.0), (tareme:1.2), (long "
+    "(dark irises:1.2), hair ornament, "
+    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), (jitome:2.0), (tareme:1.2), (long "
     "eyes:1.25), (confident:1.18), (from behind:1.2), (looking back:1.3), "
     "(looking over shoulder:1.2), (upper body:1.3), (mature female:1.3), "
     "(adult:1.2), (narrow waist:1.25), adult proportions, long torso, seven "
@@ -273,7 +286,8 @@ GAO_NEGATIVE = (
     "(fat:1.35), (chubby:1.35), (short legs:1.35), (muscular:1.3), "
     "(toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2), "
     "(text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), (english "
-    "text:1.2), signature, watermark"
+    "text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
+    "(mechanical parts:1.2), (android joints:1.2)"
 )
 
 COFFEE_POSITIVE = _with_nails(COFFEE_POSITIVE)
@@ -349,12 +363,12 @@ class PromptTest(unittest.TestCase):
 
     def test_sheer_gloss_legwear_drops_the_garment_gloss_bans_only(self):
         text = negative("amae", legwear="sheer-gloss")
-        for tags in ps.GARMENT_GLOSS_TAGS:
+        for tags in st.GARMENT_GLOSS_TAGS:
             self.assertNotIn(tags, text)
         self.assertIn("(shiny hair:1.4), (hair highlights:1.2), (watercolor:1.3), ",
                       text)
-        self.assertIn(ps.SHEER_BAN + ps.SCORE_BAN, text)
-        self.assertIn(ps.GRADIENT_BAN, text)
+        self.assertIn(SHEER_BAN + st.SCORE_BAN, text)
+        self.assertIn(st.GRADIENT_BAN, text)
 
     def test_sheer_gloss_legwear_leaves_a_bare_leg_pose_alone(self):
         self.assertEqual(positive("bust", legwear="sheer-gloss"), positive("bust"))
@@ -391,13 +405,13 @@ class PromptTest(unittest.TestCase):
 
     def test_sheer_legwear_drops_the_garment_gloss_bans_only(self):
         text = negative("amae", legwear="sheer")
-        for tags in ps.GARMENT_GLOSS_TAGS:
+        for tags in st.GARMENT_GLOSS_TAGS:
             self.assertNotIn(tags, text)
         self.assertIn("(shiny hair:1.4), (hair highlights:1.2), (watercolor:1.3), ",
                       text)
-        self.assertIn(ps.SHEER_BAN + ps.SHEER_TONE_BAN + ps.SCORE_BAN, text)
+        self.assertIn(SHEER_BAN + ps.SHEER_TONE_BAN + st.SCORE_BAN, text)
         self.assertNotIn(ps.SHEER_TONE_BAN, negative("amae", legwear="sheer-gloss"))
-        self.assertIn(ps.GRADIENT_BAN, text)
+        self.assertIn(st.GRADIENT_BAN, text)
 
     def test_sheer_legwear_leaves_a_bare_leg_pose_alone(self):
         self.assertEqual(positive("bust", legwear="sheer"), positive("bust"))
@@ -415,7 +429,8 @@ class PromptTest(unittest.TestCase):
 
     def test_dance_carries_its_own_expression_and_costume(self):
         text = positive("dance")
-        self.assertTrue(text.startswith(ps.QUALITY + ps.CHARACTER + ps.IDENTITY))
+        self.assertTrue(text.startswith(st.QUALITY + ps.CHARACTER_TAG + ps.SERIES_TAG
+                                        + st.ARTIST_TAG + ps.IDENTITY))
         self.assertIn("(:v:1.5)", text)
         self.assertIn(COSTUMES["standard"], text)
 
@@ -451,7 +466,9 @@ class PromptTest(unittest.TestCase):
         for expression in EXPRESSIONS:
             with self.subTest(expression=expression):
                 parts = dict(positive_parts("stand", expression=expression))
-                self.assertEqual(parts["eye_base"], ps.EYE_SHAPE)
+                own = EXPRESSIONS[expression].eye_base
+                self.assertEqual(parts["eye_base"],
+                                 ps.EYE_SHAPE if own is None else own)
                 self.assertNotIn("jitome", parts["face"])
 
     def test_face_carries_no_big_eyes(self):
@@ -470,7 +487,8 @@ class EyeQualityTest(unittest.TestCase):
         "dubious": EyeQuality.BLANK, "neutral": EyeQuality.BLANK,
         "joy": EyeQuality.BLANK, "amused": EyeQuality.BLANK,
         "anger": EyeQuality.BLANK, "sorrow": EyeQuality.BLANK,
-        "surprised": EyeQuality.BLANK,
+        "surprised": EyeQuality.BLANK, "annoyed": EyeQuality.BLANK,
+        "closed": EyeQuality.BLANK,
     }
 
     def test_eye_quality_mapping_per_expression(self):
@@ -479,9 +497,9 @@ class EyeQualityTest(unittest.TestCase):
             self.EXPECTED)
 
     def test_cold_and_blank_tag_text(self):
-        self.assertEqual(EYE_QUALITY[EyeQuality.COLD],
+        self.assertEqual(YUKARI.eye_quality[EyeQuality.COLD],
                          "(half-closed eyes:1.3), (unamused:1.15), ")
-        self.assertEqual(EYE_QUALITY[EyeQuality.BLANK], "")
+        self.assertEqual(YUKARI.eye_quality[EyeQuality.BLANK], "")
 
     def test_eye_quality_component_is_quality_text_plus_extras(self):
         for name, expression in EXPRESSIONS.items():
@@ -489,10 +507,10 @@ class EyeQualityTest(unittest.TestCase):
                 parts = dict(positive_parts("stand", expression=name))
                 self.assertEqual(
                     parts["eye_quality"],
-                    EYE_QUALITY[expression.eye_quality] + expression.eyes)
+                    YUKARI.eye_quality[expression.eye_quality] + expression.eyes)
 
     def test_resting_no_longer_carries_its_own_unamused_weight(self):
-        # Unified onto EYE_QUALITY[COLD]: (unamused:1.3) -> (unamused:1.15).
+        # Unified onto her COLD eye quality: (unamused:1.3) -> (unamused:1.15).
         parts = dict(positive_parts("stand", expression="resting"))
         self.assertEqual(parts["eye_quality"],
                          "(half-closed eyes:1.3), (unamused:1.15), ")
@@ -614,11 +632,14 @@ class PoseTableTest(unittest.TestCase):
         self.assertEqual(POSES["pillow"].costume, "standard")
         spec = render_spec("pillow", 3333, "x")
         self.assertEqual((spec.width, spec.height), (896, 1440))
-        self.assertIn("(from above:1.35), (dutch angle:1.3), (close-up:1.15), "
-                      "(cropped:1.2), ", spec.prompts.positive)
+        self.assertIn("(from above:1.35), (dutch angle:1.3), (close-up:1.15), ",
+                      spec.prompts.positive)
+        self.assertNotIn("cropped", spec.prompts.positive)
+        self.assertIn(SHEER_LEGWEAR, spec.prompts.positive)
         self.assertNotIn("full body", spec.prompts.positive)
         self.assertTrue(spec.prompts.negative.endswith(
-            "watermark, (standing:1.4), (sneakers:1.2), (panties:1.3), "
+            "watermark, (robot:1.3), (cyborg:1.3), (mechanical parts:1.2), "
+            "(android joints:1.2), (standing:1.4), (sneakers:1.2), (panties:1.3), "
             "(pantyshot:1.3), (green pillow:1.4), (smile:1.2), "
             "(looking at viewer:1.2), (eyes on pillow:1.45), "
             "(face on cushion:1.45), (stuffed toy:1.4), "
@@ -650,7 +671,7 @@ class PoseTableTest(unittest.TestCase):
 class RenderSpecTest(unittest.TestCase):
     def test_render_spec_fields(self):
         spec = render_spec("coffee", 42, "p")
-        self.assertEqual(spec.model_path, ps.MODEL)
+        self.assertEqual(spec.model_path, st.MODEL)
         self.assertEqual((spec.width, spec.height), (1024, 1640))
         self.assertEqual(spec.steps, 10)
 
@@ -671,7 +692,7 @@ class RenderSpecTest(unittest.TestCase):
         spec = render_spec("stand", 42, "p", hires=2048)
         self.assertEqual(spec.hires.width, 1280)
         self.assertEqual(spec.hires.height, 2048)
-        self.assertEqual(spec.hires.denoise, ps.HIRES_DENOISE)
+        self.assertEqual(spec.hires.denoise, st.HIRES_DENOISE)
         self.assertIsNone(spec.hires.positive)
         self.assertEqual(spec.hires.negative, spec.prompts.negative)
 
@@ -772,11 +793,11 @@ class LegwearStateTest(unittest.TestCase):
 
     def test_removing_negative_bans_thighhighs_kneehighs_socks(self):
         removing = negative("stand", legwear_state="removing")
-        self.assertIn(REMOVING_LEGWEAR_BAN + ps.SCORE_BAN, removing)
+        self.assertIn(REMOVING_LEGWEAR_BAN + st.SCORE_BAN, removing)
 
     def test_off_negative_bans_every_legwear_kind_and_drops_worn_only_bans(self):
         off = negative("stand", legwear_state="off")
-        self.assertIn(OFF_LEGWEAR_BAN + ps.SCORE_BAN, off)
+        self.assertIn(OFF_LEGWEAR_BAN + st.SCORE_BAN, off)
 
     def test_off_drops_the_sheer_kind_negative_edits(self):
         # `dance`'s legwear_kind is sheer-gloss; OFF means no legwear kind is
@@ -827,7 +848,7 @@ class GraphTest(unittest.TestCase):
         spec = replace(render_spec("coffee", 42, "p"), guided_steps=None)
         graph = anima_graph.build_graph(spec)
         self.assertEqual(graph["1"]["class_type"], "UNETLoader")
-        self.assertEqual(graph["1"]["inputs"]["unet_name"], ps.MODEL)
+        self.assertEqual(graph["1"]["inputs"]["unet_name"], st.MODEL)
         self.assertEqual(graph["2"]["class_type"], "CLIPLoader")
         self.assertEqual(graph["4"]["class_type"], "VAELoader")
         self.assertEqual(graph["5"]["class_type"], "EmptyLatentImage")
@@ -929,7 +950,7 @@ class GuidedStepsTest(unittest.TestCase):
 
     def test_default_spec_is_silvermoon_with_guided_steps(self):
         spec = render_spec("coffee", 42, "p")
-        self.assertEqual(spec.model_path, ps.MODEL)
+        self.assertEqual(spec.model_path, st.MODEL)
         self.assertEqual(spec.model_path,
                          "silvermoon-turbo.safetensors")
         self.assertEqual(spec.guided_steps, 4)
@@ -1165,7 +1186,7 @@ class AngleFramingOverrideTest(unittest.TestCase):
         self.assertEqual((render_spec("gao", 7, "p").width,
                           render_spec("gao", 7, "p").height), (1024, 1280))
         spec = render_spec("gao", 7, "p", framing="full")
-        self.assertEqual((spec.width, spec.height), (ps.WIDTH, ps.HEIGHT))
+        self.assertEqual((spec.width, spec.height), (st.WIDTH, st.HEIGHT))
         spec = render_spec("stand", 7, "p", framing="bust")
         self.assertEqual((spec.width, spec.height), (1280, 2048))
 
@@ -1200,3 +1221,55 @@ class AngleFramingOverrideTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LeverDefaultsTest(unittest.TestCase):
+    def test_requested_close_framing_is_square_and_drops_the_legs(self):
+        spec = render_spec("stand", 1, "x", framing="close")
+        self.assertEqual((spec.width, spec.height), (1152, 1152))
+        parts = dict(spec.positive_parts)
+        self.assertEqual(parts["legwear"], "")
+        self.assertEqual(parts["leg_display"], "")
+        for tag in ("thick thighs", "soft thighs", "long legs"):
+            self.assertNotIn(tag, parts["body_build"])
+        self.assertNotIn("cropped", spec.prompts.positive)
+        self.assertTrue(spec.prompts.negative.endswith(
+            "legs, thighs, pantyhose"))
+
+    def test_closed_expression_drops_the_open_eye_tags(self):
+        parts = dict(positive_parts("bust", expression="closed"))
+        self.assertEqual(parts["eye_base"], "")
+        self.assertIn("(closed eyes:1.6), ", parts["eye_quality"])
+        for tag in ("large eyes", "tareme"):
+            self.assertNotIn(tag, parts["face"])
+
+    def test_annoyed_expression_softens_the_jitome(self):
+        parts = dict(positive_parts("bust", expression="annoyed"))
+        self.assertTrue(parts["eye_base"].startswith("(jitome:1.2), "))
+        self.assertIn("(furrowed brow:1.25), ", parts["mouth"])
+
+    def test_identity_tags_follow_the_requested_expression(self):
+        from chagama.domain.yukari.recipe import identity_tags
+        self.assertIn("jitome", identity_tags("bust"))
+        self.assertNotIn("jitome", identity_tags("bust", expression="closed"))
+
+    def test_nomakeup_poses_bake_the_preset_patches(self):
+        for pose in ("nomakeup", "nomakeup-bangs-up"):
+            with self.subTest(pose=pose):
+                parts = dict(positive_parts(pose))
+                self.assertIn(ps.NO_HAIR_ORNAMENT, parts["identity"])
+                self.assertNotIn("hair ornament, ", parts["identity"]
+                                 .replace("no hair ornament", ""))
+                self.assertEqual(parts["nails"], "(natural nails:1.2), ")
+                self.assertNotIn("eyelashes", parts["face"])
+                self.assertIn(ps.HAIR_ORNAMENT_BAN,
+                              render_spec(pose, 1, "x").prompts.negative)
+        self.assertIn("(bangs pinned back:1.2), ",
+                      dict(positive_parts("nomakeup-bangs-up"))["identity"])
+
+
+class IdentityGuardExpressionTest(unittest.TestCase):
+    def test_closed_expression_needs_no_identity_override(self):
+        from chagama.interfaces.agent import _identity_tags
+        self.assertIn("tareme", _identity_tags("yukari", "bust", None))
+        self.assertNotIn("tareme", _identity_tags("yukari", "bust", None, "closed"))

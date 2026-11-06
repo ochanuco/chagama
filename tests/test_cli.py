@@ -86,17 +86,18 @@ class CliTest(unittest.TestCase):
         self.assertEqual(kwargs, {
             "keep_scene": False, "transparent": False, "backdrop": "dots",
             "stroke_light": RECIPE_DEFAULT,
-            "outlines": [{"color": "#ffffff", "width": 0.8},
-                         {"color": "#885b80", "width": 1.04}],
-            "light": None})
+            "outlines": None,
+            "light": None, "saturation": 1.0})
 
     @patch.object(cli, "deliver")
     @patch.object(cli, "ChimeraClient")
     def test_deliver_flags_dispatch_without_network(
             self, chimera_class, run_deliver):
         cli.main(["deliver", "gen-1", "--transparent", "--light", "moon,se",
-                  "--outline", "#ffffff,0.8", "--outline", "#885b80,2"])
+                  "--outline", "#ffffff,0.8", "--outline", "#885b80,2",
+                  "--saturation", "0"])
         kwargs = run_deliver.call_args.kwargs
+        self.assertEqual(kwargs["saturation"], 0.0)
         self.assertIs(kwargs["transparent"], True)
         self.assertIsNone(kwargs["backdrop"])
         self.assertEqual(kwargs["outlines"], [{"color": "#ffffff", "width": 0.8},
@@ -140,16 +141,27 @@ class CliTest(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "scope"):
             cli.main(["dof", "gen-1", "--focus", "0.5,0.4", "--scope", "rim"])
 
+    @patch.object(cli, "saturate_drawing")
     @patch.object(cli, "saturation")
     @patch.object(cli, "ChimeraClient")
-    def test_saturation_dispatches_without_network(self, chimera_class, run_saturation):
+    def test_saturation_dispatches_without_network(self, chimera_class, run_saturation,
+                                                   run_drawing):
+        delivery = {"request": {"kind": "deliver", "parameters": {"kind": "deliver"}}}
+        chimera_class.return_value.request.return_value = delivery
         cli.main(["saturation", "gen-1"])
         args, kwargs = run_saturation.call_args
-        self.assertEqual((args[0], kwargs), ("gen-1", {"strength": 1.0}))
+        self.assertEqual((args[0], kwargs), ("gen-1", {"strength": 1.0, "context": delivery}))
         cli.main(["saturation", "gen-1", "--strength", "0.4"])
-        self.assertEqual(run_saturation.call_args.kwargs, {"strength": 0.4})
+        self.assertEqual(run_saturation.call_args.kwargs["strength"], 0.4)
         with self.assertRaises(SystemExit):
             cli.main(["saturation", "gen-1", "--strength", "2"])
+        run_drawing.assert_not_called()
+
+        drawing = {"request": {"kind": "redraw", "parameters": {"kind": "redraw"}}}
+        chimera_class.return_value.request.return_value = drawing
+        cli.main(["saturation", "gen-2", "--strength", "0.5"])
+        args, kwargs = run_drawing.call_args
+        self.assertEqual((args[0], kwargs), ("gen-2", {"strength": 0.5, "context": drawing}))
 
     @patch.object(cli, "lens")
     @patch.object(cli, "ChimeraClient")
@@ -255,7 +267,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(document["schema_version"], 3)
         self.assertEqual(
             {recipe["name"] for recipe in document["recipes"]},
-            {"yukari"})
+            {"yukari", "akari"})
 
     @patch.object(cli, "publish_catalog_document")
     @patch.object(cli, "ChimeraClient")

@@ -30,7 +30,8 @@ def is_delivered(request: dict) -> bool:
 FIGURE_LAYER = "layer-figure"
 OUTLINE_LAYER = "layer-outline"
 BACKDROP_LAYER = "layer-backdrop"
-# What a cut redraw stands for as a delivery: transparent, with no outlines.
+# What a drawing stands for as a delivery (a cut redraw, or the drawing under
+# a saturation): transparent, with no outlines.
 CUT_REDRAW_DELIVERY = {"transparent": True, "outlines": []}
 
 
@@ -65,10 +66,11 @@ def layer_bytes(management, generation_id: str, context: dict, roles) -> dict[st
 
 def delivery_parameters(management, context: dict) -> dict:
     """The request parameters of the delivery the picture stands on: its
-    own, for a saturation the delivery it was made from, for a cut redraw
-    a transparent delivery with no outlines."""
+    own, for a saturation the delivery it was made from, for a drawing (a
+    cut redraw, or the drawing a saturation cut out) a transparent delivery
+    with no outlines."""
     parameters = context["request"].get("parameters") or {}
-    if is_cut_redraw(parameters):
+    if not is_delivered(context["request"]):
         return CUT_REDRAW_DELIVERY
     if parameters.get("kind") != "saturation":
         return parameters
@@ -79,10 +81,11 @@ def delivery_parameters(management, context: dict) -> dict:
 
 def has_backdrop_layer(management, context: dict) -> bool:
     """Whether the picture's layers include a backdrop: not when the
-    delivery under it (through saturation and lighting) is transparent."""
+    delivery under it (through saturation and lighting) is transparent, or
+    is a drawing that was cut out."""
     parameters = context["request"].get("parameters") or {}
     kind = parameters.get("kind")
-    if is_cut_redraw(parameters):
+    if not is_delivered(context["request"]):
         return False
     if kind == "deliver":
         return not parameters.get("transparent")

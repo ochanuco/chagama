@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH
+from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.photo_graph import photo_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.delivery import image_size
@@ -142,7 +143,7 @@ def photo(generation_id: str, services: PhotoServices, *, photo_id: str,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": f"{generation_id} を写真 {photo_id} に立てる",
-            "recipe": context["request"].get("recipe") or "yukari",
+            "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": _request_parameters(
                 generation_id, photo_id, place=place, height=height,
                 stand_at=stand_at, nearer=nearer, focus=focus, f_number=f_number,

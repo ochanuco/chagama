@@ -7,8 +7,9 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..domain.anima.style import HEIGHT, WIDTH
 from ..domain.yukari import delivery_style
-from ..domain.yukari.prompt_style import HEIGHT, WIDTH
+from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.base_graph import (
     BaseRoles,
     base_roles,
@@ -236,7 +237,7 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": f"{generation_id} を描き直し ({method})",
-            "recipe": source.context["request"].get("recipe") or "yukari",
+            "recipe": source.context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": {"kind": "redraw", "method": method,
                            "base_generation": generation_id,
                            **prepared.parameters, **({"cut": True} if cut else {})},

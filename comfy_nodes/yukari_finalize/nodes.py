@@ -13,6 +13,7 @@ import json
 import numpy as np
 
 from chagama.domain.generation import anima_blocks
+from chagama.domain.yukari.delivery_style import BACKDROP_PALETTE, BackdropPalette
 from chagama.infrastructure.imaging import (
     delivery,
     depth_blur,
@@ -28,6 +29,12 @@ from chagama.infrastructure.imaging import saturation as saturating
 from chagama.infrastructure.imaging import stage as staging
 
 from . import bridge, vitmatte
+
+
+def _palette(value: str) -> BackdropPalette:
+    """A `backdrop_palette` input (JSON base/accent/deep_stroke); empty is
+    the delivery default."""
+    return BackdropPalette(**json.loads(value)) if value else BACKDROP_PALETTE
 
 
 class YukariMatting:
@@ -107,18 +114,22 @@ class YukariDeliver:
             "matted": ("BOOLEAN", {"default": False}),
             "outlines": ("STRING", {"default": ""}),
             "silhouette": ("MASK",),
+            "saturation": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "backdrop_palette": ("STRING", {"default": ""}),
         }}
 
     def run(self, image, matte, keep_scene, transparent=False, stroke_light="",
             backdrop="", light_scene="", light_from="", matted=False, outlines="",
-            silhouette=None):
+            silhouette=None, saturation=0.0, backdrop_palette=""):
         picture, figure, outline, backdrop_png, tag = delivery.deliver_pngs(
             bridge.image_to_png(image), bridge.mask_to_png(matte),
             keep_scene=keep_scene, transparent=transparent,
             light=stroke_light or None, backdrop=backdrop or None,
             scene=light_scene or None, light_from=light_from or None,
             matted=matted, outlines=json.loads(outlines) if outlines else None,
-            silhouette=None if silhouette is None else bridge.mask_to_png(silhouette))
+            silhouette=None if silhouette is None else bridge.mask_to_png(silhouette),
+            figure_colour=saturating.figure_colour(saturation),
+            backdrop_palette=_palette(backdrop_palette))
         mode = "RGBA" if (transparent and not keep_scene) else "RGB"
         # A transparent delivery has no backdrop layer; this output is never saved.
         backdrop_image = bridge.png_to_image(
@@ -333,11 +344,12 @@ class YukariStage:
             "light_scene": ("STRING", {"default": ""}),
             "light_from": ("STRING", {"default": ""}),
             "frame": ("STRING", {"default": ""}),
+            "backdrop_palette": ("STRING", {"default": ""}),
         }}
 
     def run(self, figure, figure_mask, outline, outline_mask, mode, photo=None,
             backdrop="", shadow_from="", outlines="", place_x=0.5, place_y=0.95,
-            height=0.7, light_scene="", light_from="", frame=""):
+            height=0.7, light_scene="", light_from="", frame="", backdrop_palette=""):
         if mode == "photo" and photo is None:
             raise ValueError("YukariStage in photo mode needs a photo")
         picture, figure_png, outline_png, backdrop_png = staging.stage_pngs(
@@ -347,7 +359,8 @@ class YukariStage:
             backdrop=backdrop or None, shadow_from=shadow_from or None,
             outlines=json.loads(outlines) if outlines else None,
             place=(place_x, place_y), height=height, scene=light_scene or None,
-            light_from=light_from or None, frame=json.loads(frame) if frame else None)
+            light_from=light_from or None, frame=json.loads(frame) if frame else None,
+            backdrop_palette=_palette(backdrop_palette))
         return (bridge.png_to_image(picture), bridge.png_to_image(figure_png, "RGBA"),
                 bridge.png_to_image(outline_png, "RGBA"), bridge.png_to_image(backdrop_png))
 

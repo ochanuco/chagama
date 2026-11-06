@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
+from ..domain.recipes import DEFAULT_RECIPE, backdrop_palette
 from ..infrastructure.comfyui.stage_graph import lighting_graph, saturation_graph, stage_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.stage import frame_canvas_share
@@ -36,8 +37,10 @@ from .picture_source import (
 
 STAGE_SOURCE = ("背景を付けられるのは納品の絵（deliver または saturation の出力）か"
                 "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
-SATURATION_SOURCE = ("彩度を調整できるのは納品の絵（deliver の出力）か"
-                     "切り抜いた描き直し（redraw の cut）だけです。先に deliver してください")
+SATURATION_SOURCE = ("納品の絵で彩度を調整できるのは deliver の出力だけです。"
+                     "描いた絵か描き直した絵なら、その絵の saturation を指定してください")
+SATURATION_TWICE = ("この納品は deliver の saturation で彩度を圧縮済みです。"
+                    "強さを変えるなら元の絵を saturation を指定して deliver し直してください")
 LIGHTING_SOURCE = ("光を当てられるのは stage の出力、deliver / saturation の出力、"
                    "切り抜いた描き直し（redraw の cut）だけです。先に stage してください")
 LIGHTING_NOTHING = ("背景の無い絵に当てられるのは direction か scene の光だけです。"
@@ -125,7 +128,7 @@ def _record(services: StageServices, *, generation_id: str, context: dict,
         idempotency_key=key_prefix or str(uuid.uuid4()),
         resolution={
             "raw_instruction": raw_instruction,
-            "recipe": context["request"].get("recipe") or "yukari",
+            "recipe": context["request"].get("recipe") or DEFAULT_RECIPE,
             "parameters": parameters,
             "git_commit": git["commit"], "git_dirty": git["dirty"],
             "references": references,
@@ -220,7 +223,9 @@ def stage(generation_id: str, services: StageServices, *,
                                      prefix, backdrop=backdrop, shadow_from=shadow_from,
                                      outlines=parameters.get("outlines"),
                                      light=(light.scene, light.direction) if light else None,
-                                     frame=frame)
+                                     frame=frame,
+                                     backdrop_palette=backdrop_palette(
+                                         context["request"].get("recipe")))
         recorded = {"backdrop": backdrop, "shadow_from": shadow_from,
                     "light": {"scene": light.scene, "from": light.direction} if light else None,
                     **({"frame": frame} if frame is not None else {})}
@@ -306,7 +311,8 @@ def saturation(generation_id: str, services: StageServices, *, strength: float,
                context: dict | None = None) -> dict:
     """Compress the saturation of the delivery `generation_id`'s figure and
     outline layers on repin's curve (`strength` 0..1 blends it in) and put
-    them back together over its backdrop, if it has one."""
+    them back together over its backdrop, if it has one. A drawing is
+    compressed before its outlines instead (`deliver.saturate_drawing`)."""
     state_path, state = _load_state(services, "saturation", key_prefix)
     if state.get("status") == "completed" and state.get("result"):
         return state["result"]
@@ -314,8 +320,10 @@ def saturation(generation_id: str, services: StageServices, *, strength: float,
     if context is None:
         context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
     parameters = _parameters(context)
-    if parameters.get("kind") != "deliver" and not is_cut_redraw(parameters):
+    if parameters.get("kind") != "deliver":
         raise SystemExit(SATURATION_SOURCE)
+    if parameters.get("saturation"):
+        raise SystemExit(SATURATION_TWICE)
     _require_layers(services, generation_id, context, FIGURE_ROLES)
     has_backdrop = "layer-backdrop" in layer_roles_present(management, generation_id, context)
     roles = LAYER_ROLES if has_backdrop else FIGURE_ROLES

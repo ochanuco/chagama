@@ -21,6 +21,7 @@ from chagama.application.request_options import (
     redraw_arguments,
 )
 from chagama.domain.generation.fingerprint import prompt_fingerprint
+from chagama.domain.recipes import RECIPES
 from chagama.domain.generation.patches import (
     LORAS_TARGETS,
     NUMBER_TARGETS,
@@ -30,7 +31,6 @@ from chagama.domain.generation.patches import (
     parse_patches,
 )
 from chagama.domain.yukari.delivery_style import BACKDROP_LABELS
-from chagama.domain.yukari.recipe import render_spec
 from chagama.infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
 
 GIT = {"commit": "abc123", "branch": "dev/catalog-publish", "dirty": False}
@@ -83,7 +83,7 @@ class BuildCatalogTest(unittest.TestCase):
     def test_every_recipe_has_every_pose_with_non_empty_prompts_and_canvas(self):
         catalog = build_catalog(GIT)
         names = {recipe["name"] for recipe in catalog["recipes"]}
-        self.assertEqual(names, {"yukari"})
+        self.assertEqual(names, set(RECIPES))
         for recipe in catalog["recipes"]:
             self.assertTrue(recipe["poses"], recipe["name"])
             for pose in recipe["poses"]:
@@ -100,8 +100,9 @@ class BuildCatalogTest(unittest.TestCase):
         catalog = build_catalog(GIT)
         for recipe in catalog["recipes"]:
             for pose in recipe["poses"]:
-                with self.subTest(pose=pose["name"]):
-                    spec = render_spec(pose["name"], 0, "fingerprint")
+                with self.subTest(recipe=recipe["name"], pose=pose["name"]):
+                    spec = RECIPES[recipe["name"]].recipe.render_spec(
+                        pose["name"], 0, "fingerprint")
                     self.assertEqual(
                         pose["fingerprint"],
                         prompt_fingerprint(recipe["name"], pose["name"],
@@ -328,26 +329,37 @@ class DialsTest(unittest.TestCase):
 
 
 class DeliverSectionTest(unittest.TestCase):
-    def section(self) -> dict:
+    def section(self, recipe: str = "yukari") -> dict:
         by_name = {recipe["name"]: recipe for recipe in build_catalog(GIT)["recipes"]}
-        return by_name["yukari"]["deliver"]
+        return by_name[recipe]["deliver"]
 
     def test_defaults_are_the_delivery_recipe_and_valid_options(self):
         defaults = self.section()["defaults"]
         self.assertEqual(defaults, {"stroke_light": "n",
-                                    "backdrop": "dots"})
+                                    "backdrop": "dots", "saturation": 1.0})
         self.assertLessEqual(set(defaults), _KNOWN_DELIVER_OPTIONS)
         deliver_arguments(defaults)
+
+    def test_publishes_the_saturation_range_the_figure_is_compressed_with(self):
+        saturation = self.section()["saturation"]
+        self.assertEqual((saturation["min"], saturation["max"], saturation["default"]),
+                         (0.0, 1.0, 1.0))
+        self.assertIsInstance(saturation["help"], str)
 
     def test_publishes_the_outline_default_and_limits_without_a_dof(self):
         section = self.section()
         self.assertEqual(section["outlines"], {
             "default": [{"color": "#ffffff", "width": 0.8},
-                        {"color": "#885b80", "width": 1.04}],
+                        {"color": "#7e6988", "width": 1.04}],
             "max_count": 6, "max_width": 5})
         self.assertNotIn("dof", section)
         self.assertNotIn("dof", section["defaults"])
         self.assertNotIn("outlines", section["defaults"])
+
+    def test_each_recipe_publishes_its_own_outline_default(self):
+        self.assertEqual(self.section("akari")["outlines"]["default"],
+                         [{"color": "#ffffff", "width": 0.8},
+                          {"color": "#c27138", "width": 1.04}])
 
     def test_publishes_the_lens_section_at_the_catalog_root(self):
         lens = build_catalog(GIT)["lens"]
@@ -360,8 +372,9 @@ class DeliverSectionTest(unittest.TestCase):
                           lens["radius"]["default"]), (0.05, 1.0, 0.3))
 
     def test_publishes_the_saturation_section_at_the_catalog_root(self):
-        self.assertEqual(build_catalog(GIT)["saturation"],
-                         {"strength": {"min": 0.0, "max": 1.0, "default": 1.0}})
+        saturation = build_catalog(GIT)["saturation"]
+        self.assertEqual(saturation["strength"], {"min": 0.0, "max": 1.0, "default": 1.0})
+        self.assertIn("refused", saturation["help"])
 
     def test_publishes_the_photo_section_at_the_catalog_root(self):
         photo = build_catalog(GIT)["photo"]
@@ -400,7 +413,29 @@ class DeliverSectionTest(unittest.TestCase):
         self.assertEqual(section["backdrop_color"], "#ffffff")
 
 
+class StageFrameTest(unittest.TestCase):
+    def test_each_recipe_publishes_its_frame_colours(self):
+        catalog = build_catalog(GIT)
+        frames = {recipe["name"]: recipe["stage"]["frame"] for recipe in catalog["recipes"]}
+        shared = catalog["stage"]["frame"]
+        self.assertEqual(frames["yukari"], {"line": shared["line"], "rim": shared["rim"]})
+        self.assertEqual(frames["akari"], {
+            "line": {**shared["line"], "color": "#56321a"},
+            "rim": {**shared["rim"], "color": "#33200f"}})
+
+
 class BackdropsBlockTest(unittest.TestCase):
+    def test_each_recipe_publishes_thumbnails_in_its_own_palette(self):
+        catalog = build_catalog(GIT)
+        by_name = {recipe["name"]: recipe["deliver"]["backdrops"]
+                   for recipe in catalog["recipes"]}
+        self.assertEqual(by_name["yukari"], catalog["backdrops"])
+        for yukari, akari in zip(by_name["yukari"], by_name["akari"], strict=True):
+            with self.subTest(name=yukari["name"]):
+                self.assertEqual((akari["name"], akari["label"]),
+                                 (yukari["name"], yukari["label"]))
+                self.assertNotEqual(akari["thumbnail"], yukari["thumbnail"])
+
     def test_lists_every_pattern_in_registry_order_with_name_label_and_thumbnail(self):
         catalog = build_catalog(GIT)
         backdrops = catalog["backdrops"]

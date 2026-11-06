@@ -14,11 +14,9 @@ from ..domain.yukari.delivery_style import (
     DOF_VIEWFINDER,
     FRAME_COORD_RANGE,
     FRAME_EXPAND,
-    FRAME_LINE,
     FRAME_LINE_PATTERNS,
     FRAME_PAPER,
     FRAME_POINTS_MAX,
-    FRAME_RIM,
     FRAME_SIDE_CHOICES,
     FRAME_SIDE_DEFAULTS,
     FRAME_SIDES,
@@ -47,6 +45,7 @@ from ..domain.yukari.delivery_style import (
     STROKE_LIGHTS,
     Light,
 )
+from ..domain.recipes import frame_bands
 from ..infrastructure.imaging.backdrops import PATTERNS, is_backdrop
 from .deliver import RECIPE_DEFAULT
 from .picture_source import stroke_light_conflict
@@ -54,7 +53,7 @@ from .redraw import HIRES_DENOISE
 
 _KNOWN_DELIVER_OPTIONS = frozenset({
     "keep_scene", "transparent", "backdrop", "stroke_light", "outlines", "light",
-    "see_through",
+    "see_through", "saturation",
 })
 # The see-through gain's range; 1 is the cut as solved.
 _SEE_THROUGH_RANGE = (1.0, 5.0)
@@ -84,9 +83,9 @@ _KNOWN_REDRAW_OPTIONS = {
 }
 
 
-def _outlines_argument(value: object, *, key: str = "outlines") -> list[dict]:
+def _outlines_argument(value: object, *, key: str = "outlines") -> list[dict] | None:
     if value is None:
-        return [dict(outline) for outline in DELIVER_DEFAULTS["outlines"]]
+        return None
     if not isinstance(value, list):
         raise ValueError(f"{key} must be null or an array, got {type(value).__name__}")
     if len(value) > OUTLINES_MAX:
@@ -213,7 +212,8 @@ def _frame_band(value: object, default: Mapping, *, key: str) -> dict | None:
     return band
 
 
-def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
+def _frame_argument(value: object, *, recipe: str | None = None,
+                    key: str = "frame") -> dict | None:
     if value is None:
         return None
     if not isinstance(value, Mapping):
@@ -230,10 +230,11 @@ def _frame_argument(value: object, *, key: str = "frame") -> dict | None:
         if choice not in FRAME_SIDE_CHOICES:
             raise ValueError(f"{key}.sides.{side} must be one of "
                              f"{list(FRAME_SIDE_CHOICES)}, got {choice!r}")
+    line, rim = frame_bands(recipe)
     return {"box": _frame_rect(value["box"], key=f"{key}.box"),
             "sides": {side: sides.get(side, FRAME_SIDE_DEFAULTS[side]) for side in FRAME_SIDES},
-            "line": _frame_band(value.get("line", FRAME_LINE), FRAME_LINE, key=f"{key}.line"),
-            "rim": _frame_band(value.get("rim", FRAME_RIM), FRAME_RIM, key=f"{key}.rim"),
+            "line": _frame_band(value.get("line", line), line, key=f"{key}.line"),
+            "rim": _frame_band(value.get("rim", rim), rim, key=f"{key}.rim"),
             "paper": _hex_colour(value.get("paper", FRAME_PAPER), key=f"{key}.paper"),
             "canvas": _frame_canvas(value.get("canvas"), key=f"{key}.canvas"),
             "expand": _frame_expand(value.get("expand", FRAME_EXPAND), key=f"{key}.expand"),
@@ -302,8 +303,9 @@ def redraw_arguments(options: Mapping) -> dict:
 def deliver_arguments(options: Mapping) -> dict:
     """Validate a deliver request's `options` and map it to deliver() kwargs.
 
-    Absent keys take DELIVER_DEFAULTS; unknown keys or a wrong type raise
-    ValueError naming the offending key.
+    Absent keys take DELIVER_DEFAULTS, except `outlines`, left None for the
+    source's recipe to fill; unknown keys or a wrong type raise ValueError
+    naming the offending key.
     """
     if not isinstance(options, Mapping):
         raise ValueError(
@@ -365,6 +367,8 @@ def deliver_arguments(options: Mapping) -> dict:
     if not low <= see_through <= high:
         raise ValueError(f"see_through must be between {low:g} and {high:g}, got {see_through!r}")
 
+    saturation = float(_ranged(options, "saturation", SATURATION_STRENGTH))
+
     return {
         "keep_scene": keep_scene,
         "transparent": transparent,
@@ -372,6 +376,7 @@ def deliver_arguments(options: Mapping) -> dict:
         "stroke_light": stroke_light,
         "outlines": outlines,
         "light": light,
+        "saturation": 0.0 if keep_scene else saturation,
         **({"see_through": float(see_through)} if see_through != 1.0 else {}),
     }
 
@@ -547,7 +552,7 @@ def photo_arguments(options: Mapping) -> dict:
 _SHADOW_INHERITED = object()
 
 
-def stage_arguments(options: Mapping) -> dict:
+def stage_arguments(options: Mapping, *, recipe: str | None = None) -> dict:
     """Validate a stage request's `options` and map it to stage() kwargs.
 
     `photo` (a photo Generation's id) sets the delivery in that photo, at
@@ -557,7 +562,8 @@ def stage_arguments(options: Mapping) -> dict:
     absent to take the delivery's own light) and `light` ({scene, from}
     tinting the backdrop as a delivery in that scene; null for none; absent
     for the nearest light redraw in the picture's lineage) and `frame` (the
-    backdrop fills its box; see `_frame_argument`, null or absent for none).
+    backdrop fills its box; see `_frame_argument`, null or absent for none;
+    its line and rim default to `recipe`'s, the staged picture's recipe).
     The two sets of keys do not mix.
     """
     if not isinstance(options, Mapping):
@@ -594,7 +600,7 @@ def stage_arguments(options: Mapping) -> dict:
             "inherit_shadow": shadow_from is _SHADOW_INHERITED,
             "light": _light_argument(options.get("light")),
             "inherit_light": "light" not in options,
-            "frame": _frame_argument(options.get("frame"))}
+            "frame": _frame_argument(options.get("frame"), recipe=recipe)}
 
 
 def lighting_arguments(options: Mapping) -> dict:

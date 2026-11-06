@@ -93,6 +93,13 @@ Run `deploy` by `workflow_dispatch` with `ref` set to an older commit on main.
 Any commit on main works: a release that was pruned is built again. A
 rollback always asks for approval.
 
+### A new pose
+
+A pose added in code reaches `list_catalog` when the worker publishes the
+catalog, but `plain_render` and requests by pose name 404 until the pose is
+imported as a preset: after the deploy, `POST /api/v1/presets/import` with
+`{"recipe_ref": "production"}` through `ChimeraClient` (idempotent).
+
 ## Draining before a deploy
 
 `stop.ps1` asks the worker to stop before it stops the task: it writes
@@ -129,8 +136,9 @@ env built for its pins. `scripts/worker/reference-env.ps1` builds it with uv
 ComfyUI's Python with `--system-site-packages`, which borrows its CUDA torch
 and adds the pinned packages; when that venv cannot import them with CUDA, a
 standalone Python 3.12 venv with the pinned cu130 torch wheel (about 5 GB on
-disk). It marks the env `ready` only after that import check passes; until
-then reference rows fail and every other kind runs. The deploy's prepare
+disk). It marks the env `ready` only after that import check passes, and runs the
+check again before trusting a `ready` env, rebuilding it when files have gone
+missing; until then reference rows fail and every other kind runs. The deploy's prepare
 step runs it, and the `reference-env` op reruns it. Older envs are not
 pruned. The worker sends ComfyUI `/free` before the subprocess loads the
 models; d1 in bf16 takes about 7 GB of VRAM, the tagger under 1 GB, and both

@@ -2,7 +2,7 @@
 
 A command-line front end for [ComfyUI](https://github.com/Comfy-Org/ComfyUI).
 No web UI and no custom nodes of its own. The public entry point is
-`chagama`; it builds a graph, records the run in Chimera, submits it to
+`chagama`; it builds a graph, records the run in chimera, submits it to
 ComfyUI, and pulls the result back.
 
 Two things make it more than a thin API wrapper:
@@ -36,8 +36,8 @@ uv run scripts/atlas.py notes       # findings and archive by heading, with line
 
 [`docs/`](docs/) holds the operating notes — queueing, the GPU box,
 releases, model provenance. [`docs/findings/`](docs/findings/) is what the
-measurements concluded, one topic per file; `experiments/` is the measurements
-themselves, and `docs/archive/` the original log they were distilled from. They
+measurements concluded, one topic per file; the renders behind them are on chimera, and
+`docs/archive/` is the original log they were distilled from. They
 are the point of the repository; the scripts are how they were produced.
 
 ## What it runs on
@@ -84,7 +84,7 @@ character *name* and resolves it against the API (creating it if new), while
 
 Authentication is a Cloudflare Access service token, read from
 `$CHIMERA_CF_CLIENT_ID` / `$CHIMERA_CF_CLIENT_SECRET`, then from the untracked
-cache `.local/chimera-token`, and only failing both from the 1Password item
+cache `.local/chimera-token`, and only if both fail, from the 1Password item
 `chimera-claude-agent` — which prompts Touch ID, so a successful fetch writes
 the cache (mode 0600) and later runs stay unattended. The values are
 credentials: they never go into a tracked file.

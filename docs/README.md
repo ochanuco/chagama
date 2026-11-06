@@ -25,13 +25,14 @@ Each line carries a scope tag:
 `(a3 §The gradient direction)` points at archive file 3, at the heading
 that starts with those words; `uv run scripts/atlas.py notes "The gradient
 direction"` prints that section alone. A pointer with no `a<n>` came after
-the archive and lives in `experiments/`, chimera or the named PR.
+the archive and lives on chimera or in the named PR.
 
 ## Recipe
 
 | File | ~tok | Covers |
 |---|---|---|
-| [yukari/anima.md](yukari/anima.md) | 1k | the live recipe: where each block lives, cross-file contracts |
+| [yukari/anima.md](yukari/anima.md) | 1.5k | the shared Anima style, poses and expressions, and the yukari character: where each block lives, cross-file contracts |
+| [akari/anima.md](akari/anima.md) | 0.5k | the akari character: what is hers on top of the shared style and poses |
 | [yukari/delivery_style.md](yukari/delivery_style.md) | 0.9k | delivery constants: which code reads them, cross-file contracts |
 
 ## Operations
@@ -53,6 +54,6 @@ it, never open it whole.
 
 ## Writing here
 
-New measurements go to `experiments/` (append-only). Docs are rewritten to
+A measurement is the render's semantic and rating on chimera. Docs are rewritten to
 the current conclusion; see "Writing docs" in `AGENTS.md`.
 `tests/test_docs_budget.py` enforces the caps and this index.

@@ -139,6 +139,27 @@ class RulesTest(unittest.TestCase):
         self.assertEqual(accepted["mouth"], [])
         self.assertEqual(accepted["framing_tags"], ["full body"])
 
+    def test_a_back_view_turns_the_face_away(self):
+        result = reference.build(reference.PERSONA_POSE, {
+            "framing_tags": ["from behind"], "gesture": ["standing"]})
+        spec = apply_patches(render_spec(result.pose, 1, "t"),
+                             parse_patches(result.patches))
+        parts = dict(spec.positive_parts)
+        self.assertEqual(parts["face"], "")
+        self.assertEqual(parts["eye_base"], "(jitome:0.6), (tareme:0.6), ")
+        self.assertEqual(parts["gesture"],
+                         "standing, " + reference.BACK_VIEW_GESTURE)
+        self.assertIn("(looking at viewer:1.6)", spec.prompts.negative)
+        self.assertLessEqual(identity_tags(result.pose),
+                             set(bare_tags(spec.prompts.positive)))
+
+    def test_a_back_view_looking_back_keeps_the_face(self):
+        result = reference.build(reference.PERSONA_POSE, {
+            "framing_tags": ["from behind"], "gesture": ["looking back"]})
+        targets = {patch["target"] for patch in result.patches}
+        self.assertNotIn("prompt.positive.face", targets)
+        self.assertNotIn("prompt.positive.eye_base", targets)
+
     def test_an_empty_part_is_filled_by_append(self):
         data = picture("ref05")
         result = reference.plan(data["scores"], data["kept"] + ["smile"],

@@ -9,8 +9,10 @@ import unittest
 import numpy as np
 from PIL import Image
 
+from chagama.infrastructure.imaging.delivery import deliver_pngs
 from chagama.infrastructure.imaging.palette import repin
 from chagama.infrastructure.imaging.saturation import (
+    figure_colour,
     recompose,
     saturate_layer,
     saturation_pngs,
@@ -137,6 +139,50 @@ class SaturationPngsTest(unittest.TestCase):
         shown = Image.open(io.BytesIO(picture))
         self.assertEqual(shown.mode, "RGBA")
         self.assertEqual(np.array(shown)[0, 0, 3], 0)
+
+
+class DeliverSaturationTest(unittest.TestCase):
+    """A deliver compresses the figure, then draws the outlines as given."""
+
+    OUTLINES = [{"color": "#ffffff", "width": 4}, {"color": "#7e6988", "width": 5}]
+
+    def deliver(self, strength: float, *, transparent: bool):
+        colour = np.zeros((96, 96, 3), dtype=np.uint8)
+        colour[...] = hsv_rgb(191, 160, 200)
+        alpha = np.zeros((96, 96), dtype=np.uint8)
+        alpha[24:72, 30:66] = 255
+        return deliver_pngs(png(colour, "RGB"), png(alpha, "L"), transparent=transparent,
+                            backdrop=None if transparent else "#ffffff", light="n",
+                            matted=True, outlines=self.OUTLINES,
+                            figure_colour=figure_colour(strength))
+
+    def test_the_figure_layer_is_the_saturation_kinds_figure(self):
+        for transparent in (True, False):
+            with self.subTest(transparent=transparent):
+                _, raw_figure, *_ = self.deliver(0.0, transparent=transparent)
+                _, figure, *_ = self.deliver(1.0, transparent=transparent)
+                raw = np.array(Image.open(io.BytesIO(raw_figure)), dtype=np.float32)
+                expected = saturate_layer(raw, 1.0)
+                got = np.array(Image.open(io.BytesIO(figure)), dtype=np.float32)
+                covered = got[..., 3] > 0
+                np.testing.assert_array_equal(got[covered], np.rint(expected[covered]))
+                self.assertLess(mean_saturation(got[40:50, 40:50, :3]),
+                                mean_saturation(raw[40:50, 40:50, :3]) - 20)
+
+    def test_the_outlines_keep_their_given_colours(self):
+        for transparent in (True, False):
+            with self.subTest(transparent=transparent):
+                _, _, outline, *_ = self.deliver(1.0, transparent=transparent)
+                _, _, untouched, *_ = self.deliver(0.0, transparent=transparent)
+                self.assertEqual(outline, untouched)
+                layer = np.array(Image.open(io.BytesIO(outline)))
+                opaque = layer[..., :3][layer[..., 3] == 255]
+                colours, counts = np.unique(opaque, axis=0, return_counts=True)
+                top_two = {tuple(int(c) for c in colours[i]) for i in counts.argsort()[-2:]}
+                self.assertEqual(top_two, {(255, 255, 255), (0x7E, 0x69, 0x88)})
+
+    def test_no_strength_is_no_recolouring(self):
+        self.assertIsNone(figure_colour(0.0))
 
 
 if __name__ == "__main__":

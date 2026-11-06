@@ -82,10 +82,16 @@ class DeliverArgumentsTest(unittest.TestCase):
     def test_defaults_are_the_recipes_delivery(self):
         self.assertEqual(deliver_arguments({}), {
             "keep_scene": False, "transparent": False, "backdrop": "dots",
-            "stroke_light": RECIPE_DEFAULT,
-            "outlines": [{"color": "#ffffff", "width": 0.8},
-                         {"color": "#885b80", "width": 1.04}],
-            "light": None})
+            "stroke_light": RECIPE_DEFAULT, "outlines": None,
+            "light": None, "saturation": 1.0})
+
+    def test_saturation_is_a_strength_from_zero_to_one_and_off_for_a_kept_scene(self):
+        self.assertEqual(deliver_arguments({"saturation": 0})["saturation"], 0.0)
+        self.assertEqual(deliver_arguments({"saturation": 0.5})["saturation"], 0.5)
+        self.assertEqual(deliver_arguments({"keep_scene": True})["saturation"], 0.0)
+        for bad in (-0.1, 1.5, True, "1", None):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "saturation"):
+                deliver_arguments({"saturation": bad})
 
     def test_see_through_is_a_gain_from_one_to_five(self):
         self.assertEqual(deliver_arguments({"see_through": 3})["see_through"], 3.0)
@@ -294,6 +300,19 @@ class StageArgumentsTest(unittest.TestCase):
         self.assertEqual(stage_arguments({"light": {"scene": "moon"}})["light"],
                          Light("moon", "nw"))
         self.assertEqual(stage_arguments({"shadow_from": "nw"})["shadow_from"], "nw")
+
+    def test_a_frame_takes_the_staged_recipes_colours_unless_named(self):
+        box = {"box": [0, 0, 1, 1]}
+        self.assertEqual(stage_arguments({"frame": box}, recipe="yukari")["frame"],
+                         stage_arguments({"frame": box})["frame"])
+        frame = stage_arguments({"frame": box}, recipe="akari")["frame"]
+        self.assertEqual(frame["line"], {"color": "#56321a", "width": 0.6, "pattern": "solid"})
+        self.assertEqual(frame["rim"], {"color": "#33200f", "width": 0.25})
+        frame = stage_arguments({"frame": {**box, "line": {"width": 1},
+                                           "rim": {"color": "#000000"}}},
+                                recipe="akari")["frame"]
+        self.assertEqual(frame["line"], {"color": "#56321a", "width": 1.0, "pattern": "solid"})
+        self.assertEqual(frame["rim"], {"color": "#000000", "width": 0.25})
 
     def test_a_frame_takes_its_box_and_fills_the_catalog_defaults(self):
         frame = stage_arguments({"frame": {"box": [0.1, 0.25, 1, 1],

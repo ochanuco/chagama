@@ -1,12 +1,14 @@
 """Component-model invariants: Section/Priority ordering, the GENERAL-section
-priority table `_components` assigns, part-mapping coverage, and every
+priority table `Recipe.components` assigns, part-mapping coverage, and every
 pose's Framing."""
 
 from __future__ import annotations
 
 import unittest
 
-from chagama.domain.yukari.components import (
+from chagama.domain.anima.components import (
+    PART_GROUPS,
+    PART_NAMES,
     PART_OF,
     Component,
     Framing,
@@ -14,12 +16,10 @@ from chagama.domain.yukari.components import (
     Section,
     assemble,
 )
-from chagama.domain.yukari.framing import FRAMING
+from chagama.domain.anima.framing import FRAMING
 from chagama.domain.yukari.poses import POSES
 from chagama.domain.yukari.recipe import (
-    PART_GROUPS,
-    PART_NAMES,
-    _components,
+    RECIPE,
     positive,
     positive_parts,
     render_spec,
@@ -58,7 +58,7 @@ class GeneralPriorityTableTest(unittest.TestCase):
     def test_general_components_match_the_priority_table(self):
         for pose in POSES:
             with self.subTest(pose=pose):
-                for component in _components(pose):
+                for component in RECIPE.components(pose):
                     if component.section != Section.GENERAL:
                         continue
                     if component.name in self.LEAD:
@@ -79,7 +79,7 @@ class PartMappingTest(unittest.TestCase):
 
     def test_every_declared_component_maps_to_a_known_part(self):
         for pose in POSES:
-            for component in _components(pose):
+            for component in RECIPE.components(pose):
                 self.assertIn(component.name, PART_OF, component.name)
 
     def test_every_legacy_groups_members_exist_in_positive_parts(self):
@@ -132,6 +132,7 @@ class FramingTest(unittest.TestCase):
             "step": Framing.FULL, "stand": Framing.FULL, "dance": Framing.FULL,
             "bust": Framing.BUST, "anyo": Framing.FULL,
             "pillow": Framing.CLOSE, "avatar": Framing.FACE,
+            "nomakeup": Framing.BUST, "nomakeup-bangs-up": Framing.BUST,
         }
         self.assertEqual({pose: spec.framing for pose, spec in POSES.items()},
                          expected)
@@ -168,13 +169,13 @@ class FramingTagsComponentTest(unittest.TestCase):
         self.assertEqual(FRAMING[Framing.UPPER].text, "(upper body:1.3), ")
         self.assertEqual(FRAMING[Framing.LYING].text,
                          "(lying:1.3), (full body:1.35), ")
-        self.assertEqual(FRAMING[Framing.CLOSE].text,
-                         "(close-up:1.15), (cropped:1.2), ")
+        self.assertEqual(FRAMING[Framing.CLOSE].text, "(close-up:1.15), ")
 
-    def test_only_bust_framing_carries_a_canvas(self):
+    def test_only_bust_and_close_framings_carry_a_canvas(self):
         self.assertEqual(FRAMING[Framing.BUST].canvas, (1280, 2048))
+        self.assertEqual(FRAMING[Framing.CLOSE].canvas, (1152, 1152))
         for framing in (Framing.COWBOY, Framing.FULL, Framing.UPPER,
-                        Framing.LYING, Framing.CLOSE):
+                        Framing.LYING):
             with self.subTest(framing=framing):
                 self.assertIsNone(FRAMING[framing].canvas)
 

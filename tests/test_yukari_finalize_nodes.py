@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from chagama.domain.yukari.delivery_style import BACKDROP_PALETTE  # noqa: E402
 from comfy_nodes.yukari_finalize import bridge, nodes  # noqa: E402
 
 
@@ -342,6 +343,19 @@ class NodeRunTest(unittest.TestCase):
             stand_y=0.5, nearer=0.0, focus="subject", focus_x=0.5, focus_y=0.5,
             f_number=2.8)
         self.assertEqual(image.array.shape, (1, 48, 80, 3))
+
+    def test_deliver_paints_a_pattern_in_the_given_palette(self):
+        node = nodes.YukariDeliver()
+        args = (image_tensor(swatch()), mask_tensor(matte_array()))
+        backdrop = {}
+        for name, palette in (("default", ""),
+                              ("yukari", json.dumps(BACKDROP_PALETTE._asdict())),
+                              ("akari", json.dumps(BACKDROP_PALETTE._replace(
+                                  base="#f7d3b5")._asdict()))):
+            *_, backdrop[name] = node.run(*args, keep_scene=False, backdrop="dots",
+                                          backdrop_palette=palette)
+        np.testing.assert_array_equal(backdrop["default"].array, backdrop["yukari"].array)
+        self.assertFalse(np.array_equal(backdrop["yukari"].array, backdrop["akari"].array))
 
     def test_stage_sets_layers_on_a_pattern_or_a_photo(self):
         node = nodes.YukariStage()
