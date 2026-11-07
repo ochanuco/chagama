@@ -4,7 +4,7 @@
 # each node under its custom_nodes/; ComfyUI is then restarted.
 
 [comfyui]
-tag = "v0.42.1"
+tag = "v0.43.2"
 
 [[node]]
 name = "ComfyUI-layerdiffuse"
