@@ -11,6 +11,8 @@ percentile, so the farthest of the figure still stands off the black.
 The depth leaves the reference's hair out (`without_hair`): hair standing
 off the body goes to the black, hair lying over it is filled with the body's
 depth around it, and specks the cut leaves apart from the figure go too.
+Outside the head disc the render frees, a piece cut off from the body by
+that disc and holding no body point (a bow or a lock off the head) goes too.
 """
 
 from __future__ import annotations
@@ -109,19 +111,24 @@ def lineart(rgb: np.ndarray, mask: np.ndarray) -> np.ndarray:
     return (255 - lines * inside).astype(np.uint8)
 
 
-def _main_pieces(region: np.ndarray) -> np.ndarray:
+def _main_pieces(region: np.ndarray, anchors: np.ndarray | None = None) -> np.ndarray:
     count, labels, stats, _ = cv2.connectedComponentsWithStats(region.astype(np.uint8))
     if count <= 1:
         return region
     areas = stats[1:, cv2.CC_STAT_AREA]
-    return np.isin(labels, 1 + np.nonzero(areas >= areas.max() * SPECK_SHARE)[0])
+    pieces = 1 + np.nonzero(areas >= areas.max() * SPECK_SHARE)[0]
+    if anchors is not None:
+        pieces = np.union1d(pieces, np.unique(labels[anchors & region]))
+    return np.isin(labels, pieces)
 
 
-def without_hair(inside: np.ndarray, hair: np.ndarray,
-                 head: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
+def without_hair(inside: np.ndarray, hair: np.ndarray, head: np.ndarray | None = None,
+                 anchors: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray]:
     """`(kept, filled)`: the figure the depth keeps, and the hair within it
     whose depth is filled from the body around it. Hair in `head` (the disc
-    the render frees, or holds for a back view) keeps its own depth."""
+    the render frees, or holds for a back view) keeps its own depth; outside
+    it, a small piece the disc cuts off goes unless it holds one of `anchors`
+    (the seen body points)."""
     hair = hair & inside
     if head is not None:
         hair &= ~head
@@ -130,13 +137,15 @@ def without_hair(inside: np.ndarray, hair: np.ndarray,
     bridged = cv2.morphologyEx(body.astype(np.uint8), cv2.MORPH_CLOSE,
                                cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (side, side)))
     kept = _main_pieces(body | (hair & bridged.astype(bool)))
+    if head is not None:
+        kept = _main_pieces(kept & ~head, anchors) | (kept & head)
     return kept, kept & hair
 
 
 def depth(relative: np.ndarray, mask: np.ndarray, hair: np.ndarray | None = None,
-          head: np.ndarray | None = None) -> np.ndarray:
+          head: np.ndarray | None = None, anchors: np.ndarray | None = None) -> np.ndarray:
     inside = mask >= MASK_THRESHOLD
-    kept, filled = (without_hair(inside, hair, head) if hair is not None
+    kept, filled = (without_hair(inside, hair, head, anchors) if hair is not None
                     else (inside, np.zeros_like(inside)))
     measured = kept & ~filled
     if not measured.any():
@@ -163,13 +172,15 @@ def png_base64(picture: np.ndarray) -> str:
 
 
 def outlines(image: Image.Image, segmenters: Sequence[tuple[str, Segment]],
-             estimate_depth, estimate_hair=None, head: np.ndarray | None = None) -> dict:
+             estimate_depth, estimate_hair=None, head: np.ndarray | None = None,
+             anchors: np.ndarray | None = None) -> dict:
     """`{cut, silhouette, lineart, depth}`: `cut` names the segmenter that
     found the figure, and each picture is a base64 greyscale PNG, the long
     side at most `LONG_SIDE`; just `{cut: None}` when none found it.
     `estimate_depth` maps the picture to its relative depth, larger nearer;
     `estimate_hair`, to its 0..1 hair likelihood, which the depth leaves out
-    but for the hair in `head`, a boolean mask the picture's size."""
+    but for the hair in `head`, a boolean mask the picture's size; `anchors`
+    marks the seen body points, which keep a piece `head` cuts off."""
     rgb = np.asarray(image.convert("RGB"))
     for name, segment in segmenters:
         mask = segment(rgb)
@@ -182,4 +193,4 @@ def outlines(image: Image.Image, segmenters: Sequence[tuple[str, Segment]],
     return {"cut": name, "silhouette": png_base64(silhouette(mask)),
             "lineart": png_base64(lineart(rgb, mask)),
             "depth": png_base64(depth(estimate_depth(image.convert("RGB")), mask,
-                                      hair, head))}
+                                      hair, head, anchors))}

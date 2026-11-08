@@ -208,6 +208,16 @@ class FreeHeadTest(unittest.TestCase):
         self.assertEqual(mask[50, 100 + 15], 0.0)
         self.assertEqual(mask[150, 100], 1.0)
 
+    def test_body_points_mark_the_seen_points_off_the_head(self):
+        points = [[0.0, 0.0, 0.0]] * 133
+        points[0] = [0.5, 0.25, 0.9]
+        points[9] = [0.2, 0.6, 0.9]
+        points[10] = [0.8, 0.6, 0.1]
+        mask = pose_skeleton.body_points(points, 1.0, 200, 200)
+        self.assertTrue(mask[120, 40])
+        self.assertFalse(mask[50, 100])
+        self.assertFalse(mask[120, 160])
+
     def test_no_head_point_masks_nothing(self):
         mask = pose_skeleton.free_mask([[0.5, 0.5, 0.1]] * 133, 1.0, 64, 64)
         self.assertEqual(mask.min(), 1.0)
