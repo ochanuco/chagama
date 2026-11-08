@@ -383,6 +383,14 @@ ENCLOSED_KEY_MIN_GREEN_EXCESS = 12
 # pocket the figure fully encloses is also cut where it is the key darkened
 # to no less than this share of itself, within MATTE_EDGE_TOLERANCE.
 ENCLOSED_KEY_MIN_SHADE = 0.75
+# A pocket can also hold the key seen through a dark translucent layer --
+# sheer tights over the gap between spread toes: the layer darkens the key
+# like a shade but dilutes its green excess, so the excess share falls to
+# no more than this ratio of the pixel's shade, while a true shade keeps
+# the two shares equal. The diluted reading still needs at least this
+# share of the key's excess, so a near-neutral dark pixel is not the key.
+ENCLOSED_KEY_DILUTED_RATIO = 0.5
+ENCLOSED_KEY_MIN_DILUTED_SHARE = 0.05
 # When the corners are not a green key (a drawn frame line closes the green
 # off from a white outside), the key is taken from the figure's own green
 # pixels instead, once there are at least this many of them. Interior
