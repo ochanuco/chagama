@@ -218,12 +218,23 @@ def enclosed_cut(pixels: np.ndarray, figure: np.ndarray,
 
 
 def _key_shaded(pixels: np.ndarray, key: np.ndarray, tolerance: int) -> np.ndarray:
-    """Pixels within `tolerance` of `key` darkened to no less than
-    `delivery_style.ENCLOSED_KEY_MIN_SHADE` of itself; the key itself included."""
-    shade = np.clip((pixels * key).sum(axis=2) / max((key * key).sum(), 1.0),
-                    0.0, 1.0)
-    return ((np.abs(pixels - shade[..., None] * key).max(axis=2) <= tolerance)
-            & (shade >= delivery_style.ENCLOSED_KEY_MIN_SHADE))
+    """Pixels that are `key` darkened: within `tolerance` of a shade of it
+    no darker than `delivery_style.ENCLOSED_KEY_MIN_SHADE` of itself (the
+    key itself included), or the key diluted by a dark translucent layer
+    over it -- its green excess down to no more than
+    `delivery_style.ENCLOSED_KEY_DILUTED_RATIO` of its shade, which a true
+    shade never does, while keeping at least
+    `delivery_style.ENCLOSED_KEY_MIN_DILUTED_SHARE` of the key's excess."""
+    projection = (pixels * key).sum(axis=2) / max((key * key).sum(), 1.0)
+    shade = np.clip(projection, 0.0, 1.0)
+    excess = ((pixels[..., 1] - np.maximum(pixels[..., 0], pixels[..., 2]))
+              / max(key[1] - max(key[0], key[2]), 1.0))
+    shaded = ((np.abs(pixels - shade[..., None] * key).max(axis=2) <= tolerance)
+              & (shade >= delivery_style.ENCLOSED_KEY_MIN_SHADE))
+    diluted = ((excess >= delivery_style.ENCLOSED_KEY_MIN_DILUTED_SHARE)
+               & (excess <= delivery_style.ENCLOSED_KEY_DILUTED_RATIO * projection)
+               & (projection <= 1.0))
+    return shaded | diluted
 
 
 def _shaded_pockets(pixels: np.ndarray, figure: np.ndarray, tolerance: int,
@@ -240,7 +251,12 @@ def _shaded_pockets(pixels: np.ndarray, figure: np.ndarray, tolerance: int,
     sizes = ndimage.sum(candidates, labels, range(1, count + 1))
     open_ = np.unique(labels[ndimage.binary_dilation(~figure, eight) & candidates])
     keep = np.setdiff1d(1 + np.nonzero(sizes >= 16)[0], open_)
-    return np.isin(labels, keep)
+    regions = np.isin(labels, keep)
+    # The pocket's most diluted pixels fail the colour test one by one;
+    # where green still leads, enclosed by pixels that pass it, they are
+    # the same pocket. A hole where it does not is figure the pocket rings.
+    green_leads = pixels[..., 1] > np.maximum(pixels[..., 0], pixels[..., 2])
+    return (regions | (ndimage.binary_fill_holes(regions) & green_leads)) & figure
 
 
 def key_holes(pixels: np.ndarray, figure: np.ndarray, tolerance: int) -> np.ndarray:

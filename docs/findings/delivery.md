@@ -53,18 +53,20 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   in 512 px tiles; foreground colour by pymatting's estimate, despilled on
   the soft edge only. The ViTMatte alpha is the saved `alpha` asset. Every
   pose renders on green (grey sat too close to the pale skin at the edge).
-  A key pocket the figure encloses is cut where it is the key or the key in
-  shadow (down to `ENCLOSED_KEY_MIN_SHADE` 0.75), and held known backdrop in
-  the trimap, so a pocket narrower than the ±12 px band is not handed back
-  to ViTMatte as figure. See-through clothing over the key (a figure
-  component reaching the known figure whose green excess is at least
-  `TRANSLUCENT_MIN_KEY_SHARE` of the key's) gets alpha 1 − that share and
-  its colour unmixed from the key, so a staged backdrop shows through it;
-  a material drawn opaque (pale cyan, no key in it) is left as is. The
-  `see_through` deliver option (1–5) scales that showing-through for the
-  composite only (1 − gain × (1 − alpha) inside the trimap band); the
-  saved alpha asset stays as solved. The 1 px key alpha and `drawn_outline` remain only for graphs
-  recorded before the matting stage. `[Anima]`
+  A key pocket the figure encloses is cut where it is the key, its shade
+  (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a
+  dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE` of the key's), and held known backdrop
+  in the trimap, so a narrow pocket is not handed back to ViTMatte as
+  figure. See-through
+  clothing over the key (a figure component reaching the known figure,
+  green excess at least `TRANSLUCENT_MIN_KEY_SHARE` of the key's) gets
+  alpha 1 − that share and its colour unmixed from the key, so a staged
+  backdrop shows through it; a material drawn opaque (pale cyan, no key
+  in it) is left as is. The `see_through` option (1–5) scales that for
+  the composite only (1 − gain × (1 − alpha) inside the trimap band);
+  the saved alpha asset stays as solved. The
+  1 px key alpha and `drawn_outline` remain only for graphs recorded
+  before the matting stage. `[Anima]`
 - Depth of field is its own request (`dof`) on a delivered picture's layers:
   each layer blurred on its own and composited back to front, so an
   out-of-focus figure spreads a soft alpha over the rim and backdrop instead
@@ -97,9 +99,8 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
 - Seat layered delivery: backdrop → seat → frame → figure, re-running
   `clean_background` with the seat pasted into the backdrop. `[Anima]`
 
-- The green key is read from the top-left 8x8 patch only. When steam or the
-  figure covers that corner the key is None and `see_through` stops too.
-  Steam that floats free of the figure is cut away. `[Anima]`
+- The green key is read from the top-left 8x8 patch only; covered by steam
+  or figure, it is None and `see_through` stops too. Free steam is cut. `[Anima]`
 
 ## Palette (repin)
 
@@ -113,13 +114,12 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   pink blotches); skip it, do not shrink it. `[all]` (a5 §補正は)
 - Hue interpolation goes the short way round, or purple → skin crosses green at
   every feather. Skin restoration fires only where skin was painted. `[all]` (a5 §肌ピン自体)
-- Despill on a yellow-green key pinks the skin at the excess-24 edge; limit it
-  to the edge band. It projects onto the key's chroma instead of capping green,
-  because `(green background)` draws a teal and a green cap left a cyan rim.
-  `[Anima]`
-- Matte model: `BiRefNet-general` kept the enclosed gaps under the chin in 3
-  fragments; RMBG `BiRefNet-HR` filled them as figure and `HR-matting` split
-  the edge into 35. `[Anima]`
+- Despill on a yellow-green key pinks the skin at the excess-24 edge; limit
+  it to the edge band. It projects onto the key's chroma, not a green cap:
+  `(green background)` draws a teal, and a cap left a cyan rim. `[Anima]`
+- Matte model: `BiRefNet-general` kept the enclosed chin gaps in 3
+  fragments; RMBG `BiRefNet-HR` filled them, `HR-matting` split the edge
+  into 35. `[Anima]`
 
 ## Redraw passes (IL opt-in)
 

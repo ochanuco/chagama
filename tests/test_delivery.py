@@ -225,6 +225,20 @@ class DeliveryTest(unittest.TestCase):
         self.assertTrue(cut[150:160, 150:160].all())
         self.assertEqual(int((figure & ~cut).sum()), 180)
 
+    def test_enclosed_cut_drops_a_diluted_key_pocket(self):
+        pixels = np.full((256, 256, 3), (121, 198, 118), dtype=np.uint8)
+        pixels[64:192, 64:192] = (170, 140, 210)
+        pixels[100:130, 100:106] = (68, 78, 69)      # the key through dark tights
+        pixels[64:192, 64:67] = (68, 78, 69)         # the same, on the edge
+        pixels[150:160, 150:160] = (54, 89, 53)      # a true shade of the key
+        figure = np.zeros((256, 256), dtype=bool)
+        figure[64:192, 64:192] = True
+        cut = enclosed_cut(pixels.astype(float), figure, 20)
+        self.assertFalse(cut[100:130, 100:106].any())
+        self.assertTrue(cut[64:192, 64:67].all())
+        self.assertTrue(cut[150:160, 150:160].all())
+        self.assertEqual(int((figure & ~cut).sum()), 180)
+
     def test_key_holes_are_the_key_coloured_pixels_of_the_figures_holes(self):
         pixels = np.full((128, 128, 3), (138, 196, 138), dtype=np.uint8)
         pixels[32:96, 32:96] = (170, 140, 210)
