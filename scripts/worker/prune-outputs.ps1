@@ -8,8 +8,9 @@ if (-not (Test-Path -LiteralPath $Data -PathType Container)) { throw "no data di
 
 $roots = @()
 if ($ComfyDir) { $roots += (Join-Path $ComfyDir "output"), (Join-Path $ComfyDir "input") }
+# reference-env holds installed packages, whose files keep their wheel's old mtimes.
 $roots += Get-ChildItem $Data -Directory |
-    Where-Object { $_.Name -notin "models", "worker" } |
+    Where-Object { $_.Name -notin "models", "worker", "reference-env" } |
     ForEach-Object FullName
 
 $cutoff = (Get-Date).AddDays(-$Days)
