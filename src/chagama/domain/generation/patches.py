@@ -15,7 +15,8 @@ TEXT_TARGETS = ("prompt.positive", "prompt.negative",
 PART_TARGET_PREFIX = "prompt.positive."
 NUMBER_TARGETS = ("render.cfg", "render.steps", "render.width",
                   "render.height", "render.guided_steps", "hires.denoise")
-STRING_TARGETS = ("render.model", "render.sampler", "render.scheduler")
+STRING_TARGETS = ("render.model", "render.sampler", "render.scheduler",
+                  "render.vae")
 LORAS_TARGETS = ("render.loras",)
 POSE_TARGETS = ("render.pose",)
 POSE_POINTS = 133
@@ -350,6 +351,8 @@ def _apply_one(spec: RenderSpec, patch: Patch) -> RenderSpec:
         return replace(spec, sampler_name=patch.value)
     if patch.target == "render.scheduler":
         return replace(spec, scheduler=patch.value)
+    if patch.target == "render.vae":
+        return replace(spec, vae_name=patch.value)
     if patch.target == "render.loras":
         return replace(spec, loras=patch.value)
     if patch.target == "render.pose":

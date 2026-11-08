@@ -868,6 +868,16 @@ class GraphTest(unittest.TestCase):
         self.assertEqual(graph["9"]["inputs"]["images"], ["8", 0])
         self.assertEqual(graph["9"]["inputs"]["filename_prefix"], "p")
 
+    def test_vae_name_comes_from_the_spec(self):
+        spec = render_spec("coffee", 42, "p")
+        graph = anima_graph.build_graph(spec)
+        self.assertEqual(graph["4"]["inputs"]["vae_name"],
+                         "qwen_image_vae.safetensors")
+        rgba = anima_graph.build_graph(
+            replace(spec, vae_name="anima_rgba_vae.safetensors"))
+        self.assertEqual(rgba["4"]["inputs"]["vae_name"],
+                         "anima_rgba_vae.safetensors")
+
     def test_empty_loras_leaves_the_graph_byte_identical(self):
         spec = render_spec("coffee", 42, "p")
         self.assertEqual(anima_graph.build_graph(spec),

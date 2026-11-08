@@ -350,11 +350,14 @@ class ApplyPatchesTest(unittest.TestCase):
                   reason="r"),
             _patch(target="render.scheduler", op="set", value="normal",
                   reason="r"),
+            _patch(target="render.vae", op="set",
+                  value="anima_rgba_vae.safetensors", reason="r"),
         ])
         result = apply_patches(self.spec, patches)
         self.assertEqual(result.model_path, "other.safetensors")
         self.assertEqual(result.sampler_name, "euler")
         self.assertEqual(result.scheduler, "normal")
+        self.assertEqual(result.vae_name, "anima_rgba_vae.safetensors")
 
     def test_width_and_height_sets(self):
         patches = parse_patches([

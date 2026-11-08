@@ -7,7 +7,6 @@ import json
 from ...domain.generation.models import PoseControl, RenderSpec
 
 CLIP_NAME = "qwen_3_06b_base.safetensors"
-VAE_NAME = "qwen_image_vae.safetensors"
 # One file carries both the adapter's LoRA deltas and its control embedder.
 POSE_ADAPTER = "anima_pose_preview2.safetensors"
 OUTLINE_ADAPTER = "anima-lllite-any-test-like-v2.safetensors"
@@ -84,7 +83,7 @@ def build_graph(spec: RenderSpec) -> dict[str, dict]:
             "unet_name": spec.model_path, "weight_dtype": "default"}},
         "2": {"class_type": "CLIPLoader", "inputs": {
             "clip_name": CLIP_NAME, "type": "qwen_image"}},
-        "4": {"class_type": "VAELoader", "inputs": {"vae_name": VAE_NAME}},
+        "4": {"class_type": "VAELoader", "inputs": {"vae_name": spec.vae_name}},
         "5": {"class_type": "EmptyLatentImage", "inputs": {
             "width": spec.width, "height": spec.height, "batch_size": 1}},
         "6": {"class_type": "CLIPTextEncode", "inputs": {
