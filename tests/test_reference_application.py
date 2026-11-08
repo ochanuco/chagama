@@ -160,6 +160,26 @@ class ReferenceTest(unittest.TestCase):
             self.assertLessEqual({(part, tag) for tag in tags}, listed)
         json.dumps(result)
 
+    def test_a_rated_image_is_left_to_chimera(self):
+        chimera, log = Chimera(), []
+        rating = {"model": "wd", "rating": {}, "tags": {}}
+        services = dataclasses.replace(make(chimera, log), rate_image=lambda data: rating)
+        reference(row(), services)
+        self.assertEqual(chimera.calls,
+                         [("PUT", "/api/v1/requests/ref-1/reference-safety", rating)])
+        self.assertEqual(chimera.deleted, [])
+
+    def test_a_failed_rating_deletes_the_image(self):
+        chimera, log = Chimera(), []
+
+        def broken(data):
+            raise RuntimeError("onnxruntime is not installed")
+
+        services = dataclasses.replace(make(chimera, log), rate_image=broken)
+        reference(row(), services)
+        self.assertEqual(chimera.calls, [])
+        self.assertEqual(chimera.deleted, ["ref-1"])
+
     def test_a_missing_image_raises_before_any_model_loads(self):
         chimera, log = Chimera(), []
         with self.assertRaises(ReferenceImageMissing):
