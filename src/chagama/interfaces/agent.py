@@ -188,6 +188,11 @@ def build_reference_services(chimera: ChimeraClient, comfyui: ComfyUIClient,
         return run_analysis(env_python(repository), Path(__file__).resolve().parents[2],
                             image, models_dir=models_dir())
 
+    def rate_image(image: bytes) -> dict:
+        from ..infrastructure.imaging.safety import rate_image as rate
+
+        return rate(image)
+
     return ReferenceServices(
         management=chimera,
         fetch_image=chimera.fetch_reference_image,
@@ -195,6 +200,7 @@ def build_reference_services(chimera: ChimeraClient, comfyui: ComfyUIClient,
         free_comfyui=comfyui.free,
         analyze=analyze,
         emit=emit,
+        rate_image=rate_image,
     )
 
 
