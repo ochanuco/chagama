@@ -40,7 +40,7 @@ LINE_GAIN = 4.0
 MASK_MARGIN = 9
 DEPTH_RANGE = (0.15, 1.0)
 DEPTH_PERCENTILES = (1, 99)
-HAIR_THRESHOLD = 0.4
+HAIR_THRESHOLD = 0.3
 # Hair narrower than this share of the long side, between parts of the body,
 # lies over the body and is filled rather than cut.
 HAIR_BRIDGE = 0.04
