@@ -458,6 +458,15 @@ MATTING_TILE_OVERLAP_PX = 64
 TRANSLUCENT_MIN_KEY_SHARE = 0.08
 TRANSLUCENT_MIN_AREA = 256
 TRANSLUCENT_MIN_SOLVE_ALPHA = 0.25
+# A pocket the figure encloses that the binary cut kept whole: the key
+# diluted through a dark layer there (the enclosed cut's own diluted test)
+# caps alpha at 1 - share / FULL_SHARE instead of staying opaque. Only
+# tinted components of at least MIN_AREA pixels sitting at least
+# MIN_DEPTH_PX inside the silhouette count, so the solved edge and the
+# surface fringe keep the alpha the matte gave them.
+POCKET_KEY_FULL_SHARE = 0.08
+POCKET_KEY_MIN_AREA = 16
+POCKET_KEY_MIN_DEPTH_PX = 3
 
 DOF_F_NUMBER = {"min": 1.4, "max": 22, "default": 2.8,
                 "stops": [1.4, 1.6, 1.8, 2.0, 2.2, 2.5, 2.8, 3.2, 3.5, 4.0, 4.5,

@@ -204,5 +204,54 @@ class SeeThroughTest(unittest.TestCase):
         np.testing.assert_allclose(colour[40, 40], WHITE, atol=1e-6)
 
 
+def pocket_scene() -> tuple[np.ndarray, np.ndarray]:
+    """A plum figure on the key, alpha opaque over it, with three interior
+    patches: the key diluted through a dark layer (strong and weak) and a
+    true shade of the key."""
+    px = np.zeros((96, 96, 3))
+    px[...] = KEY
+    px[8:88, 8:88] = (90.0, 60.0, 95.0)
+    px[40:52, 40:52] = (66.0, 76.0, 67.0)
+    px[40:52, 58:70] = (54.0, 58.0, 52.0)
+    px[58:70, 40:52] = (52.0, 80.0, 51.0)
+    alpha = np.zeros((96, 96))
+    alpha[8:88, 8:88] = 1.0
+    return px, alpha
+
+
+class PocketKeyTest(unittest.TestCase):
+    def test_a_kept_pocket_reads_at_its_diluted_share_not_opaque(self):
+        px, alpha = pocket_scene()
+        capped = matting.pocket_key(px, alpha)
+        np.testing.assert_allclose(capped[46, 46], 0.0, atol=1e-6)
+        np.testing.assert_allclose(capped[46, 64], 0.23, atol=0.02)
+        self.assertEqual(capped[20, 20], 1.0)
+        self.assertEqual(capped[0, 0], 0.0)
+
+    def test_a_true_shade_of_the_key_stays_opaque(self):
+        px, alpha = pocket_scene()
+        np.testing.assert_array_equal(
+            matting.pocket_key(px, alpha)[58:70, 40:52],
+            alpha[58:70, 40:52])
+
+    def test_the_silhouette_rim_keeps_its_alpha(self):
+        px, alpha = pocket_scene()
+        px[8:10, 40:52] = (66.0, 76.0, 67.0)
+        capped = matting.pocket_key(px, alpha)
+        self.assertEqual(capped[8, 46], 1.0)
+        self.assertEqual(capped[9, 46], 1.0)
+
+    def test_a_tinted_speck_under_the_minimum_area_stays_opaque(self):
+        px, alpha = pocket_scene()
+        px[74:77, 74:77] = (66.0, 76.0, 67.0)
+        self.assertEqual(matting.pocket_key(px, alpha)[75, 75], 1.0)
+
+    def test_off_a_green_key_the_alpha_is_untouched(self):
+        px, alpha = pocket_scene()
+        px[...] = np.where((px == KEY).all(axis=2, keepdims=True),
+                           (200.0, 200.0, 200.0), px)
+        np.testing.assert_array_equal(matting.pocket_key(px, alpha), alpha)
+
+
 if __name__ == "__main__":
     unittest.main()
