@@ -17,6 +17,7 @@ DWPOSE = "reference/dwpose"
 ANIME_SEG = "reference/anime-seg"
 PHOTO_SEG = "reference/birefnet-lite"
 DEPTH = "reference/depth-anything-v2-large"
+HAIR = "reference/clipseg"
 
 
 class ReferenceUnavailable(RuntimeError):
