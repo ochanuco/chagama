@@ -58,6 +58,9 @@ class RenderSpec:
     filename_prefix: str
     hires: HiresSpec | None = None
     loras: tuple[tuple[str, float], ...] = ()
+    # The VAE file the graph loads; a request swaps it with `render.vae`
+    # (the RGBA VAE is how a generation carries its own alpha).
+    vae_name: str = "qwen_image_vae.safetensors"
     # Leading steps sampled at `cfg`, the rest at CFG 1.0, same noise
     # schedule. None or 0 means a plain single KSampler.
     guided_steps: int | None = None

@@ -85,6 +85,22 @@ repo = "circlestone-labs/Anima"
 file = "split_files/vae/qwen_image_vae.safetensors"
 revision = "f973fc41ec7545364ac9776c2440285f43ff2a30"
 
+# Anima-RGBA (Apache-2.0): the 4-channel version of the VAE above and its
+# rank-32 LoRA. A request that sets `render.vae` to the VAE and
+# `render.loras` to the LoRA, and prompts a transparent background, gets a
+# generation whose PNG carries real alpha instead of the green screen.
+[[model]]
+dest = "vae/anima_rgba_vae.safetensors"
+repo = "localai0301/Anima-RGBA"
+file = "anima_rgba_vae.safetensors"
+revision = "c1e34fb312d98af65db290fc5aba4dfb2f03f49b"
+
+[[model]]
+dest = "loras/anima_rgba_lora.safetensors"
+repo = "localai0301/Anima-RGBA"
+file = "anima_rgba_lora.safetensors"
+revision = "c1e34fb312d98af65db290fc5aba4dfb2f03f49b"
+
 # The Anima pose adapter (non-commercial weights, outputs unrestricted): the
 # LoRA and control embedder the yukari graph applies under `render.pose`,
 # and the DWPose detector pair the reference env reads poses with.
