@@ -55,22 +55,22 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   pose renders on green (grey sat too close to the pale skin at the edge).
   A key pocket the figure encloses is cut where it is the key, its shade
   (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a
-  dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE` of the key's), and held known backdrop
-  in the trimap, so a narrow pocket is not handed back to ViTMatte as
-  figure. See-through
-  clothing over the key (a figure component reaching the known figure,
-  green excess at least `TRANSLUCENT_MIN_KEY_SHARE` of the key's) gets
-  alpha 1 − that share and its colour unmixed from the key, so a staged
-  backdrop shows through it; a material drawn opaque (pale cyan, no key
-  in it) is left as is. The `see_through` option (1–5) scales that for
-  the composite only (1 − gain × (1 − alpha) inside the trimap band);
-  the saved alpha asset stays as solved. The
-  1 px key alpha and `drawn_outline` remain only for graphs recorded
-  before the matting stage. `[Anima]`
-- Depth of field is its own request (`dof`) on a delivered picture's layers:
-  each layer blurred on its own and composited back to front, so an
-  out-of-focus figure spreads a soft alpha over the rim and backdrop instead
-  of fading it into paper white. `[Anima]`
+  dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE`), and held known backdrop in the
+  trimap, so a narrow pocket is not handed back to ViTMatte as
+  figure. A pocket the cut kept whole is not left opaque either: its
+  diluted share caps the solved alpha at 1 − share / `POCKET_KEY_FULL_SHARE`
+  (interior components only), so a weaker web fades, not a solid wedge.
+  See-through clothing over the
+  key (a figure component reaching the known figure, green excess at
+  least `TRANSLUCENT_MIN_KEY_SHARE` of the key's) gets alpha 1 − that
+  share and its colour unmixed from the key; a material drawn opaque
+  (pale cyan, no key in it) is left as is. The `see_through` option
+  (1–5) scales that for the composite only; the saved alpha asset stays
+  as solved. The 1 px key alpha and `drawn_outline` remain only for
+  pre-matting graphs. `[Anima]`
+- Depth of field is its own request (`dof`) over a delivery's layers: each
+  layer blurred separately and composited back to front, so an out-of-focus
+  figure spreads soft alpha over the rim instead of fading into paper white. `[Anima]`
 - Detail density follows the redraw canvas: draw at 2560, shrink to 1536. `[IL]`
 
 ## Holds

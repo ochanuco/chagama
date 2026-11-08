@@ -123,6 +123,40 @@ def see_through(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndar
     return np.where(region, np.minimum(alpha, cap), alpha)
 
 
+def pocket_key(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:
+    """`alpha` capped in the pockets the figure encloses that the binary
+    cut kept: there the key diluted through a dark layer (its share under
+    `ENCLOSED_KEY_DILUTED_RATIO` of its projection, which a true shade
+    never is) reads at 1 - share / `POCKET_KEY_FULL_SHARE`, not opaque.
+    Only tinted components of at least `POCKET_KEY_MIN_AREA` pixels sitting
+    at least `POCKET_KEY_MIN_DEPTH_PX` inside the silhouette count, so the
+    solved edge keeps its alpha. Untouched off a green key."""
+    key = green_key(px)
+    if key is None:
+        return alpha
+    share = key_share(px, key)
+    projection = (px * key).sum(axis=2) / max(float((key * key).sum()), 1.0)
+    diluted = (share > 0) & (
+        share <= delivery_style.ENCLOSED_KEY_DILUTED_RATIO * projection)
+    if not diluted.any():
+        return alpha
+    filled = ndimage.binary_fill_holes(alpha > 0)
+    depth = ndimage.distance_transform_edt(filled)
+    tinted = diluted & filled & (
+        depth >= delivery_style.POCKET_KEY_MIN_DEPTH_PX)
+    labels, count = ndimage.label(
+        tinted, ndimage.generate_binary_structure(2, 2))
+    if not count:
+        return alpha
+    sizes = ndimage.sum(tinted, labels, range(1, count + 1))
+    region = np.isin(labels, 1 + np.nonzero(
+        sizes >= delivery_style.POCKET_KEY_MIN_AREA)[0])
+    if not region.any():
+        return alpha
+    cap = np.clip(1.0 - share / delivery_style.POCKET_KEY_FULL_SHARE, 0.0, 1.0)
+    return np.where(region, np.minimum(alpha, cap), alpha)
+
+
 def clearer(px: np.ndarray, alpha: np.ndarray, gain: float) -> np.ndarray:
     """`alpha` with the key showing through the see-through inside scaled by
     `gain`: 1 - gain * (1 - alpha) there. The soft edge is left as is."""
@@ -192,7 +226,8 @@ def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     alpha = tiled(predict, px.astype(np.uint8), known,
                   delivery_style.MATTING_TILE_PX,
                   delivery_style.MATTING_TILE_OVERLAP_PX)
-    return _png(see_through(px, settle(alpha, known), known) * 255, "L")
+    return _png(pocket_key(px, see_through(px, settle(alpha, known), known))
+                * 255, "L")
 
 
 def clearer_png(data: bytes, alpha: bytes, gain: float) -> bytes:
