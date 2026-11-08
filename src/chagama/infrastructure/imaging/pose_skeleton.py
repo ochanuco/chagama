@@ -182,6 +182,19 @@ def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
     return mask
 
 
+def body_points(points: Sequence[Sequence[float]], aspect: float, width: int,
+                height: int) -> np.ndarray:
+    """A boolean `height` x `width` mask of the seen points off the head
+    (body, feet and hands), each a dot of `RADIUS`."""
+    left, top, frame_width, frame_height = frame(width, height, aspect)
+    mask = np.zeros((height, width), np.uint8)
+    for index, (x, y, score) in enumerate(points):
+        if index not in HEAD_POINTS and score >= SCORE_THRESHOLD:
+            cv2.circle(mask, (int(round(left + x * frame_width)),
+                              int(round(top + y * frame_height))), RADIUS, 1, -1)
+    return mask.astype(bool)
+
+
 def patch_padded(skeleton: np.ndarray) -> np.ndarray:
     """`skeleton` with black added at the bottom and right up to a multiple of
     `PATCH_PIXELS` on each side."""

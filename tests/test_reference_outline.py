@@ -133,6 +133,25 @@ class HairTest(unittest.TestCase):
         self.assertTrue(kept[130, 260])
         self.assertFalse(filled[130, 260])
 
+    def test_a_piece_the_head_cuts_off_goes_unless_a_body_point_holds_it(self):
+        inside = np.zeros((400, 400), bool)
+        inside[150:390, 100:300] = True
+        inside[60:150, 150:250] = True
+        inside[40:60, 120:150] = True
+        inside[40:60, 250:280] = True
+        inside[40:60, 280:300] = True
+        head = np.zeros_like(inside)
+        head[40:150, 150:250] = True
+        head[60:150, 140:260] = True
+        anchors = np.zeros_like(inside)
+        anchors[50, 290] = True
+        kept, filled = outline.without_hair(inside, np.zeros_like(inside), head, anchors)
+        self.assertTrue(kept[300, 200])
+        self.assertTrue(kept[100, 200])
+        self.assertFalse(kept[50, 130])
+        self.assertTrue(kept[50, 290])
+        self.assertFalse(filled.any())
+
     def test_the_depth_fills_hair_over_the_body_from_the_body_around_it(self):
         inside, hair = self.masks()
         relative = np.ones(inside.shape, np.float32)

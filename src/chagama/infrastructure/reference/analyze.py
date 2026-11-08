@@ -18,7 +18,7 @@ from pathlib import Path
 from PIL import Image
 
 from ...domain.yukari import reference as rules
-from ..imaging.pose_skeleton import free_mask
+from ..imaging.pose_skeleton import body_points, free_mask
 from . import depth, dwpose, hair, outline
 
 
@@ -51,7 +51,8 @@ def analyze(image: Image.Image, load_tagger: Callable, load_verifier: Callable,
         head = free_mask(figure["points"], figure["aspect"], width, height) < 0.5
         figure.update(outline.outlines(
             image, load_segmenters(), load_depth(),
-            load_hair() if load_hair is not None else None, head))
+            load_hair() if load_hair is not None else None, head,
+            body_points(figure["points"], figure["aspect"], width, height)))
     return {
         "scores": {tag: score for tag, score in tagging.scores.items()
                    if tag in candidates},
