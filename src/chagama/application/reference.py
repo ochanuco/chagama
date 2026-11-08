@@ -55,6 +55,8 @@ class ReferenceServices:
     free_comfyui: Callable[[], None]
     analyze: Callable[[bytes], Mapping]
     emit: Callable[[str], None] = print
+    # WD tagger の生スコア。None なら判定せず、解析のあとすぐ画像を消す。
+    rate_image: Callable[[bytes], dict] | None = None
     sleep: Callable[[float], None] = time.sleep
     random_seed: Callable[[], int] = field(
         default=lambda: random.randrange(SEED_LIMIT))
@@ -189,11 +191,33 @@ def reference(row: Mapping, services: ReferenceServices) -> dict:
     result = analyze(data, services)
     services.emit(f"reference {request_id}: proposed {result['pose']}, "
                   f"{len(result['candidates'])} candidates")
-    try:
-        services.delete_image(request_id)
-    except (SystemExit, Exception) as error:
-        services.emit(f"  ! reference image delete failed: {error}")
+    if not _hand_over_for_rating(request_id, data, services):
+        try:
+            services.delete_image(request_id)
+        except (SystemExit, Exception) as error:
+            services.emit(f"  ! reference image delete failed: {error}")
     return result
+
+
+def _hand_over_for_rating(request_id: str, data: bytes,
+                          services: ReferenceServices) -> bool:
+    """Send chimera the content rating; chimera then keeps the picture for a
+    while only when the verdict allows reading it, and deletes it otherwise.
+    False (rating unavailable, or chimera refused it) means the caller deletes
+    the picture as before."""
+    if services.rate_image is None:
+        return False
+    try:
+        rating = services.rate_image(data)
+        answer = services.management.request(
+            "PUT", f"/api/v1/requests/{request_id}/reference-safety", rating)
+    except (SystemExit, Exception) as error:
+        services.emit(f"  ! reference safety rating skipped: {error}")
+        return False
+    verdict = (answer or {}).get("verdict") if isinstance(answer, Mapping) else None
+    kept = (answer or {}).get("kept") if isinstance(answer, Mapping) else None
+    services.emit(f"  reference safety: {verdict}, image {'kept' if kept else 'deleted'}")
+    return True
 
 
 def _selection(payload: Mapping) -> tuple[str, str, dict[str, list[str]]]:

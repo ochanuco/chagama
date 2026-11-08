@@ -291,7 +291,9 @@ tracked file.
   アダプタ、シルエットと線画は any-test LLLite、深度は VACE depth）にし、
   キャンバスを pose 既定の画素数のまま参考画像の縦横比に合わせて、通常の
   generate として積む。GUI は prompt を書かず、
-  候補から選ぶだけ。元画像は解析後に捨て、残すのは骨格の座標と、人物だけを
+  候補から選ぶだけ。元画像は解析後に WD tagger の判定を chimera に送り、
+  chimera が判定 none / caution のものだけ 24 時間残す（MCP `get_reference_image`
+  で読める）。それ以外と判定できなかったものはすぐ消す。残すのは骨格の座標と、人物だけを
   切り出したシルエット・線画・深度。
 - ComfyUI `/prompt` への直 POST は禁止。レシピが組めない graph は
   `create_request` の payload に `generation.graph` として入れて渡す（seed と
