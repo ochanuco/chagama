@@ -99,3 +99,67 @@ class OutlineTest(unittest.TestCase):
     def test_no_figure_cut_leaves_no_pictures(self):
         self.assertEqual(outline.outlines(self.picture(), [("anime", nobody), ("photo", nobody)],
                                           near_left), {"cut": None})
+
+
+class HairTest(unittest.TestCase):
+    """A body with a strand of hair hanging off its side, a lock lying across
+    it, and a speck the cut kept apart."""
+
+    def masks(self):
+        inside = np.zeros((400, 400), bool)
+        inside[100:300, 150:250] = True
+        inside[120:380, 250:270] = True
+        inside[150:160, 150:250] = True
+        inside[20:26, 20:26] = True
+        hair = np.zeros_like(inside)
+        hair[120:380, 250:270] = True
+        hair[150:160, 150:250] = True
+        return inside, hair
+
+    def test_hair_off_the_body_and_specks_are_cut_and_hair_over_it_filled(self):
+        inside, hair = self.masks()
+        kept, filled = outline.without_hair(inside, hair)
+        self.assertTrue(kept[200, 200])
+        self.assertFalse(kept[350, 260])
+        self.assertFalse(kept[22, 22])
+        self.assertTrue(filled[155, 200])
+        self.assertFalse(filled[200, 200])
+
+    def test_hair_in_the_head_keeps_its_depth(self):
+        inside, hair = self.masks()
+        head = np.zeros_like(inside)
+        head[100:200, 240:280] = True
+        kept, filled = outline.without_hair(inside, hair, head)
+        self.assertTrue(kept[130, 260])
+        self.assertFalse(filled[130, 260])
+
+    def test_the_depth_fills_hair_over_the_body_from_the_body_around_it(self):
+        inside, hair = self.masks()
+        relative = np.ones(inside.shape, np.float32)
+        relative[150:160] = 5.0
+        picture = outline.depth(relative, inside.astype(np.float32), hair)
+        self.assertEqual(picture[350, 260], 0)
+        self.assertEqual(picture[22, 22], 0)
+        self.assertGreater(picture[155, 200], 0)
+        self.assertLessEqual(abs(int(picture[155, 200]) - int(picture[200, 200])), 2)
+
+    def test_outlines_leave_the_hair_it_is_given_out_of_the_depth(self):
+        rgb = np.full((400, 200, 3), 255, np.uint8)
+        rgb[100:300, 50:150] = 40
+
+        def hair_on_the_right(image):
+            likelihood = np.zeros((image.size[1], image.size[0]), np.float32)
+            likelihood[:, 140:] = 1.0
+            return likelihood
+
+        def wide(rgb):
+            mask = np.zeros(rgb.shape[:2], np.float32)
+            mask[100:300, 50:190] = 1.0
+            return mask
+
+        found = outline.outlines(Image.fromarray(rgb), [("anime", wide)], near_left,
+                                 hair_on_the_right)
+        depth = decode(found["depth"])
+        self.assertEqual(depth[200, 170], 0)
+        self.assertGreater(depth[200, 100], 0)
+        self.assertEqual(decode(found["silhouette"])[200, 170], 0)
