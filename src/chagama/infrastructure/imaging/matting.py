@@ -206,10 +206,25 @@ def _png(array: np.ndarray, mode: str | None = None) -> bytes:
     return output.getvalue()
 
 
-def own_alpha(data: bytes, size: tuple[int, int] | None = None) -> bytes | None:
+def _inset(alpha: Image.Image, px: int) -> Image.Image:
+    """The alpha pulled in by `px`: each pixel takes the lowest alpha in
+    the disc around it, so a soft edge keeps its shape, shifted inward."""
+    axis = np.arange(-px, px + 1)
+    footprint = (axis[:, None] ** 2 + axis[None, :] ** 2) <= px * px
+    eroded = ndimage.grey_erosion(
+        np.array(alpha).astype(float), footprint=footprint)
+    return Image.fromarray(
+        np.clip(np.rint(eroded), 0, 255).astype(np.uint8), "L")
+
+
+def own_alpha(data: bytes, size: tuple[int, int] | None = None,
+              inset_px: int = 0) -> bytes | None:
     """The alpha channel of the PNG `data` as an L PNG at `size`, or None
     when the picture carries no alpha of its own: only an alpha-carrying
-    picture's cut can take its alpha from the picture itself."""
+    picture's cut can take its alpha from the picture itself. `inset_px`
+    pulls the alpha in at `size`; a redraw's cut carries its source's
+    alpha, and the resample's repaint can sit inside the source
+    silhouette, so the carry is inset to stay within the repaint."""
     try:
         image = Image.open(io.BytesIO(data))
         if "A" not in image.getbands():
@@ -221,6 +236,8 @@ def own_alpha(data: bytes, size: tuple[int, int] | None = None) -> bytes | None:
         return None
     if size is not None and alpha.size != size:
         alpha = alpha.resize(size, Image.BICUBIC)
+    if inset_px:
+        alpha = _inset(alpha, inset_px)
     output = io.BytesIO()
     alpha.save(output, "PNG")
     return output.getvalue()
