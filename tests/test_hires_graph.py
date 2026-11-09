@@ -60,19 +60,45 @@ class HiresGraphTest(unittest.TestCase):
         self.assertEqual(result["9"]["inputs"]["filename_prefix"], "hires-x")
         self.assertEqual(result["5"], graph["5"])
 
-    def test_alpha_vae_source_upscales_with_bislerp(self):
+    def test_a_source_image_is_upscaled_and_encoded_instead_of_replayed(self):
         graph = plain_graph()
         graph["4"] = {"class_type": "VAELoader",
                       "inputs": {"vae_name": "anima_rgba_vae.safetensors"}}
-        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p")
-        self.assertEqual(result["10"]["inputs"]["upscale_method"], "bislerp")
+        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p",
+                             source_image="draft.png")
+        self.assertEqual(result["10"], {"class_type": "LoadImage",
+                                        "inputs": {"image": "draft.png"}})
+        self.assertEqual(result["11"]["class_type"], "JoinImageWithAlpha")
+        self.assertEqual(result["11"]["inputs"],
+                         {"image": ["10", 0], "alpha": ["10", 1]})
+        self.assertEqual(result["12"]["inputs"]["upscale_method"], "lanczos")
+        self.assertEqual(result["13"], {"class_type": "VAEEncode", "inputs": {
+            "pixels": ["12", 0], "vae": ["4", 0]}})
+        self.assertEqual(result["14"]["inputs"]["latent_image"], ["13", 0])
+        self.assertEqual(result["8"]["inputs"]["samples"], ["14", 0])
+        self.assertNotIn("3", result)
+        self.assertNotIn("5", result)
+        self.assertNotIn("LatentUpscale",
+                         {node["class_type"] for node in result.values()})
 
-    def test_standard_vae_source_keeps_bicubic(self):
+    def test_a_source_image_keeps_the_first_pass_sampler_settings(self):
+        graph = guided_graph()
+        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p",
+                             source_image="draft.png")
+        [resample] = [node["inputs"] for node in result.values()
+                      if node["class_type"] == "KSampler"]
+        self.assertEqual((resample["seed"], resample["cfg"], resample["steps"]),
+                         (99, 2.0, 10))
+        self.assertEqual(resample["denoise"], 0.35)
+        self.assertNotIn("10", result)
+        self.assertNotIn("3", result)
+
+    def test_an_image_upscaled_graph_is_already_hires(self):
         graph = plain_graph()
-        graph["4"] = {"class_type": "VAELoader",
-                      "inputs": {"vae_name": "qwen_image_vae.safetensors"}}
-        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p")
-        self.assertEqual(result["10"]["inputs"]["upscale_method"], "bicubic")
+        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p",
+                             source_image="draft.png")
+        with self.assertRaises(ValueError):
+            hires_graph(result, base_roles(result), PORTRAIT_2048, 0.35, "p")
 
     def test_target_sides_are_rounded_to_multiples_of_eight(self):
         graph = plain_graph(1000, 1500)

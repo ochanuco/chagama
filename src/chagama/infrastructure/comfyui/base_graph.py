@@ -20,21 +20,19 @@ from .anima_graph import POSE_ADAPTER
 PASSTHROUGH = ("JoinImageWithAlpha", "LayeredDiffusionDecode", "InpaintStitchImproved")
 
 # The four-channel VAE whose pictures carry their own alpha. Its latent
-# background is one flat code and bicubic overshoot rings it into the
-# silhouette's narrow gaps, so its hires pass interpolates with bislerp.
+# background is one flat code that no latent interpolation keeps clean
+# across the silhouette, so its hires pass upscales the decoded picture.
 ALPHA_VAE_NAME = "anima_rgba_vae.safetensors"
 
 
-def upscale_method(graph: Mapping, roles: BaseRoles) -> str:
-    """The LatentUpscale method for `roles`' decode: bislerp when the
-    decode's VAE is the alpha-carrying one, bicubic otherwise."""
+def carries_alpha(graph: Mapping, roles: BaseRoles) -> bool:
+    """Whether `roles`' decode runs through the alpha-carrying VAE."""
     vae_ref = graph[roles.decode_id].get("inputs", {}).get("vae")
-    if is_ref(vae_ref) and vae_ref[0] in graph:
-        loader = graph[vae_ref[0]]
-        if (loader.get("class_type") == "VAELoader"
-                and loader.get("inputs", {}).get("vae_name") == ALPHA_VAE_NAME):
-            return "bislerp"
-    return "bicubic"
+    if not (is_ref(vae_ref) and vae_ref[0] in graph):
+        return False
+    loader = graph[vae_ref[0]]
+    return (loader.get("class_type") == "VAELoader"
+            and loader.get("inputs", {}).get("vae_name") == ALPHA_VAE_NAME)
 
 
 def is_ref(value: object) -> bool:
@@ -232,13 +230,30 @@ def uncontrolled_conditioning(graph: Mapping, positive: list,
     return positive, negative
 
 
+def ancestors(graph: Mapping, node_id: str) -> set[str]:
+    """`node_id` and every node it reads from."""
+    found: set[str] = set()
+    stack = [node_id]
+    while stack:
+        current = stack.pop()
+        if current in found:
+            continue
+        found.add(current)
+        stack.extend(value[0] for value in graph[current].get("inputs", {}).values()
+                     if is_ref(value) and value[0] in graph)
+    return found
+
+
 def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
-                prefix: str) -> dict:
-    """A copy of `graph` that latent-upscales the finished sampler's output
-    to `pixels` in area, keeping its aspect ratio, and re-samples it with the
-    first-pass seed, before the decode. The EmptyLatentImage is left
-    untouched."""
-    if any(node.get("class_type") == "LatentUpscale" for node in graph.values()):
+                prefix: str, source_image: str | None = None) -> dict:
+    """A copy of `graph` that upscales the finished picture to `pixels` in
+    area, keeping its aspect ratio, and re-samples it with the first-pass
+    seed, before the decode. Without `source_image` the first pass runs
+    again and its latent is upscaled; with it, the uploaded picture itself
+    is upscaled and encoded, alpha included, and the first pass is dropped
+    from the graph."""
+    if any(node.get("class_type") in ("LatentUpscale", "ImageScale")
+           for node in graph.values()):
         raise ValueError("この graph は既に hires 済みです")
     result = copy.deepcopy(dict(graph))
     origin = chain_origin(result, roles.sampler_id)
@@ -259,11 +274,31 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
     positive, negative = uncontrolled_conditioning(
         result, sampler_inputs["positive"], sampler_inputs["negative"])
     next_id = max(int(key) for key in result if key.isdecimal()) + 1
-    upscale_id, resample_id = str(next_id), str(next_id + 1)
-    result[upscale_id] = {"class_type": "LatentUpscale", "inputs": {
-        "samples": [roles.sampler_id, 0],
-        "upscale_method": upscale_method(result, roles),
-        "width": target_width, "height": target_height, "crop": "disabled"}}
+
+    def allocate() -> str:
+        nonlocal next_id
+        next_id += 1
+        return str(next_id - 1)
+
+    if source_image is None:
+        upscale_id = allocate()
+        result[upscale_id] = {"class_type": "LatentUpscale", "inputs": {
+            "samples": [roles.sampler_id, 0], "upscale_method": "bicubic",
+            "width": target_width, "height": target_height, "crop": "disabled"}}
+    else:
+        load_id, join_id, scale_id, upscale_id = (
+            allocate(), allocate(), allocate(), allocate())
+        result[load_id] = {"class_type": "LoadImage",
+                           "inputs": {"image": source_image}}
+        result[join_id] = {"class_type": "JoinImageWithAlpha", "inputs": {
+            "image": [load_id, 0], "alpha": [load_id, 1]}}
+        result[scale_id] = {"class_type": "ImageScale", "inputs": {
+            "image": [join_id, 0], "upscale_method": "lanczos",
+            "width": target_width, "height": target_height, "crop": "disabled"}}
+        result[upscale_id] = {"class_type": "VAEEncode", "inputs": {
+            "pixels": [scale_id, 0],
+            "vae": result[roles.decode_id]["inputs"]["vae"]}}
+    resample_id = allocate()
     result[resample_id] = {"class_type": "KSampler", "inputs": {
         "model": uncontrolled_model(result, sampler_inputs["model"]),
         "positive": positive, "negative": negative,
@@ -273,4 +308,7 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
         "scheduler": settings["scheduler"], "denoise": denoise}}
     result[roles.decode_id]["inputs"]["samples"] = [resample_id, 0]
     result[roles.save_id]["inputs"]["filename_prefix"] = prefix
+    if source_image is not None:
+        kept = ancestors(result, roles.save_id)
+        result = {key: node for key, node in result.items() if key in kept}
     return result
