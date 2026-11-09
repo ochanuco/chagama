@@ -60,6 +60,20 @@ class HiresGraphTest(unittest.TestCase):
         self.assertEqual(result["9"]["inputs"]["filename_prefix"], "hires-x")
         self.assertEqual(result["5"], graph["5"])
 
+    def test_alpha_vae_source_upscales_with_bislerp(self):
+        graph = plain_graph()
+        graph["4"] = {"class_type": "VAELoader",
+                      "inputs": {"vae_name": "anima_rgba_vae.safetensors"}}
+        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p")
+        self.assertEqual(result["10"]["inputs"]["upscale_method"], "bislerp")
+
+    def test_standard_vae_source_keeps_bicubic(self):
+        graph = plain_graph()
+        graph["4"] = {"class_type": "VAELoader",
+                      "inputs": {"vae_name": "qwen_image_vae.safetensors"}}
+        result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p")
+        self.assertEqual(result["10"]["inputs"]["upscale_method"], "bicubic")
+
     def test_target_sides_are_rounded_to_multiples_of_eight(self):
         graph = plain_graph(1000, 1500)
         result = hires_graph(graph, base_roles(graph), PORTRAIT_2048, 0.35, "p")
