@@ -272,6 +272,16 @@ class OwnAlphaTest(unittest.TestCase):
         own = matting.own_alpha(rgb_png(pixels), (4, 16))
         self.assertEqual(Image.open(io.BytesIO(own)).size, (4, 16))
 
+    def test_the_alpha_can_be_inset(self):
+        pixels = np.zeros((16, 16, 4), dtype=np.uint8)
+        pixels[4:12, 4:12, 3] = 255
+        own = matting.own_alpha(rgb_png(pixels), inset_px=2)
+        alpha = np.array(Image.open(io.BytesIO(own)))
+        self.assertEqual(alpha[8, 8], 255)
+        self.assertEqual(alpha[6, 8], 255)
+        self.assertEqual(alpha[5, 8], 0)
+        self.assertEqual(alpha[4, 8], 0)
+
     def test_opaque_and_unreadable_pictures_have_no_own_alpha(self):
         self.assertIsNone(matting.own_alpha(rgb_png(
             np.full((8, 8, 3), 128, dtype=np.uint8))))

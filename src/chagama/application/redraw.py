@@ -264,7 +264,9 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
     if cut:
         _cut_output(services, rendered["id"], (name, data), prefix=f"{prefix}-out",
                     key_prefix=key_prefix, state=state, state_path=state_path,
-                    carried=own_alpha(source.picked, services.image_size(data)))
+                    carried=own_alpha(
+                        source.picked, services.image_size(data),
+                        delivery_style.CARRIED_ALPHA_INSET_PX))
     services.notifier.send(
         f"**redraw {method}** `{generation_id}`\n"
         f"**file** `{name}`\n"

@@ -445,6 +445,11 @@ KEY_EDGE_RAMP = 2.0
 MATTING_MODEL = "hustvl/vitmatte-base-composition-1k"
 MATTING_REVISION = "bf486d01a7d9e3dbcc8400f7942835caf0eaf76e"
 MATTING_TRIMAP_PX = 12
+# A redraw's cut carries the source draft's alpha, inset by this much at
+# the redrawn size: the resample can repaint the figure a few px inside
+# the draft silhouette, and an uninset carry keeps the repaint that sits
+# in the overhang.
+CARRIED_ALPHA_INSET_PX = 2
 # The model runs on square tiles of TILE_PX around the unknown band,
 # overlapping by OVERLAP_PX and feathered across it: its global attention
 # over a whole 2048-px picture does not fit the worker's GPU.
