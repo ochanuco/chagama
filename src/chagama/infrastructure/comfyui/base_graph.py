@@ -244,6 +244,40 @@ def ancestors(graph: Mapping, node_id: str) -> set[str]:
     return found
 
 
+WHITE = 0xFFFFFF
+
+
+def alpha_encode_nodes(graph: dict, allocate, source_image: str, width: int,
+                       height: int, vae_ref: list) -> str:
+    """Nodes that load the uploaded RGBA `source_image`, upscale it to
+    `width` x `height` and encode it; returns the encode's id. The alpha
+    VAE's encoder reads the colour composited over white plus the alpha,
+    and the composite comes after the upscale, whose alpha-weighted
+    resample leaves no colour under a fully transparent pixel."""
+    load_id, join_id, scale_id, split_id, invert_id, white_id, over_id, \
+        rejoin_id, encode_id = (allocate() for _ in range(9))
+    graph[load_id] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
+    graph[join_id] = {"class_type": "JoinImageWithAlpha", "inputs": {
+        "image": [load_id, 0], "alpha": [load_id, 1]}}
+    graph[scale_id] = {"class_type": "ImageScale", "inputs": {
+        "image": [join_id, 0], "upscale_method": "lanczos",
+        "width": width, "height": height, "crop": "disabled"}}
+    graph[split_id] = {"class_type": "SplitImageWithAlpha",
+                       "inputs": {"image": [scale_id, 0]}}
+    graph[invert_id] = {"class_type": "InvertMask",
+                        "inputs": {"mask": [split_id, 1]}}
+    graph[white_id] = {"class_type": "EmptyImage", "inputs": {
+        "width": width, "height": height, "batch_size": 1, "color": WHITE}}
+    graph[over_id] = {"class_type": "ImageCompositeMasked", "inputs": {
+        "destination": [white_id, 0], "source": [split_id, 0], "x": 0, "y": 0,
+        "resize_source": False, "mask": [invert_id, 0]}}
+    graph[rejoin_id] = {"class_type": "JoinImageWithAlpha", "inputs": {
+        "image": [over_id, 0], "alpha": [split_id, 1]}}
+    graph[encode_id] = {"class_type": "VAEEncode", "inputs": {
+        "pixels": [rejoin_id, 0], "vae": vae_ref}}
+    return encode_id
+
+
 def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
                 prefix: str, source_image: str | None = None) -> dict:
     """A copy of `graph` that upscales the finished picture to `pixels` in
@@ -286,18 +320,9 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
             "samples": [roles.sampler_id, 0], "upscale_method": "bicubic",
             "width": target_width, "height": target_height, "crop": "disabled"}}
     else:
-        load_id, join_id, scale_id, upscale_id = (
-            allocate(), allocate(), allocate(), allocate())
-        result[load_id] = {"class_type": "LoadImage",
-                           "inputs": {"image": source_image}}
-        result[join_id] = {"class_type": "JoinImageWithAlpha", "inputs": {
-            "image": [load_id, 0], "alpha": [load_id, 1]}}
-        result[scale_id] = {"class_type": "ImageScale", "inputs": {
-            "image": [join_id, 0], "upscale_method": "lanczos",
-            "width": target_width, "height": target_height, "crop": "disabled"}}
-        result[upscale_id] = {"class_type": "VAEEncode", "inputs": {
-            "pixels": [scale_id, 0],
-            "vae": result[roles.decode_id]["inputs"]["vae"]}}
+        upscale_id = alpha_encode_nodes(
+            result, allocate, source_image, target_width, target_height,
+            result[roles.decode_id]["inputs"]["vae"])
     resample_id = allocate()
     result[resample_id] = {"class_type": "KSampler", "inputs": {
         "model": uncontrolled_model(result, sampler_inputs["model"]),

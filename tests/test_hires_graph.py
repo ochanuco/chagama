@@ -68,14 +68,20 @@ class HiresGraphTest(unittest.TestCase):
                              source_image="draft.png")
         self.assertEqual(result["10"], {"class_type": "LoadImage",
                                         "inputs": {"image": "draft.png"}})
-        self.assertEqual(result["11"]["class_type"], "JoinImageWithAlpha")
         self.assertEqual(result["11"]["inputs"],
                          {"image": ["10", 0], "alpha": ["10", 1]})
         self.assertEqual(result["12"]["inputs"]["upscale_method"], "lanczos")
-        self.assertEqual(result["13"], {"class_type": "VAEEncode", "inputs": {
-            "pixels": ["12", 0], "vae": ["4", 0]}})
-        self.assertEqual(result["14"]["inputs"]["latent_image"], ["13", 0])
-        self.assertEqual(result["8"]["inputs"]["samples"], ["14", 0])
+        self.assertEqual(result["15"]["inputs"]["color"], 0xFFFFFF)
+        self.assertEqual(result["16"]["inputs"]["destination"], ["15", 0])
+        self.assertEqual(result["16"]["inputs"]["source"], ["13", 0])
+        self.assertEqual(result["16"]["inputs"]["mask"], ["14", 0])
+        self.assertEqual(result["14"]["inputs"]["mask"], ["13", 1])
+        self.assertEqual(result["17"]["inputs"],
+                         {"image": ["16", 0], "alpha": ["13", 1]})
+        self.assertEqual(result["18"], {"class_type": "VAEEncode", "inputs": {
+            "pixels": ["17", 0], "vae": ["4", 0]}})
+        self.assertEqual(result["19"]["inputs"]["latent_image"], ["18", 0])
+        self.assertEqual(result["8"]["inputs"]["samples"], ["19", 0])
         self.assertNotIn("3", result)
         self.assertNotIn("5", result)
         self.assertNotIn("LatentUpscale",
