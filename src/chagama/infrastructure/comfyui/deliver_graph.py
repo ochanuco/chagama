@@ -24,31 +24,26 @@ FOREGROUND_SUFFIX = "-foreground"
 def alpha_nodes(graph: dict, allocate: Callable[[], str], source_ref: list,
                 matte_model: str, prefix: str,
                 alpha_image: str | None,
-                guide_image: str | None = None) -> list:
-    """The ViTMatte alpha of `source_ref`: loaded from the uploaded
-    `alpha_image`, or cut here and saved under `prefix` + ALPHA_SUFFIX.
-    A cut is guided by the uploaded `guide_image` (the source picture's
-    own alpha, as a greyscale PNG) when one is given.
-    Returns the alpha mask ref."""
-    if alpha_image is not None:
+                carried_image: str | None = None) -> list:
+    """The alpha of `source_ref`: loaded from the uploaded `alpha_image`
+    (a saved cut asset, reused as it stands), carried from the uploaded
+    `carried_image` (the source picture's own alpha, saved under
+    `prefix` + ALPHA_SUFFIX as this cut's alpha), or cut here with
+    ViTMatte and saved the same way. Returns the alpha mask ref."""
+    if alpha_image is not None or carried_image is not None:
         load_alpha = allocate()
         graph[load_alpha] = {"class_type": "LoadImage", "inputs": {
-            "image": alpha_image}}
+            "image": (alpha_image if alpha_image is not None
+                      else carried_image)}}
         to_mask = allocate()
         graph[to_mask] = {"class_type": "ImageToMask", "inputs": {
             "image": [load_alpha, 0], "channel": "red"}}
-        return [to_mask, 0]
+        alpha_ref = [to_mask, 0]
+        if carried_image is not None:
+            save_mask(graph, allocate, alpha_ref, prefix + ALPHA_SUFFIX)
+        return alpha_ref
     coarse_ref = _matte_nodes(graph, allocate, source_ref, matte_model)
-    guide_ref = None
-    if guide_image is not None:
-        load_guide = allocate()
-        graph[load_guide] = {"class_type": "LoadImage", "inputs": {
-            "image": guide_image}}
-        to_mask = allocate()
-        graph[to_mask] = {"class_type": "ImageToMask", "inputs": {
-            "image": [load_guide, 0], "channel": "red"}}
-        guide_ref = [to_mask, 0]
-    alpha_ref = matting_node(graph, allocate, source_ref, coarse_ref, guide_ref)
+    alpha_ref = matting_node(graph, allocate, source_ref, coarse_ref)
     save_mask(graph, allocate, alpha_ref, prefix + ALPHA_SUFFIX)
     return alpha_ref
 
@@ -74,11 +69,11 @@ def depth_nodes(graph: dict, allocate: Callable[[], str], source_ref: list,
 
 
 def cut_graph(source_image: str, matte_model: str, prefix: str,
-              size: tuple[int, int], guide_image: str | None = None) -> dict:
+              size: tuple[int, int], carried_image: str | None = None) -> dict:
     """The cut of the uploaded `source_image` as a deliver makes it: the
     alpha and depth saved under `prefix` + ALPHA_SUFFIX / DEPTH_SUFFIX, and
-    the depth inferred at the source's `size`, and the figure's colour under that alpha under `prefix` + FOREGROUND_SUFFIX. The cut is guided by
-    `guide_image` when one is given; see `alpha_nodes`."""
+    the depth inferred at the source's `size`, and the figure's colour under that alpha under `prefix` + FOREGROUND_SUFFIX. The alpha is carried from
+    `carried_image` when one is given; see `alpha_nodes`."""
     graph: dict = {}
     cursor = 1
 
@@ -92,7 +87,7 @@ def cut_graph(source_image: str, matte_model: str, prefix: str,
     graph[load] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
     source_ref = [load, 0]
     alpha_ref = alpha_nodes(graph, allocate, source_ref, matte_model, prefix,
-                            None, guide_image)
+                            None, carried_image)
     depth_nodes(graph, allocate, source_ref, prefix, None, size)
     graph[allocate()] = {"class_type": "SaveImage", "inputs": {
         "images": foreground_node(graph, allocate, source_ref, alpha_ref),
@@ -102,7 +97,7 @@ def cut_graph(source_image: str, matte_model: str, prefix: str,
 
 def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   alpha_image: str | None = None,
-                  guide_image: str | None = None,
+                  carried_image: str | None = None,
                   keep_scene: bool,
                   transparent: bool, backdrop: str | None,
                   stroke_light: str | None, outlines: list[dict],
@@ -113,8 +108,8 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
     computing; without it the graph cuts the source itself and
-    saves the result under `prefix` + ALPHA_SUFFIX, guided by the uploaded
-    `guide_image` (the source picture's own alpha) when one is given. `see_through` scales the
+    saves the result under `prefix` + ALPHA_SUFFIX — or, with the uploaded
+    `carried_image`, takes the source picture's own alpha as that cut. `see_through` scales the
     key showing through see-through clothing after the colour is solved;
     the saved alpha stays unscaled. `saturation` is the strength the
     figure's saturation is compressed with before the outlines are drawn;
@@ -143,7 +138,7 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
 
     alpha_ref = alpha_nodes(
         graph, allocate, source_ref, matte_model, prefix, alpha_image,
-        guide_image)
+        carried_image)
 
     image_ref = source_ref
     silhouette_ref = None

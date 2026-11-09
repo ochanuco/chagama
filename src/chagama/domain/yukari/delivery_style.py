@@ -445,10 +445,6 @@ KEY_EDGE_RAMP = 2.0
 MATTING_MODEL = "hustvl/vitmatte-base-composition-1k"
 MATTING_REVISION = "bf486d01a7d9e3dbcc8400f7942835caf0eaf76e"
 MATTING_TRIMAP_PX = 12
-# A picture that carries its own alpha guides its cut: outside the guide's
-# silhouette, dilated by GUIDE_BAND_PX, is known backdrop whatever the
-# matte model traced there, and inside it, eroded by the same, known figure.
-MATTING_GUIDE_BAND_PX = 4
 # The model runs on square tiles of TILE_PX around the unknown band,
 # overlapping by OVERLAP_PX and feathered across it: its global attention
 # over a whole 2048-px picture does not fit the worker's GPU.
