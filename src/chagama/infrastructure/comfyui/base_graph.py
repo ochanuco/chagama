@@ -245,17 +245,23 @@ def ancestors(graph: Mapping, node_id: str) -> set[str]:
 
 
 WHITE = 0xFFFFFF
+# How far past the source's silhouette an alpha picture's second pass may
+# repaint; beyond it the encoded background is held, since a resampled
+# flat background grows marks along the canvas edges.
+REPAINT_MARGIN_PX = 24
 
 
 def alpha_encode_nodes(graph: dict, allocate, source_image: str, width: int,
                        height: int, vae_ref: list) -> str:
     """Nodes that load the uploaded RGBA `source_image`, upscale it to
-    `width` x `height` and encode it; returns the encode's id. The alpha
-    VAE's encoder reads the colour composited over white plus the alpha,
-    and the composite comes after the upscale, whose alpha-weighted
-    resample leaves no colour under a fully transparent pixel."""
+    `width` x `height`, encode it and mask it to the silhouette grown by
+    REPAINT_MARGIN_PX; returns the masked latent's id. The alpha VAE's
+    encoder reads the colour composited over white plus the alpha, and
+    the composite comes after the upscale, whose alpha-weighted resample
+    leaves no colour under a fully transparent pixel."""
     load_id, join_id, scale_id, split_id, invert_id, white_id, over_id, \
-        rejoin_id, encode_id = (allocate() for _ in range(9))
+        rejoin_id, encode_id, threshold_id, grow_id, masked_id = (
+            allocate() for _ in range(12))
     graph[load_id] = {"class_type": "LoadImage", "inputs": {"image": source_image}}
     graph[join_id] = {"class_type": "JoinImageWithAlpha", "inputs": {
         "image": [load_id, 0], "alpha": [load_id, 1]}}
@@ -275,7 +281,14 @@ def alpha_encode_nodes(graph: dict, allocate, source_image: str, width: int,
         "image": [over_id, 0], "alpha": [split_id, 1]}}
     graph[encode_id] = {"class_type": "VAEEncode", "inputs": {
         "pixels": [rejoin_id, 0], "vae": vae_ref}}
-    return encode_id
+    graph[threshold_id] = {"class_type": "ThresholdMask", "inputs": {
+        "mask": [invert_id, 0], "value": 0.02}}
+    graph[grow_id] = {"class_type": "GrowMask", "inputs": {
+        "mask": [threshold_id, 0], "expand": REPAINT_MARGIN_PX,
+        "tapered_corners": True}}
+    graph[masked_id] = {"class_type": "SetLatentNoiseMask", "inputs": {
+        "samples": [encode_id, 0], "mask": [grow_id, 0]}}
+    return masked_id
 
 
 def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
