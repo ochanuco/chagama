@@ -19,6 +19,23 @@ from .anima_graph import POSE_ADAPTER
 # resolve as the picture's save.
 PASSTHROUGH = ("JoinImageWithAlpha", "LayeredDiffusionDecode", "InpaintStitchImproved")
 
+# The four-channel VAE whose pictures carry their own alpha. Its latent
+# background is one flat code and bicubic overshoot rings it into the
+# silhouette's narrow gaps, so its hires pass interpolates with bislerp.
+ALPHA_VAE_NAME = "anima_rgba_vae.safetensors"
+
+
+def upscale_method(graph: Mapping, roles: BaseRoles) -> str:
+    """The LatentUpscale method for `roles`' decode: bislerp when the
+    decode's VAE is the alpha-carrying one, bicubic otherwise."""
+    vae_ref = graph[roles.decode_id].get("inputs", {}).get("vae")
+    if is_ref(vae_ref) and vae_ref[0] in graph:
+        loader = graph[vae_ref[0]]
+        if (loader.get("class_type") == "VAELoader"
+                and loader.get("inputs", {}).get("vae_name") == ALPHA_VAE_NAME):
+            return "bislerp"
+    return "bicubic"
+
 
 def is_ref(value: object) -> bool:
     return isinstance(value, list) and len(value) == 2
@@ -244,7 +261,8 @@ def hires_graph(graph: Mapping, roles: BaseRoles, pixels: int, denoise: float,
     next_id = max(int(key) for key in result if key.isdecimal()) + 1
     upscale_id, resample_id = str(next_id), str(next_id + 1)
     result[upscale_id] = {"class_type": "LatentUpscale", "inputs": {
-        "samples": [roles.sampler_id, 0], "upscale_method": "bicubic",
+        "samples": [roles.sampler_id, 0],
+        "upscale_method": upscale_method(result, roles),
         "width": target_width, "height": target_height, "crop": "disabled"}}
     result[resample_id] = {"class_type": "KSampler", "inputs": {
         "model": uncontrolled_model(result, sampler_inputs["model"]),
