@@ -253,5 +253,85 @@ class PocketKeyTest(unittest.TestCase):
         np.testing.assert_array_equal(matting.pocket_key(px, alpha), alpha)
 
 
+def guide_png(box=(24, 40, 24, 40), size=64) -> bytes:
+    guide = np.zeros((size, size), dtype=np.uint8)
+    top, bottom, left, right = box
+    guide[top:bottom, left:right] = 255
+    return rgb_png(guide)
+
+
+class GuideAlphaTest(unittest.TestCase):
+    def test_an_alpha_carrying_png_guides_at_its_own_size(self):
+        pixels = np.zeros((8, 8, 4), dtype=np.uint8)
+        pixels[..., 3] = 255
+        pixels[:4, :, 3] = 0
+        guide = matting.guide_alpha(rgb_png(pixels))
+        image = Image.open(io.BytesIO(guide))
+        self.assertEqual(image.mode, "L")
+        self.assertEqual(image.size, (8, 8))
+        self.assertEqual(np.array(image)[:4].max(), 0)
+        self.assertEqual(np.array(image)[7, 7], 255)
+
+    def test_the_guide_is_resized_to_the_asked_size(self):
+        pixels = np.zeros((8, 8, 4), dtype=np.uint8)
+        pixels[..., 3] = 255
+        pixels[:4, :, 3] = 0
+        guide = matting.guide_alpha(rgb_png(pixels), (4, 16))
+        self.assertEqual(Image.open(io.BytesIO(guide)).size, (4, 16))
+
+    def test_opaque_and_unreadable_pictures_have_no_guide(self):
+        self.assertIsNone(matting.guide_alpha(rgb_png(
+            np.full((8, 8, 3), 128, dtype=np.uint8))))
+        pixels = np.zeros((8, 8, 4), dtype=np.uint8)
+        pixels[..., 3] = 255
+        self.assertIsNone(matting.guide_alpha(rgb_png(pixels)))
+        self.assertIsNone(matting.guide_alpha(b"picked:src"))
+
+
+class KnownRegionsGuideTest(unittest.TestCase):
+    def scene(self, size, box):
+        pixels = np.full((size, size, 3), (210, 230, 235), dtype=np.uint8)
+        top, bottom, left, right = box
+        pixels[top:bottom, left:right] = (40, 40, 40)
+        soft = np.zeros((size, size), dtype=np.uint8)
+        soft[top:bottom, left:right] = 255
+        return pixels.astype(float), soft
+
+    def test_outside_the_guide_silhouette_is_known_backdrop(self):
+        px, soft = self.scene(64, (16, 48, 16, 48))
+        guide = np.zeros((64, 64))
+        guide[24:40, 24:40] = 1.0
+        known = matting.known_regions(px, soft, guide)
+        self.assertEqual(known[17, 32], matting.KNOWN_BACKDROP)
+        self.assertEqual(known[32, 32], matting.KNOWN_FIGURE)
+        unguided = matting.known_regions(px, soft)
+        self.assertEqual(unguided[17, 32], matting.UNKNOWN)
+
+    def test_inside_the_guide_silhouette_is_known_figure(self):
+        px, soft = self.scene(96, (24, 72, 24, 72))
+        guide = np.zeros((96, 96))
+        guide[16:80, 16:80] = 1.0
+        known = matting.known_regions(px, soft, guide)
+        self.assertEqual(known[22, 48], matting.KNOWN_FIGURE)
+        unguided = matting.known_regions(px, soft)
+        self.assertEqual(unguided[22, 48], matting.UNKNOWN)
+
+
+class AlphaPngGuideTest(unittest.TestCase):
+    def test_the_guide_forces_the_settled_alpha_outside_its_silhouette(self):
+        pixels = np.full((64, 64, 3), (210, 230, 235), dtype=np.uint8)
+        pixels[16:48, 16:48] = (40, 40, 40)
+        soft = np.zeros((64, 64), dtype=np.uint8)
+        soft[16:48, 16:48] = 255
+        predict = lambda rgb, known: np.full(known.shape, 0.5)
+        guided = np.array(Image.open(io.BytesIO(matting.alpha_png(
+            rgb_png(pixels), rgb_png(soft), predict, guide=guide_png()))))
+        self.assertEqual(guided[17, 32], 0)
+        self.assertEqual(guided[32, 32], 255)
+        unguided = np.array(Image.open(io.BytesIO(matting.alpha_png(
+            rgb_png(pixels), rgb_png(soft), predict))))
+        self.assertGreater(unguided[17, 32], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

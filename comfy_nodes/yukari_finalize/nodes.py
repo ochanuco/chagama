@@ -45,13 +45,15 @@ class YukariMatting:
 
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {"image": ("IMAGE",), "matte": ("MASK",)}}
+        return {"required": {"image": ("IMAGE",), "matte": ("MASK",)},
+                "optional": {"guide": ("MASK",)}}
 
-    def run(self, image, matte):
+    def run(self, image, matte, guide=None):
         try:
             alpha = matting.alpha_png(
                 bridge.image_to_png(image), bridge.mask_to_png(matte),
-                vitmatte.predict)
+                vitmatte.predict,
+                bridge.mask_to_png(guide) if guide is not None else None)
         finally:
             vitmatte.release()
         return (bridge.png_to_mask(alpha),)
