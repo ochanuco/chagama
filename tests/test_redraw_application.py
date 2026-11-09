@@ -303,6 +303,29 @@ class CutTest(unittest.TestCase):
         self.assertTrue(resolution["parameters"]["cut"])
         self.assertEqual(result["generation_ids"], ["redrawn"])
 
+    def test_an_alpha_carrying_source_guides_the_cut(self):
+        records = {"src": record(graph=ANIMA_GRAPH)}
+        management = ManagementFake(records)
+        source_image = Image.new("RGBA", (8, 8), (10, 20, 30, 255))
+        alpha = Image.new("L", (8, 8), 255)
+        alpha.paste(0, (0, 0, 8, 4))
+        source_image.putalpha(alpha)
+        output = io.BytesIO()
+        source_image.save(output, "PNG")
+        management.fetch_generation_image = lambda generation_id: output.getvalue()
+        with tempfile.TemporaryDirectory() as directory:
+            svc = services(directory, management, comfyui=CutComfyFake())
+            redraw("src", svc, context=records["src"], cut=True,
+                   key_prefix="request:r1", method="hires", hires=2048,
+                   denoise=0.5)
+        cut = svc.comfyui.submitted[1]
+        loads = nodes_of(cut, "LoadImage")
+        self.assertEqual(len(loads), 2)
+        [(_, matting)] = nodes_of(cut, "YukariMatting")
+        self.assertIn("guide", matting["inputs"])
+        self.assertTrue(any("-guide-" in name
+                            for name, _ in svc.comfyui.uploaded))
+
     def test_without_cut_nothing_is_cut(self):
         records = {"src": record(graph=ANIMA_GRAPH)}
         management = ManagementFake(records)

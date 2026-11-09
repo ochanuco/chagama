@@ -64,11 +64,14 @@ def save_mask(graph: dict, allocate: Callable[[], str], mask_ref: list,
 
 
 def matting_node(graph: dict, allocate: Callable[[], str], image_ref: list,
-                 matte_ref: list) -> list:
-    """The ViTMatte alpha of the picture. Returns the alpha ref."""
+                 matte_ref: list, guide_ref: list | None = None) -> list:
+    """The ViTMatte alpha of the picture, guided by the source picture's
+    own alpha mask when `guide_ref` is given. Returns the alpha ref."""
+    inputs = {"image": image_ref, "matte": matte_ref}
+    if guide_ref is not None:
+        inputs["guide"] = guide_ref
     node_id = allocate()
-    graph[node_id] = {"class_type": "YukariMatting", "inputs": {
-        "image": image_ref, "matte": matte_ref}}
+    graph[node_id] = {"class_type": "YukariMatting", "inputs": inputs}
     return [node_id, 0]
 
 

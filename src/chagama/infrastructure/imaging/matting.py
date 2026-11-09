@@ -206,23 +206,60 @@ def _png(array: np.ndarray, mode: str | None = None) -> bytes:
     return output.getvalue()
 
 
-def known_regions(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
+def guide_alpha(data: bytes, size: tuple[int, int] | None = None) -> bytes | None:
+    """The alpha channel of the PNG `data` as an L PNG at `size`, or None
+    when the picture carries no alpha of its own: only an alpha-carrying
+    picture can guide a cut."""
+    try:
+        image = Image.open(io.BytesIO(data))
+        if "A" not in image.getbands():
+            return None
+        alpha = image.getchannel("A")
+    except Exception:
+        return None
+    if alpha.getextrema()[0] == 255:
+        return None
+    if size is not None and alpha.size != size:
+        alpha = alpha.resize(size, Image.BICUBIC)
+    output = io.BytesIO()
+    alpha.save(output, "PNG")
+    return output.getvalue()
+
+
+def known_regions(px: np.ndarray, soft: np.ndarray,
+                  guide: np.ndarray | None = None) -> np.ndarray:
     """The trimap of the retraced matte, with the key the figure encloses
     known backdrop: a gap narrower than the unknown band is otherwise left
-    to the model, which reads it as figure."""
+    to the model, which reads it as figure. With `guide`, the picture's own
+    alpha at 0..1, the guide's silhouette overrides the retraced matte
+    outside its band: what the source itself left transparent is backdrop
+    however the matte model reads the repainted colour there."""
     figure = delivery.cut_figure(px, soft)
     known = trimap(figure, delivery_style.MATTING_TRIMAP_PX)
+    if guide is not None:
+        guided = trimap(guide >= 0.5, delivery_style.MATTING_GUIDE_BAND_PX)
+        known[guided == KNOWN_FIGURE] = KNOWN_FIGURE
+        known[guided == KNOWN_BACKDROP] = KNOWN_BACKDROP
     known[delivery.key_holes(px, figure, delivery_style.MATTE_EDGE_TOLERANCE)] = (
         KNOWN_BACKDROP)
     return known
 
 
-def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
+def alpha_png(data: bytes, matte: bytes, predict: Predict,
+              guide: bytes | None = None) -> bytes:
     """The alpha (L PNG) of the figure in `data`, from the matte model's soft
-    output `matte`."""
+    output `matte`. `guide` is the source picture's own alpha (L PNG) when
+    it has one; see `known_regions`."""
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
-    known = known_regions(px, soft)
+    guide_arr = None
+    if guide is not None:
+        guide_img = Image.open(io.BytesIO(guide)).convert("L")
+        if guide_img.size != (px.shape[1], px.shape[0]):
+            guide_img = guide_img.resize(
+                (px.shape[1], px.shape[0]), Image.BICUBIC)
+        guide_arr = np.array(guide_img).astype(float) / 255.0
+    known = known_regions(px, soft, guide_arr)
     alpha = tiled(predict, px.astype(np.uint8), known,
                   delivery_style.MATTING_TILE_PX,
                   delivery_style.MATTING_TILE_OVERLAP_PX)
