@@ -80,8 +80,13 @@ class HiresGraphTest(unittest.TestCase):
                          {"image": ["16", 0], "alpha": ["13", 1]})
         self.assertEqual(result["18"], {"class_type": "VAEEncode", "inputs": {
             "pixels": ["17", 0], "vae": ["4", 0]}})
-        self.assertEqual(result["19"]["inputs"]["latent_image"], ["18", 0])
-        self.assertEqual(result["8"]["inputs"]["samples"], ["19", 0])
+        self.assertEqual(result["19"]["inputs"], {"mask": ["14", 0], "value": 0.02})
+        self.assertEqual(result["20"]["inputs"]["mask"], ["19", 0])
+        self.assertGreater(result["20"]["inputs"]["expand"], 0)
+        self.assertEqual(result["21"], {"class_type": "SetLatentNoiseMask", "inputs": {
+            "samples": ["18", 0], "mask": ["20", 0]}})
+        self.assertEqual(result["22"]["inputs"]["latent_image"], ["21", 0])
+        self.assertEqual(result["8"]["inputs"]["samples"], ["22", 0])
         self.assertNotIn("3", result)
         self.assertNotIn("5", result)
         self.assertNotIn("LatentUpscale",
