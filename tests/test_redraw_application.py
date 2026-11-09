@@ -303,7 +303,7 @@ class CutTest(unittest.TestCase):
         self.assertTrue(resolution["parameters"]["cut"])
         self.assertEqual(result["generation_ids"], ["redrawn"])
 
-    def test_an_alpha_carrying_source_guides_the_cut(self):
+    def test_an_alpha_carrying_source_carries_its_alpha_into_the_cut(self):
         records = {"src": record(graph=ANIMA_GRAPH)}
         management = ManagementFake(records)
         source_image = Image.new("RGBA", (8, 8), (10, 20, 30, 255))
@@ -319,12 +319,15 @@ class CutTest(unittest.TestCase):
                    key_prefix="request:r1", method="hires", hires=2048,
                    denoise=0.5)
         cut = svc.comfyui.submitted[1]
-        loads = nodes_of(cut, "LoadImage")
-        self.assertEqual(len(loads), 2)
-        [(_, matting)] = nodes_of(cut, "YukariMatting")
-        self.assertIn("guide", matting["inputs"])
-        self.assertTrue(any("-guide-" in name
+        self.assertEqual(len(nodes_of(cut, "LoadImage")), 2)
+        self.assertEqual(nodes_of(cut, "YukariMatting"), [])
+        self.assertEqual(nodes_of(cut, "BiRefNetRMBG"), [])
+        self.assertIn("rdw-src-out-alpha", saved_prefixes(cut))
+        self.assertTrue(any("-alpha-in-" in name
                             for name, _ in svc.comfyui.uploaded))
+        uploads = management.asset_uploads()
+        self.assertEqual([call[3][0]["role"] for call in uploads],
+                         ["alpha", "depth", "cut", "cutout"])
 
     def test_without_cut_nothing_is_cut(self):
         records = {"src": record(graph=ANIMA_GRAPH)}

@@ -12,7 +12,7 @@ from ..domain.yukari.delivery_style import Light
 from ..domain.recipes import DEFAULT_RECIPE, backdrop_palette, deliver_outlines
 from ..infrastructure.comfyui.deliver_graph import deliver_graph
 from ..infrastructure.comfyui.timings import note_ingested
-from ..infrastructure.imaging.matting import guide_alpha
+from ..infrastructure.imaging.matting import own_alpha
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import (
     ALPHA_ROLE,
@@ -214,16 +214,16 @@ def _deliver(generation_id: str, services: DeliverServices, *,
     source_image = services.comfyui.upload_image(f"{prefix}-source-{token}.png", picked)
     alpha_image = (services.comfyui.upload_image(f"{prefix}-alpha-in-{token}.png", alpha_bytes)
                    if alpha_bytes is not None else None)
-    guide_image = None
+    carried_image = None
     if alpha_image is None:
-        guide = guide_alpha(picked)
-        if guide is not None:
-            guide_image = services.comfyui.upload_image(
-                f"{prefix}-guide-{token}.png", guide)
+        carried = own_alpha(picked)
+        if carried is not None:
+            carried_image = services.comfyui.upload_image(
+                f"{prefix}-carried-{token}.png", carried)
     graph = services.deliver_graph(
         source_image, delivery_style.MATTE_MODEL, prefix,
         alpha_image=alpha_image,
-        guide_image=guide_image,
+        carried_image=carried_image,
         keep_scene=keep_scene,
         transparent=transparent, backdrop=backdrop, stroke_light=stroke_light,
         outlines=outlines,

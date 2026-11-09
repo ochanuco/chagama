@@ -19,7 +19,7 @@ from ..infrastructure.comfyui.base_graph import (
 from ..infrastructure.comfyui.deliver_graph import cut_graph
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.delivery import image_size
-from ..infrastructure.imaging.matting import cutout_png, guide_alpha
+from ..infrastructure.imaging.matting import cutout_png, own_alpha
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
 from .cut_assets import (
     ALPHA_ROLE,
@@ -155,11 +155,11 @@ def _prepare_hires(source: _Source, prefix: str, services: RedrawServices, *,
 
 def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, bytes], *,
                 prefix: str, key_prefix: str | None, state: dict, state_path,
-                guide: bytes | None = None) -> None:
+                carried: bytes | None = None) -> None:
     """Cut the redrawn `picture` as a deliver of it would and attach the
     alpha, depth and their `cut` description to `rendered_id`, so a deliver
-    of it reuses them, with an RGBA `cutout` to show it by. The cut is
-    guided by the redraw source's own alpha (`guide`) when it has one."""
+    of it reuses them, with an RGBA `cutout` to show it by. The cut's alpha
+    is the redraw source's own alpha (`carried`) when it has one."""
     prompt_id = state.get("cut_prompt_id")
     knows = getattr(services.comfyui, "knows", None)
     if prompt_id and (knows is None or knows(prompt_id)):
@@ -167,14 +167,14 @@ def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, 
     else:
         image = services.comfyui.upload_image(
             f"{prefix}-in-{uuid.uuid4().hex[:8]}.png", picture[1])
-        guide_image = None
-        if guide is not None:
-            guide_image = services.comfyui.upload_image(
-                f"{prefix}-guide-{uuid.uuid4().hex[:8]}.png", guide)
+        carried_image = None
+        if carried is not None:
+            carried_image = services.comfyui.upload_image(
+                f"{prefix}-alpha-in-{uuid.uuid4().hex[:8]}.png", carried)
         prompt_id = services.comfyui.submit(
             services.cut_graph(image, delivery_style.MATTE_MODEL, prefix,
                                 services.image_size(picture[1]),
-                                guide_image=guide_image))
+                                carried_image=carried_image))
         if state_path:
             state["cut_prompt_id"] = prompt_id
             services.state.save(state_path, state)
@@ -264,7 +264,7 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
     if cut:
         _cut_output(services, rendered["id"], (name, data), prefix=f"{prefix}-out",
                     key_prefix=key_prefix, state=state, state_path=state_path,
-                    guide=guide_alpha(source.picked, services.image_size(data)))
+                    carried=own_alpha(source.picked, services.image_size(data)))
     services.notifier.send(
         f"**redraw {method}** `{generation_id}`\n"
         f"**file** `{name}`\n"
