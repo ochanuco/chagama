@@ -19,6 +19,7 @@ from chagama.application.redraw import HIRES_DENOISE, hires_pixels
 from chagama.application.ingest import classify_redraw_outputs
 from chagama.application.redraw import RedrawServices, redraw
 from chagama.infrastructure.comfyui.refinement_graph import DEPTH_NODE
+import numpy as np
 from PIL import Image
 
 ANIMA_GRAPH = {
@@ -255,6 +256,16 @@ def png(mode: str, colour) -> bytes:
     return output.getvalue()
 
 
+def rgba_png(top_transparent: int) -> bytes:
+    image = Image.new("RGBA", (8, 8), (10, 20, 30, 255))
+    alpha = Image.new("L", (8, 8), 255)
+    alpha.paste(0, (0, 0, 8, top_transparent))
+    image.putalpha(alpha)
+    output = io.BytesIO()
+    image.save(output, "PNG")
+    return output.getvalue()
+
+
 class CutComfyFake(ComfyFake):
     """Answers the cut's alpha and figure colour with real PNGs."""
 
@@ -303,31 +314,40 @@ class CutTest(unittest.TestCase):
         self.assertTrue(resolution["parameters"]["cut"])
         self.assertEqual(result["generation_ids"], ["redrawn"])
 
-    def test_an_alpha_carrying_source_carries_its_alpha_into_the_cut(self):
-        records = {"src": record(graph=ANIMA_GRAPH)}
+    def test_an_alpha_source_is_redrawn_from_its_picture_and_cut_by_its_own_alpha(self):
+        graph = copy.deepcopy(ANIMA_GRAPH)
+        graph["4"] = {"class_type": "VAELoader",
+                      "inputs": {"vae_name": "anima_rgba_vae.safetensors"}}
+        records = {"src": record(graph=graph)}
         management = ManagementFake(records)
-        source_image = Image.new("RGBA", (8, 8), (10, 20, 30, 255))
-        alpha = Image.new("L", (8, 8), 255)
-        alpha.paste(0, (0, 0, 8, 4))
-        source_image.putalpha(alpha)
-        output = io.BytesIO()
-        source_image.save(output, "PNG")
-        management.fetch_generation_image = lambda generation_id: output.getvalue()
+        source = rgba_png(top_transparent=4)
+        management.fetch_generation_image = lambda generation_id: source
+        redrawn = rgba_png(top_transparent=2)
+
+        class AlphaComfyFake(CutComfyFake):
+            def fetch(self, image):
+                if image["filename"].startswith("rdw-src_"):
+                    return redrawn
+                return super().fetch(image)
+
         with tempfile.TemporaryDirectory() as directory:
-            svc = services(directory, management, comfyui=CutComfyFake())
+            svc = services(directory, management, comfyui=AlphaComfyFake())
             redraw("src", svc, context=records["src"], cut=True,
                    key_prefix="request:r1", method="hires", hires=2048,
                    denoise=0.5)
-        cut = svc.comfyui.submitted[1]
-        self.assertEqual(len(nodes_of(cut, "LoadImage")), 2)
+        hires, cut = svc.comfyui.submitted
+        [(_, load)] = nodes_of(hires, "LoadImage")
+        self.assertTrue(load["inputs"]["image"].startswith("uploaded-rdw-src-src-"))
+        self.assertEqual(svc.comfyui.uploaded[0][1], source)
+        self.assertEqual(len(nodes_of(hires, "VAEEncode")), 1)
+        self.assertEqual(nodes_of(hires, "EmptyLatentImage"), [])
         self.assertEqual(nodes_of(cut, "YukariMatting"), [])
         self.assertEqual(nodes_of(cut, "BiRefNetRMBG"), [])
-        self.assertIn("rdw-src-out-alpha", saved_prefixes(cut))
-        self.assertTrue(any("-alpha-in-" in name
-                            for name, _ in svc.comfyui.uploaded))
-        uploads = management.asset_uploads()
-        self.assertEqual([call[3][0]["role"] for call in uploads],
-                         ["alpha", "depth", "cut", "cutout"])
+        [carried] = [data for name, data in svc.comfyui.uploaded
+                     if "-alpha-in-" in name]
+        alpha = np.array(Image.open(io.BytesIO(carried)))
+        self.assertEqual(alpha[1, 4], 0)
+        self.assertEqual(alpha[3, 4], 255)
 
     def test_without_cut_nothing_is_cut(self):
         records = {"src": record(graph=ANIMA_GRAPH)}

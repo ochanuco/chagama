@@ -13,6 +13,7 @@ from ..domain.recipes import DEFAULT_RECIPE
 from ..infrastructure.comfyui.base_graph import (
     BaseRoles,
     base_roles,
+    carries_alpha,
     hires_graph,
     sampler_settings,
 )
@@ -143,9 +144,14 @@ def _prepare_hires(source: _Source, prefix: str, services: RedrawServices, *,
         "hires", has_graph=source.roles is not None, repaired=source.derived,
         stitched=source.roles is not None and source.roles.stitched,
         is_anima=source.is_anima)
+    source_image = None
+    if carries_alpha(source.graph, source.roles):
+        source_image = services.comfyui.upload_image(
+            f"{prefix}-src-{uuid.uuid4().hex[:8]}.png", source.picked)
     try:
         graph = services.hires_graph(
-            source.graph, source.roles, hires_pixels(hires), denoise, prefix)
+            source.graph, source.roles, hires_pixels(hires), denoise, prefix,
+            source_image=source_image)
     except ValueError as error:
         raise SystemExit(str(error)) from error
     return _Prepared(
@@ -159,7 +165,7 @@ def _cut_output(services: RedrawServices, rendered_id: str, picture: tuple[str, 
     """Cut the redrawn `picture` as a deliver of it would and attach the
     alpha, depth and their `cut` description to `rendered_id`, so a deliver
     of it reuses them, with an RGBA `cutout` to show it by. The cut's alpha
-    is the redraw source's own alpha (`carried`) when it has one."""
+    is the redrawn picture's own alpha (`carried`) when it has one."""
     prompt_id = state.get("cut_prompt_id")
     knows = getattr(services.comfyui, "knows", None)
     if prompt_id and (knows is None or knows(prompt_id)):
@@ -264,9 +270,7 @@ def redraw(generation_id: str, services: RedrawServices, *, method: str,
     if cut:
         _cut_output(services, rendered["id"], (name, data), prefix=f"{prefix}-out",
                     key_prefix=key_prefix, state=state, state_path=state_path,
-                    carried=own_alpha(
-                        source.picked, services.image_size(data),
-                        delivery_style.CARRIED_ALPHA_INSET_PX))
+                    carried=own_alpha(data))
     services.notifier.send(
         f"**redraw {method}** `{generation_id}`\n"
         f"**file** `{name}`\n"
