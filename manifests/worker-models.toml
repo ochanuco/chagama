@@ -55,7 +55,7 @@ revision = "1484985258ba7ef45c314144fcf0e90924ffbf44"
 dest = "background_removal/birefnet.safetensors"
 repo = "Comfy-Org/BiRefNet"
 file = "background_removal/birefnet.safetensors"
-revision = "25511f8787e51912e1480706b4e47b8f467fbf72"
+revision = "884af709e9b795d89dafbf97f29c8d6a2386f5c6"
 
 # SilvermoonMix Anima Turbo from Civitai, pinned by version id; the file is the
 # version's primary Model file. dest is a fixed name so recipes do not change
@@ -228,7 +228,7 @@ revision = "8f559771d5a49a02fa03f7df2a05ccb7eecb3a2a"
 dest = "reference/anima-tagger/config.json"
 repo = "sorryhyun/anima-tagger"
 file = "config.json"
-revision = "e9d6966f8fa05e9b70ecb8a7ddff216a9b19d28a"
+revision = "fbe45963eb3e59d131b98d20375509e2582b5c33"
 
 [[model]]
 dest = "reference/anima-tagger/groups.yaml"
