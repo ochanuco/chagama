@@ -64,7 +64,6 @@ function Build-Standalone {
     & $uv venv --python 3.12 $envDir 2>&1 | Out-Host
     if ($LASTEXITCODE) { return $false }
     & $uv pip install --python $python -r $requirements -r $standalone `
-        --extra-index-url https://download.pytorch.org/whl/cu130 `
         --index-strategy unsafe-best-match 2>&1 | Out-Host
     if ($LASTEXITCODE) { return $false }
     & $python -c $check 2>&1 | Out-Host

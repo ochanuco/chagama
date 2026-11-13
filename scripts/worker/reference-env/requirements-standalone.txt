@@ -1,5 +1,7 @@
 # Only for the standalone env, when a venv over ComfyUI's Python cannot
 # import its CUDA torch: torch, torchvision and what ComfyUI would have lent.
+# The torch pin must be on this index: PyPI's Windows wheel of it is CPU only.
+--extra-index-url https://download.pytorch.org/whl/cu132
 torch==2.15.0
 torchvision==0.29.2
 pillow==13.0.0
