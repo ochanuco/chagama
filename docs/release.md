@@ -135,7 +135,8 @@ env built for its pins. `scripts/worker/reference-env.ps1` builds it with uv
 (found on `PATH`, in `UV`, or as `"uv"` in `worker.json`): first a venv over
 ComfyUI's Python with `--system-site-packages`, which borrows its CUDA torch
 and adds the pinned packages; when that venv cannot import them with CUDA, a
-standalone Python 3.12 venv with the pinned cu130 torch wheel (about 5 GB on
+standalone Python 3.12 venv with the pinned CUDA torch wheel, from the
+PyTorch index `requirements-standalone.txt` names (about 5 GB on
 disk). It marks the env `ready` only after that import check passes, and runs the
 check again before trusting a `ready` env, rebuilding it when files have gone
 missing; until then reference rows fail and every other kind runs. The deploy's prepare
