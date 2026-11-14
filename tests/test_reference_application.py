@@ -13,6 +13,7 @@ from PIL import Image
 
 from chagama.application.generate import validate_request
 from chagama.application.reference import (
+    CLOSE_DEPTH_BLUR,
     FREE_SETTLE_SECONDS,
     FREE_SHARE_LIMIT,
     ReferenceImageMissing,
@@ -304,6 +305,16 @@ class ReferenceRenderTest(unittest.TestCase):
             "framing_tags": ["facing away"], "gesture": ["looking back"]})
         pose = pose_patch(figure, "firm", applied=plan.applied)["value"]
         self.assertEqual((pose["free_head"], pose["free_chest"]), (True, False))
+
+    def test_an_upper_body_frame_keeps_more_of_the_depth(self):
+        chimera = Chimera()
+        chimera.source = analysed_source()
+        chimera.source["result"]["candidates"].append(
+            {"tag": "upper body", "part": "framing_tags", "score": 0.8,
+             "kept": True, "d1": None, "applied": True})
+        reference_render(render_row(pose_follow="firm", applied={
+            "framing_tags": ["upper body"]}), make(chimera, []))
+        self.assertEqual(self.pose_of(chimera)["blur"], CLOSE_DEPTH_BLUR)
 
     def test_firm_without_a_picked_tag_holds_the_head_and_chest(self):
         figure = analysed_source()["result"]["figure"]

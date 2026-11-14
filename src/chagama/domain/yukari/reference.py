@@ -3,7 +3,8 @@ patches.
 
 `yukari_persona` is the style and `YUKARI` alone (`Recipe.persona`), so the
 composition, the gesture and the expression all come from the picture and no
-prepared pose pulls them back. Legwear tags replace the default tights; the
+prepared pose pulls them back. Legwear tags replace the default tights, and
+a frame cut above the waist drops the leg words unless one was picked; the
 character stays the recipe's (the identity part is never touched).
 """
 
@@ -61,6 +62,11 @@ BACK_VIEW_GESTURE = "(facing away:1.6), (back of head:1.35), "
 BACK_VIEW_NEGATIVE = (", (looking at viewer:1.6), (from front:1.3), "
                       "(looking back:1.5), (looking over shoulder:1.4)")
 REASON = "参考画像のタグ"
+# A frame cut above the waist: the persona's leg words would fit legs into it.
+NO_LEGS_FRAMING = frozenset({"upper body", "portrait", "close-up"})
+LEG_BUILD = frozenset({"wide hips", "thick thighs", "soft thighs", "long legs",
+                       "long torso", "seven heads tall"})
+LEG_NEGATIVE = frozenset({"short legs", "thin legs", "slender legs"})
 
 
 @dataclass(frozen=True)
@@ -69,6 +75,7 @@ class Plan:
     applied: dict[str, list[str]]
     patches: list[dict]
     dropped: list[str]
+    no_legs: bool = False
 
 
 def candidates(groups: Mapping[str, Sequence[str]]) -> dict[str, str]:
@@ -155,14 +162,22 @@ def _face_away(current: Mapping[str, str], mouth_tags: Collection[str]) -> list[
     return patches
 
 
+def shows_no_legs(accepted: Mapping[str, Sequence[str]]) -> bool:
+    return (bool(NO_LEGS_FRAMING & set(accepted.get("framing_tags", ())))
+            and not accepted.get("legwear"))
+
+
 def build(pose: str, accepted: Mapping[str, Sequence[str]],
-          kept: Collection[str] = ()) -> Plan:
-    """The patches that put `accepted` (part -> tags) onto `pose`."""
+          kept: Collection[str] = (), *, no_legs: bool | None = None) -> Plan:
+    """The patches that put `accepted` (part -> tags) onto `pose`; with
+    `no_legs` (by default `shows_no_legs`), the persona's leg words go."""
     if pose not in POSE_CHOICES:
         raise ValueError(f"pose must be one of {POSE_CHOICES}, got {pose!r}")
     unknown = set(accepted) - set(PART_SOURCES)
     if unknown:
         raise ValueError(f"unknown parts {sorted(unknown)}")
+    if no_legs is None:
+        no_legs = shows_no_legs(accepted)
     accepted = {part: list(dict.fromkeys(accepted.get(part, ())))
                 for part in PART_SOURCES}
     current = dict(positive_parts(pose))
@@ -184,9 +199,17 @@ def build(pose: str, accepted: Mapping[str, Sequence[str]],
     used = {tag for tags in accepted.values() for tag in tags}
     if used & BACK_TAGS and LOOKING_BACK not in used:
         patches += _face_away(current, set(accepted["mouth"]))
-    patches += _remove_items("prompt.negative", negative(pose), used)
+    if no_legs:
+        legwear = _part_patch("legwear", current["legwear"], "")
+        if legwear:
+            patches.append(legwear)
+        patches += _remove_items("prompt.positive.body_build", current["body_build"],
+                                 LEG_BUILD)
+    banned = used | LEG_NEGATIVE if no_legs else used
+    patches += _remove_items("prompt.negative", negative(pose), banned)
     dropped = sorted(set(kept) - used)
-    return Plan(pose=pose, applied=applied, patches=patches, dropped=dropped)
+    return Plan(pose=pose, applied=applied, patches=patches, dropped=dropped,
+                no_legs=no_legs)
 
 
 def plan(scores: Mapping[str, float], kept: Collection[str],
