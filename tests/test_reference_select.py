@@ -241,6 +241,27 @@ class PersonaTest(unittest.TestCase):
                              parse_patches(plan.patches))
         self.assertEqual(dict(spec.positive_parts)["legwear"], "black pantyhose, ")
 
+    def test_an_upper_body_frame_drops_the_leg_words(self):
+        plan = reference.build("yukari_persona", {"framing_tags": ["upper body"]})
+        self.assertTrue(plan.no_legs)
+        spec = apply_patches(render_spec("yukari_persona", 1, "t"),
+                             parse_patches(plan.patches))
+        parts = dict(spec.positive_parts)
+        self.assertEqual(parts["legwear"], "")
+        self.assertFalse(reference.LEG_BUILD & set(bare_tags(parts["body_build"])))
+        self.assertIn("mature female", bare_tags(parts["body_build"]))
+        self.assertFalse(reference.LEG_NEGATIVE & set(bare_tags(spec.prompts.negative)))
+        self.assertLessEqual(identity_tags("yukari_persona"),
+                             set(bare_tags(spec.prompts.positive)))
+
+    def test_a_picked_legwear_keeps_the_legs_in_an_upper_body_frame(self):
+        plan = reference.build("yukari_persona", {"framing_tags": ["upper body"],
+                                                  "legwear": ["black pantyhose"]})
+        self.assertFalse(plan.no_legs)
+        spec = apply_patches(render_spec("yukari_persona", 1, "t"),
+                             parse_patches(plan.patches))
+        self.assertIn("long legs", bare_tags(dict(spec.positive_parts)["body_build"]))
+
     def test_the_persona_is_not_a_catalog_pose(self):
         from chagama.domain.yukari.poses import POSES
         self.assertNotIn("yukari_persona", POSES)

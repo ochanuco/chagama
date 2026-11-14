@@ -34,6 +34,8 @@ FREE_SETTLE_SECONDS = 2.0
 SEED_LIMIT = 2**31
 POSE_STRENGTH = 1.0
 DEPTH_BLUR = 0.015
+# A frame cut above the waist keeps the face and chest relief that tells her size.
+CLOSE_DEPTH_BLUR = 0.005
 # off: the tags only. loose: the skeleton. firm: the depth, smoothed of its
 # hems and folds, with the head and chest left to the tags, or the skeleton for a reference read before depth was kept.
 POSE_FOLLOWS = ("off", "loose", "firm")
@@ -139,7 +141,8 @@ def _free_parts(figure: Mapping, applied: Mapping[str, Sequence[str]],
 
 
 def pose_patch(figure: Mapping, follow: str, *,
-               applied: Mapping[str, Sequence[str]] | None = None) -> dict:
+               applied: Mapping[str, Sequence[str]] | None = None,
+               no_legs: bool = False) -> dict:
     applied = applied or {}
     back = shows_back(applied)
     if follow == "firm" and "depth" in figure:
@@ -149,7 +152,8 @@ def pose_patch(figure: Mapping, follow: str, *,
                                             not back)
         value = {"control": "depth", "picture": figure["depth"],
                  "free_head": free_head, "free_chest": free_chest,
-                 "points": figure["points"], "blur": DEPTH_BLUR}
+                 "points": figure["points"],
+                 "blur": CLOSE_DEPTH_BLUR if no_legs else DEPTH_BLUR}
     else:
         value = {"points": figure["points"]}
     return {"target": "render.pose", "op": "set",
@@ -179,7 +183,8 @@ def generate_request(plan: rules.Plan, *, seed: int, source: str,
     patches = list(plan.patches)
     if figure and pose_follow != "off":
         patches += canvas_patches(plan.pose, figure["aspect"])
-        patches.append(pose_patch(figure, pose_follow, applied=plan.applied))
+        patches.append(pose_patch(figure, pose_follow, applied=plan.applied,
+                                  no_legs=plan.no_legs))
     parameters = {"pose": plan.pose}
     if shows_back(plan.applied):
         parameters["angle"] = "from_behind"
@@ -277,11 +282,12 @@ def reference_render(row: Mapping, services: ReferenceServices) -> dict:
     try:
         rules.check_selection((source.get("result") or {}).get("candidates") or [],
                               pose, applied)
+        no_legs = rules.shows_no_legs(applied)
         if figure and follow != "off":
             grown = with_headroom(figure)
             if grown is not figure:
                 figure, applied = grown, _without_head_crop(applied)
-        plan = rules.build(pose, applied)
+        plan = rules.build(pose, applied, no_legs=no_legs)
     except ValueError as error:
         raise SystemExit(f"reference_render: {error}") from error
     seed = payload.get("seed")
