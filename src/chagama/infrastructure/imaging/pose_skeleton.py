@@ -182,6 +182,18 @@ def free_mask(points: Sequence[Sequence[float]], aspect: float, width: int,
     return mask
 
 
+def freed_share(points: Sequence[Sequence[float]], aspect: float,
+                silhouette: np.ndarray, head: bool, chest: bool) -> float:
+    """The share of `silhouette` (the figure's pixels over the source frame)
+    that `free_mask` leaves to the prompt."""
+    height, width = silhouette.shape
+    figure = int(silhouette.sum())
+    if not figure:
+        return 0.0
+    freed = free_mask(points, aspect, width, height, head, chest) < 0.5
+    return float((freed & silhouette).sum() / figure)
+
+
 def body_points(points: Sequence[Sequence[float]], aspect: float, width: int,
                 height: int) -> np.ndarray:
     """A boolean `height` x `width` mask of the seen points off the head
