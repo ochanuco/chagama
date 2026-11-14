@@ -18,11 +18,12 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
+import numpy as np
 from PIL import Image
 
 from ..domain.recipes import DEFAULT_RECIPE, RECIPES
 from ..domain.yukari import reference as rules
-from ..infrastructure.imaging.pose_skeleton import head_overflow
+from ..infrastructure.imaging.pose_skeleton import freed_share, head_overflow
 from .generate import validate_request
 from .worker_channels import Management
 
@@ -36,6 +37,8 @@ DEPTH_BLUR = 0.015
 # off: the tags only. loose: the skeleton. firm: the depth, smoothed of its
 # hems and folds, with the head and chest left to the tags, or the skeleton for a reference read before depth was kept.
 POSE_FOLLOWS = ("off", "loose", "firm")
+# A full figure frees a quarter to a third; a close-up's head alone frees half.
+FREE_SHARE_LIMIT = 0.4
 POSE_ASPECTS = (0.5, 2.0)
 # A head the reference crops is drawn whole: the frame grows past it by its
 # freed disc and this share of the disc beyond, and the tags that crop it go.
@@ -118,6 +121,23 @@ def shows_back(applied: Mapping[str, Sequence[str]]) -> bool:
     return any(tag in rules.BACK_TAGS for tags in applied.values() for tag in tags)
 
 
+def _free_parts(figure: Mapping, applied: Mapping[str, Sequence[str]],
+                head: bool, chest: bool) -> tuple[bool, bool]:
+    """Which of the head and chest the depth leaves to the prompt: none
+    without a picked tag, and the chest, then the head, held while what they
+    free is over `FREE_SHARE_LIMIT` of the figure."""
+    if not any(applied.values()):
+        return False, False
+    with Image.open(io.BytesIO(base64.b64decode(figure["depth"]))) as opened:
+        silhouette = np.asarray(opened.convert("L")) > 0
+    points, aspect = figure["points"], figure["aspect"]
+    if chest and freed_share(points, aspect, silhouette, head, chest) > FREE_SHARE_LIMIT:
+        chest = False
+    if head and freed_share(points, aspect, silhouette, head, chest) > FREE_SHARE_LIMIT:
+        head = False
+    return head, chest
+
+
 def pose_patch(figure: Mapping, follow: str, *,
                applied: Mapping[str, Sequence[str]] | None = None) -> dict:
     applied = applied or {}
@@ -125,8 +145,10 @@ def pose_patch(figure: Mapping, follow: str, *,
     if follow == "firm" and "depth" in figure:
         # A back view's head and chest are her back: the prompt would turn them round.
         looking_back = any(rules.LOOKING_BACK in tags for tags in applied.values())
+        free_head, free_chest = _free_parts(figure, applied, not back or looking_back,
+                                            not back)
         value = {"control": "depth", "picture": figure["depth"],
-                 "free_head": not back or looking_back, "free_chest": not back,
+                 "free_head": free_head, "free_chest": free_chest,
                  "points": figure["points"], "blur": DEPTH_BLUR}
     else:
         value = {"points": figure["points"]}

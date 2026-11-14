@@ -14,6 +14,7 @@ from PIL import Image
 from chagama.application.generate import validate_request
 from chagama.application.reference import (
     FREE_SETTLE_SECONDS,
+    FREE_SHARE_LIMIT,
     ReferenceImageMissing,
     ReferenceServices,
     generate_request,
@@ -24,7 +25,7 @@ from chagama.application.reference import (
     with_headroom,
 )
 from chagama.application.work import work_once
-from chagama.infrastructure.imaging.pose_skeleton import HEAD_POINTS, head_overflow
+from chagama.infrastructure.imaging.pose_skeleton import HEAD_POINTS, freed_share, head_overflow
 from chagama.domain.yukari.reference import Plan
 from chagama.infrastructure.reference.analyze import analyze
 from chagama.infrastructure.reference.anima_tagger import TagGroup
@@ -304,6 +305,19 @@ class ReferenceRenderTest(unittest.TestCase):
         pose = pose_patch(figure, "firm", applied=plan.applied)["value"]
         self.assertEqual((pose["free_head"], pose["free_chest"]), (True, False))
 
+    def test_firm_without_a_picked_tag_holds_the_head_and_chest(self):
+        figure = analysed_source()["result"]["figure"]
+        pose = pose_patch(figure, "firm", applied={})["value"]
+        self.assertEqual((pose["free_head"], pose["free_chest"]), (False, False))
+
+    def test_a_close_up_holds_the_head_that_would_free_most_of_the_figure(self):
+        figure = close_up_figure()
+        silhouette = np.ones((100, 100), bool)
+        self.assertGreater(freed_share(figure["points"], 1.0, silhouette, True, False),
+                           FREE_SHARE_LIMIT)
+        pose = pose_patch(figure, "firm", applied={"gesture": ["eating"]})["value"]
+        self.assertEqual((pose["free_head"], pose["free_chest"]), (False, False))
+
     def test_firm_without_a_depth_follows_the_skeleton(self):
         chimera = Chimera()
         chimera.source = analysed_source()
@@ -435,6 +449,17 @@ def cropped_head_figure():
     depth = io.BytesIO()
     Image.new("L", (20, 10), 200).save(depth, format="PNG")
     return {"points": points, "aspect": 2.0,
+            "depth": base64.b64encode(depth.getvalue()).decode("ascii")}
+
+
+def close_up_figure():
+    points = [[0.5, 0.95, 0.9]] * 133
+    for index in HEAD_POINTS:
+        points[index] = [0.5, 0.5, 0.9]
+    points[3], points[4] = [0.32, 0.5, 0.9], [0.68, 0.5, 0.9]
+    depth = io.BytesIO()
+    Image.new("L", (100, 100), 200).save(depth, format="PNG")
+    return {"points": points, "aspect": 1.0,
             "depth": base64.b64encode(depth.getvalue()).decode("ascii")}
 
 
