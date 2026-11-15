@@ -302,8 +302,9 @@ REPIN_CHROMA_WINDOWS = ("purple", "cyan")
 REPIN_PINK_WINDOW = (225.0, 255.0)
 # Hue ranges `repin` compresses on the same curve without easing their hue,
 # only below REPIN_SAT_ONLY_V_MAX (fading to zero over the last 20 levels).
-# (140, 170) is the navy of the cushion, between cyan and purple.
-REPIN_SAT_ONLY_WINDOWS = ((140.0, 170.0), REPIN_PINK_WINDOW)
+# (140, 170) is the navy of the cushion, between cyan and purple. The pink
+# stops at 245 so reds across the 255/0 seam (the open mouth) keep their colour.
+REPIN_SAT_ONLY_WINDOWS = ((140.0, 170.0), (225.0, 245.0))
 REPIN_SAT_ONLY_V_MAX = 210.0
 # Light skin (skin window and REPIN_PINK_WINDOW, V from
 # REPIN_SKIN_CAP_V up, full 20 levels later) is compressed on this

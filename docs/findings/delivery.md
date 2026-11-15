@@ -112,8 +112,8 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   `[all]` (a5 §部屋着のピンク; a6 §repin's cyan)
 - A correction built to subtract damages an in-band render (crushed irises,
   pink blotches); skip it, do not shrink it. `[all]` (a5 §補正は)
-- Hue interpolation goes the short way round, or purple → skin crosses green at
-  every feather. Skin restoration fires only where skin was painted. `[all]` (a5 §肌ピン自体)
+- Hue is circular: easing goes the short way (else purple → skin crosses green) and windows wrap at
+  255/0 (else the mouth's red speckles); pink stops at 245 to keep that red. Skin restoration fires only where skin was painted. `[all]` (a5 §肌ピン自体)
 - Despill on a yellow-green key pinks the skin at the excess-24 edge; limit
   it to the edge band. It projects onto the key's chroma, not a green cap:
   `(green background)` draws a teal, and a cap left a cyan rim. `[Anima]`

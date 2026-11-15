@@ -121,6 +121,12 @@ class CyanWindowTest(unittest.TestCase):
         center = center_hsv(rgb)
         self.assertAlmostEqual(center[..., 1].mean(), compressed(150), delta=3)
 
+    def test_dark_red_is_treated_alike_on_both_sides_of_the_hue_seam(self):
+        for v in (70, 113):
+            below = center_hsv(repin(swatch((255, 127, v)))[0])[..., 1].mean()
+            above = center_hsv(repin(swatch((0, 127, v)))[0])[..., 1].mean()
+            self.assertAlmostEqual(below, above, delta=3, msg=f"V {v}")
+
     def test_warm_skin_is_outside_the_pink_window(self):
         pixels = swatch((18, 60, 240))
         rgb, _ = repin(pixels)
