@@ -106,3 +106,46 @@ class PngTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _numbers(value) -> list[float]:
+    if isinstance(value, (list, tuple)):
+        return [n for item in value for n in _numbers(item)]
+    return [float(value)] if isinstance(value, (int, float)) and not isinstance(value, bool) else []
+
+
+def _shape(value):
+    """The structure with every number blanked, kinds and flags kept."""
+    if isinstance(value, (list, tuple)):
+        return [_shape(item) for item in value]
+    return value if isinstance(value, (str, bool)) else 0
+
+
+class PlanFixtureTest(unittest.TestCase):
+    """tests/fixtures/trail_plan.json is also checked by chimera's browser
+    preview: both must build this plan from the same trail."""
+
+    def test_the_plan_matches_the_shared_fixture(self):
+        import json
+        import pathlib
+        fixture = json.loads((pathlib.Path(__file__).parent / "fixtures" / "trail_plan.json").read_text())
+        rng = T.Rng(7)
+        np.testing.assert_allclose([rng.random() for _ in range(5)], fixture["rng_seed_7"], rtol=0, atol=0)
+        for case in fixture["cases"]:
+            with self.subTest(case=case["name"]):
+                spec = case["trail"]
+                trail = T.Trail(points=tuple(map(tuple, spec["points"])), front=tuple(spec["front"]),
+                                path=spec["path"], rule=spec["rule"], width=spec["width"],
+                                color=spec["color"], head=spec["head"],
+                                head_at_end=spec["head_at_end"], seed=spec["seed"])
+                drawn = T.plan(trail, case["height"], case["width"], light_ground=case["light_ground"])
+                counts = {}
+                for prim in drawn["body"]:
+                    counts[prim[0]] = counts.get(prim[0], 0) + 1
+                self.assertEqual(counts, case["counts"])
+                self.assertEqual(drawn["head_in_front"], case["head_in_front"])
+                for got, want in ((drawn["body"][:60], case["body_head"]),
+                                  (drawn["body"][-60:], case["body_tail"]),
+                                  (drawn["head"], case["head"]), (drawn["front"], case["front"])):
+                    self.assertEqual(_shape(got), _shape(want))
+                    np.testing.assert_allclose(_numbers(got), _numbers(want), rtol=1e-9, atol=1e-9)
