@@ -20,10 +20,10 @@ COSTUMES = {
                   "(knee-length skirt:1.8), (pleated skirt:1.1), "),
     "rei": ("(black dress:1.3), (high-waist dress:1.2), "
             "(short sleeves:1.3), (puffy short sleeves:1.2), "
-            "(see-through sleeves:1.2), (grey striped sleeves:1.1), "
+            "(see-through puffy sleeves:1.2), "
             "(high collar:1.1), (gold choker ornament:1.1), "
-            "(dark purple sash:1.25), (dark purple sash tails:1.3), "
-            "(gold tassels:1.15), "
+            "(dark purple sash:1.25), (black ribbon tails:1.3), "
+            "(black hanging ribbon from hip ornament:1.2), (gold tassels:1.15), "
             "(flared skirt:1.35), (a-line skirt:1.2), (knee-length skirt:1.5), "
             "(gradient skirt:1.3), (black to purple gradient:1.25), "
             "(sparkle print:1.1), (gold trim on hem:1.2), "
@@ -33,7 +33,7 @@ COSTUMES = {
             "(white shawl:1.3), (shawl draped over arms:1.2), "
             "(gold stripes on shawl:1.05), "
             "(black headphones:1.45), (headphones on head:1.2), "
-            "(gold trim:1.05), (black gloves:1.2), "),
+            "(gold trim:1.05), (black wrist gloves:1.3), (bare forearms:1.25), "),
 }
 
 # A costume's tags when the request's angle shows her back. The official
@@ -56,8 +56,6 @@ COSTUME_BAN = {
     "rei": ("(horizontal-striped legwear:1.3), (side slit:1.3), "
             "(front slit:1.3), (open skirt:1.3), (split skirt:1.3), "
             "(white petticoat:1.3), (long sleeves:1.3), (long skirt:1.3), "
-            "(pink strap:1.4), (pink sash:1.4), (pink belt:1.35), "
-            "(pink ribbon:1.3), (pink cord:1.3), (cable:1.35), (cord:1.25), "
             "(white frills:1.25), "
             "(lace trim:1.2), (pencil skirt:1.25), (coat:1.2), (coin:1.2), "
             "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
