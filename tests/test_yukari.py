@@ -58,7 +58,7 @@ def _current_defaults(fixture):
         .replace("hitoshi:0.85)", "hitoshi:1.3)")
         .replace("seven heads tall, ", "seven heads tall, (collarbone:1.2), ")
         .replace("(dark irises:1.2), hair ornament, ", "(dark irises:1.2), hair ornament, "
-                 "(pale pink pupils:1.05), (vertical oval pupils:1.0), "
+                 "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), "
                  "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
         .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "))
     out["negative"] = fixture["negative"].replace(
@@ -77,7 +77,7 @@ COFFEE_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
-    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
+    "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
@@ -127,7 +127,7 @@ AMAE_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
-    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
+    "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (cowboy shot:1.3), (thighs:1.2), (mature "
     "female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), (soft "
@@ -154,7 +154,7 @@ STAND_POSITIVE = (
     "vocaloid, voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
-    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
+    "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed "
     "eyes:1.3), (unamused:1.15), (from front:1.3), (full body:1.45), (wide "
     "shot:1.3), (thighs:1.1), (mature female:1.3), (adult:1.2), (wide "
@@ -206,7 +206,7 @@ BUST_POSITIVE = (
     "voiceroid, (@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
     "light purple hair, short hair with long locks, very long sidelocks, "
     "(dark greyish purple eyes:1.4), (dark irises:1.2), hair ornament, "
-    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
+    "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), "
     "(jitome:2.0), (tareme:1.2), (long eyes:1.25), (half-closed eyes:1.35), "
     "(unamused:1.35), (expressionless:1.2), "
     "(from front:1.3), (portrait:1.5), (head and shoulders:1.4), "
@@ -252,7 +252,7 @@ GAO_POSITIVE = (
     "hitoshi:1.3), (@yoshikawa hideaki:0.5), light purple hair, short hair "
     "with long locks, very long sidelocks, (dark greyish purple eyes:1.4), "
     "(dark irises:1.2), hair ornament, "
-    "(pale pink pupils:1.05), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), (jitome:2.0), (tareme:1.2), (long "
+    "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), (concentric iris rings:0.9), (mechanical eyes:0.6), (jitome:2.0), (tareme:1.2), (long "
     "eyes:1.25), (confident:1.18), (from behind:1.2), (looking back:1.3), "
     "(looking over shoulder:1.2), (upper body:1.3), (mature female:1.3), "
     "(adult:1.2), (narrow waist:1.25), adult proportions, long torso, seven "

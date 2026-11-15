@@ -22,7 +22,7 @@ uv run chagama akari prompt --pose bust
 
 | File | Holds |
 |---|---|
-| `prompt_style.py` | `kizuna akari`, identity (white twin braids, deep blue eyes with pale pink pupils), the droopy eye shape, `EYES` (her lower-lid droop, the eye quality under every expression), face, body, the `1990s (style)` suffix on the style block, her negative bans (eye shape, purple/black tights, black jacket, accessories, mechanical body) |
+| `prompt_style.py` | `kizuna akari`, identity (white twin braids, deep blue eyes with small red pupils), the droopy eye shape, `EYES` (her lower-lid droop, the eye quality under every expression), face, body, the `1990s (style)` suffix on the style block, her negative bans (eye shape, purple/black tights, black jacket, accessories, mechanical body) |
 | `costumes.py` | `half_jacket`, her only costume and the default: the very dark brown jacket slipping off the shoulders over a dark grey pinafore with a white frilled, lace-trimmed hem; a from-behind variant (hem included); white tights with a faint light-orange tint for every legwear kind |
 | `looks.py` | her looks on the shared poses: the adult body of `bust` / `gao` / `avatar`, the bare face of the `nomakeup` poses |
 | `delivery.py` | her default deliver bands (yukari's white band, then the `#c27138` rim) and backdrop palette (base `#f7d3b5`, yukari's pink accent, deep stroke `#c27138`) and stage frame colours (line `#56321a`, rim `#33200f`) |

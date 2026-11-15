@@ -18,7 +18,7 @@ EVERY_POSE = sorted(SHARED_POSES) + [RECIPE.character.persona_pose]
 
 IDENTITY = frozenset({
     "kizuna akari", "white hair", "very long hair", "twin braids",
-    "low twin braids", "deep blue eyes", "pale pink pupils", "tareme",
+    "low twin braids", "deep blue eyes", "small red pupils", "tareme",
     "droopy eyes",
 })
 # Yukari's own words: her name, colours, ジト目 and garments.

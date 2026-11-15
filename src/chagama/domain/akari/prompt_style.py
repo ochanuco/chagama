@@ -10,12 +10,12 @@ CHARACTER_TAG = "kizuna akari, "
 SERIES_TAG = "vocaloid, voiceroid, "
 IDENTITY = ("(white hair:1.3), (very long hair:1.2), (twin braids:1.4), "
             "low twin braids, sidelocks, (deep blue eyes:1.3), "
-            "(pale pink pupils:1.3), (vertical oval pupils:1.2), "
+            "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.2), "
             "(light cyan lower iris:1.15), (concentric iris rings:1.1), "
             "(mechanical eyes:0.8), ")
 IDENTITY_TAG_NAMES = frozenset({
     "kizuna akari", "white hair", "very long hair", "twin braids",
-    "low twin braids", "deep blue eyes", "pale pink pupils", "tareme",
+    "low twin braids", "deep blue eyes", "small red pupils", "tareme",
     "droopy eyes",
 })
 BODY = ("(mature female:1.3), (adult:1.2), (wide hips:1.2), (thick thighs:1.2), "
