@@ -23,7 +23,7 @@ from .generate import GenerateServices, generate, request_file_path
 from .lens import LensServices, lens
 from .photo import PhotoServices, photo
 from .picture_source import is_delivered
-from .stage import StageServices, lighting, saturation, stage
+from .stage import StageServices, lighting, saturation, stage, trail
 from .redraw import RedrawServices, redraw
 from .reference import (
     ReferenceImageMissing,
@@ -36,6 +36,7 @@ from .request_options import (
     dof_arguments,
     lens_arguments,
     lighting_arguments,
+    trail_arguments,
     saturation_arguments,
     photo_arguments,
     stage_arguments,
@@ -81,6 +82,7 @@ class WorkServices:
     photo: Callable[..., dict] = photo
     stage: Callable[..., dict] = stage
     lighting: Callable[..., dict] = lighting
+    trail: Callable[..., dict] = trail
     saturation: Callable[..., dict] = saturation
     saturate_drawing: Callable[..., dict] = saturate_drawing
     reference: Callable[..., dict] = reference
@@ -89,7 +91,7 @@ class WorkServices:
     sleep: Callable[[float], None] = time.sleep
     heartbeat_interval: float = 30
     kinds: tuple[str, ...] = ("generate", "redraw", "deliver", "dof", "lens",
-                              "photo", "stage", "lighting", "saturation",
+                              "photo", "stage", "trail", "lighting", "saturation",
                               "reference", "reference_render")
     heartbeat: Callable[..., Heartbeat] = Heartbeat
     keep_awake: Callable[[], AbstractContextManager] = nullcontext
@@ -278,6 +280,24 @@ def _execute_lighting(services: WorkServices, row: Mapping) -> dict:
     return result
 
 
+def _execute_trail(services: WorkServices, row: Mapping) -> dict:
+    payload = row.get("payload") or {}
+    generation_id = payload.get("generation_id")
+    if not generation_id:
+        raise SystemExit("trail payload.generation_id is required")
+    context, _ = fetch_source(services.management, generation_id)
+    try:
+        arguments = trail_arguments(payload.get("options") or {},
+                                    recipe=context["request"].get("recipe"))
+    except ValueError as error:
+        raise SystemExit(str(error)) from error
+    result = services.trail(generation_id, services.stage_services,
+                            key_prefix=f"request:{row['id']}",
+                            request_id=row["id"], context=context, **arguments)
+    result["resolved_options"] = {**arguments, "seed": result.pop("seed", arguments["seed"])}
+    return result
+
+
 def _execute_saturation(services: WorkServices, row: Mapping) -> dict:
     payload = row.get("payload") or {}
     generation_id = payload.get("generation_id")
@@ -340,6 +360,8 @@ def execute(services: WorkServices, row: Mapping) -> dict:
         return _execute_photo(services, row)
     if kind == "stage":
         return _execute_stage(services, row)
+    if kind == "trail":
+        return _execute_trail(services, row)
     if kind == "lighting":
         return _execute_lighting(services, row)
     if kind == "saturation":

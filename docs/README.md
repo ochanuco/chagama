@@ -40,6 +40,7 @@ the archive and lives on chimera or in the named PR.
 | File | ~tok | Covers |
 |---|---|---|
 | [queueing.md](queueing.md) | 2.7k | request kinds, where each option is defined, cross-file rules |
+| [trail.md](trail.md) | 0.8k | the trail kind: its layers, options and night backdrops |
 | [release.md](release.md) | 1.4k | manual deploy of main, worker deploy |
 | [remote.md](remote.md) | 1.3k | the GPU box: setup, logon tasks, fetching models |
 | [models.md](models.md) | 2.2k | model files and provenance |

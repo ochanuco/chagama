@@ -16,7 +16,12 @@ from ..infrastructure.comfyui.refinement_graph import (
     LAYER_FIGURE_SUFFIX,
     LAYER_OUTLINE_SUFFIX,
 )
-from ..infrastructure.comfyui.stage_graph import LIT_SUFFIX, STAGE_SUFFIX
+from ..infrastructure.comfyui.stage_graph import (
+    LAYER_FRONT_SUFFIX,
+    LIT_SUFFIX,
+    STAGE_SUFFIX,
+    TRAIL_SUFFIX,
+)
 from ..infrastructure.imaging.safety import rate_image
 
 
@@ -72,6 +77,14 @@ def classify_stage_outputs(outputs: list) -> dict[str, list]:
     """A stage submission's outputs by role: the `staged` picture and its
     `layer-*` layers."""
     return _by_suffix(outputs, {"staged": STAGE_SUFFIX, **LAYER_ROLES})
+
+
+def classify_trail_outputs(outputs: list) -> dict[str, list]:
+    """A trail submission's outputs by role: the `trailed` picture, its
+    backdrop with the back part painted in, and its front layer."""
+    return _by_suffix(outputs, {"trailed": TRAIL_SUFFIX,
+                                "layer-backdrop": LAYER_BACKDROP_SUFFIX,
+                                "layer-front": LAYER_FRONT_SUFFIX})
 
 
 def classify_lighting_outputs(outputs: list) -> dict[str, list]:

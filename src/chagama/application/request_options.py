@@ -45,7 +45,8 @@ from ..domain.yukari.delivery_style import (
     STROKE_LIGHTS,
     Light,
 )
-from ..domain.recipes import frame_bands
+from ..domain.recipes import deliver_outlines, frame_bands
+from ..domain.yukari import trail_style
 from ..infrastructure.imaging.backdrops import PATTERNS, is_backdrop
 from .deliver import RECIPE_DEFAULT
 from .picture_source import stroke_light_conflict
@@ -77,6 +78,9 @@ _KNOWN_FRAME_KEYS = frozenset({"box", "sides", "line", "rim", "paper", "canvas",
 
 _KNOWN_LIGHTING_OPTIONS = frozenset({"direction", "strength", "scene"})
 _KNOWN_SATURATION_OPTIONS = frozenset({"strength"})
+_KNOWN_TRAIL_OPTIONS = frozenset({
+    "template", "points", "front", "path", "rule", "width", "color", "head",
+    "head_at_end", "in_frame", "seed"})
 
 _KNOWN_REDRAW_OPTIONS = {
     "hires": frozenset({"hires", "denoise"}),
@@ -623,6 +627,70 @@ def lighting_arguments(options: Mapping) -> dict:
     return {"direction": direction,
             "strength": _ranged(options, "strength", LIGHTING_STRENGTH),
             "scene": scene}
+
+
+def _choice(options: Mapping, key: str, values, default):
+    value = options.get(key, default)
+    if value not in values:
+        raise ValueError(f"{key} must be one of {list(values)}, got {value!r}")
+    return value
+
+
+def _flag(options: Mapping, key: str, default: bool) -> bool:
+    value = options.get(key, default)
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} must be true or false, got {value!r}")
+    return value
+
+
+def trail_arguments(options: Mapping, *, recipe: str | None = None) -> dict:
+    """Validate a trail request's `options` and resolve every default: the
+    template supplies points and front flags that `points` / `front`
+    override, the colour defaults to the recipe's, and `seed` stays None
+    when absent so the use case picks one."""
+    if not isinstance(options, Mapping):
+        raise ValueError(f"trail options must be an object, got {type(options).__name__}")
+    unknown = sorted(set(options) - _KNOWN_TRAIL_OPTIONS)
+    if unknown:
+        raise ValueError(f"trail が受け付けない option です: {', '.join(unknown)}")
+    name = options.get("template", trail_style.TRAIL_DEFAULT_TEMPLATE)
+    chosen = trail_style.template(name) if isinstance(name, str) else None
+    if chosen is None:
+        raise ValueError(
+            f"template must be one of {[t.name for t in trail_style.TRAIL_TEMPLATES]}, got {name!r}")
+    low, high = trail_style.TRAIL_POINT_RANGE
+    points = options.get("points", [list(p) for p in chosen.points])
+    if (not isinstance(points, (list, tuple)) or len(points) != 4
+            or any(not isinstance(p, (list, tuple)) or len(p) != 2
+                   or any(not isinstance(v, (int, float)) or isinstance(v, bool) for v in p)
+                   for p in points)):
+        raise ValueError(f"points must be four [x, y] numbers, got {points!r}")
+    if any(not (low <= v <= high) for p in points for v in p):
+        raise ValueError(f"points values must be within {low:g}..{high:g}, got {points!r}")
+    front = options.get("front", list(chosen.front))
+    if (not isinstance(front, (list, tuple)) or len(front) != 4
+            or any(not isinstance(f, bool) for f in front)):
+        raise ValueError(f"front must be four booleans, got {front!r}")
+    color = options.get("color")
+    color = (_hex_colour(color, key="color") if color is not None
+             else trail_style.default_color(deliver_outlines(recipe)[-1]["color"]))
+    seed = options.get("seed")
+    if seed is not None and (not isinstance(seed, int) or isinstance(seed, bool)
+                             or not 0 <= seed <= trail_style.TRAIL_SEED_MAX):
+        raise ValueError(f"seed must be an integer 0..{trail_style.TRAIL_SEED_MAX}, got {seed!r}")
+    return {
+        "template": name,
+        "points": [[float(x), float(y)] for x, y in points],
+        "front": list(front),
+        "path": _choice(options, "path", trail_style.TRAIL_PATHS, "curve"),
+        "rule": _choice(options, "rule", trail_style.TRAIL_RULES, "both"),
+        "width": _ranged(options, "width", trail_style.TRAIL_WIDTH),
+        "color": color,
+        "head": _choice(options, "head", trail_style.TRAIL_HEADS, "light"),
+        "head_at_end": _flag(options, "head_at_end", True),
+        "in_frame": _flag(options, "in_frame", True),
+        "seed": seed,
+    }
 
 
 def saturation_arguments(options: Mapping) -> dict:

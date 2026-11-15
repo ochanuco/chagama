@@ -4,6 +4,7 @@ layers it now stands in."""
 
 from __future__ import annotations
 
+import random
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -11,7 +12,15 @@ from pathlib import Path
 
 from ..domain.yukari.delivery_style import STROKE_LIGHTS, Light
 from ..domain.recipes import DEFAULT_RECIPE, backdrop_palette
-from ..infrastructure.comfyui.stage_graph import lighting_graph, saturation_graph, stage_graph
+from ..infrastructure.comfyui.refinement_graph import LAYER_FIGURE_SUFFIX, LAYER_OUTLINE_SUFFIX
+from ..infrastructure.comfyui.stage_graph import (
+    LAYER_FRONT_SUFFIX,
+    lighting_graph,
+    saturation_graph,
+    stage_graph,
+    trail_graph,
+)
+from ..domain.yukari import trail_style
 from ..infrastructure.comfyui.timings import note_ingested
 from ..infrastructure.imaging.stage import frame_canvas_share
 from ..infrastructure.persistence.run_state import JsonRunState, operation_state_path
@@ -22,6 +31,7 @@ from .ingest import (
     classify_lighting_outputs,
     classify_saturation_outputs,
     classify_stage_outputs,
+    classify_trail_outputs,
     generation_key,
     open_request,
     record_job,
@@ -47,6 +57,9 @@ LIGHTING_NOTHING = ("背景の無い絵に当てられるのは direction か sc
                     "どちらかを指定してください")
 LIGHTING_TWICE = "この絵にはもう光が当たっています。stage の出力からかけ直してください"
 NO_LAYERS = "この絵には層が無いので、作り直してください"
+TRAIL_SOURCE = "軌跡を描けるのは stage の出力（背景を付けた絵）だけです"
+TRAIL_TWICE = "この絵にはもう軌跡があります。stage の出力から描き直してください"
+FRONT_ROLE = "layer-front"
 FIGURE_ROLES = ("layer-figure", "layer-outline")
 LAYER_ROLES = (*FIGURE_ROLES, "layer-backdrop")
 
@@ -62,6 +75,7 @@ class StageServices:
     stage_graph: Callable[..., dict] = stage_graph
     lighting_graph: Callable[..., dict] = lighting_graph
     saturation_graph: Callable[..., dict] = saturation_graph
+    trail_graph: Callable[..., dict] = trail_graph
     state: JsonRunState = field(default_factory=JsonRunState)
 
 
@@ -271,7 +285,7 @@ def lighting(generation_id: str, services: StageServices, *,
     kind = parameters.get("kind")
     if kind == "lighting":
         raise SystemExit(LIGHTING_TWICE)
-    if kind not in ("stage", "deliver", "saturation") and not is_cut_redraw(parameters):
+    if kind not in ("stage", "trail", "deliver", "saturation") and not is_cut_redraw(parameters):
         raise SystemExit(LIGHTING_SOURCE)
     roles = LAYER_ROLES if has_backdrop_layer(management, context) else FIGURE_ROLES
     if len(roles) == len(FIGURE_ROLES) and direction is None and scene is None:
@@ -281,18 +295,23 @@ def lighting(generation_id: str, services: StageServices, *,
     tint_backdrop = scene is not None and not (kind == "stage" and parameters.get("photo"))
     prefix = f"light-{generation_id}"
     token = uuid.uuid4().hex[:8]
-    layers = layer_bytes(management, generation_id, context, roles)
+    front_roles = ((FRONT_ROLE,) if FRONT_ROLE in layer_roles_present(
+        management, generation_id, context) else ())
+    layers = layer_bytes(management, generation_id, context, (*roles, *front_roles))
     uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
                 for role, data in layers.items()}
     graph = services.lighting_graph(
         uploaded["layer-figure"], uploaded["layer-outline"], uploaded.get("layer-backdrop"),
         prefix, direction=direction, strength=strength, scene=scene,
-        tint_backdrop=tint_backdrop)
+        tint_backdrop=tint_backdrop, front_image=uploaded.get(FRONT_ROLE))
+    front = layers.get(FRONT_ROLE)
     prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
                      state_path=state_path)
     outputs = classify_lighting_outputs(services.comfyui.wait_for(prompt_id))
     fetched = _fetch(services, outputs, ("lit", *roles), prefix)
     layers = {role: fetched[role] for role in roles}
+    if front is not None:
+        layers[FRONT_ROLE] = (f"{prefix}{LAYER_FRONT_SUFFIX}.png", front)
     result = _record(
         services, generation_id=generation_id, context=context, key_prefix=key_prefix,
         request_id=request_id, prompt_id=prompt_id, graph=graph, picture=fetched["lit"],
@@ -303,6 +322,79 @@ def lighting(generation_id: str, services: StageServices, *,
         references=[{"source_generation_id": generation_id, "purpose": "rebuild",
                      "aspect": "composition", "instruction": "この絵を背景の光で照らす"}],
         title="lighting")
+    return _finish(services, state_path, state, result)
+
+
+def _back_box(parameters: dict) -> list[float] | None:
+    """The stage frame's box as shares of the staged picture: the box is in
+    shares of the delivery's canvas, which the framed `canvas` spans."""
+    frame = parameters.get("frame")
+    if not frame or not frame.get("box"):
+        return None
+    x0, y0, x1, y1 = frame.get("canvas") or (0.0, 0.0, 1.0, 1.0)
+    bx0, by0, bx1, by1 = frame["box"]
+    return [(bx0 - x0) / (x1 - x0), (by0 - y0) / (y1 - y0),
+            (bx1 - x0) / (x1 - x0), (by1 - y0) / (y1 - y0)]
+
+
+def trail(generation_id: str, services: StageServices, *, template: str,
+          points: list, front: list, path: str, rule: str, width: float, color: str,
+          head: str, head_at_end: bool, in_frame: bool, seed: int | None,
+          key_prefix: str | None = None, request_id: str | None = None,
+          context: dict | None = None) -> dict:
+    """Draw a trail across the staged picture `generation_id`: the stretches
+    behind the figure painted into its backdrop (inside the stage frame's
+    box when `in_frame`), the rest over the figure as its front layer. The
+    result carries the seed it drew with."""
+    state_path, state = _load_state(services, "trail", key_prefix)
+    if state.get("status") == "completed" and state.get("result"):
+        return state["result"]
+    management = services.management
+    if context is None:
+        context = management.request("GET", f"/api/v1/generations/{generation_id}/context")
+    parameters = _parameters(context)
+    if parameters.get("kind") == "trail":
+        raise SystemExit(TRAIL_TWICE)
+    if parameters.get("kind") != "stage":
+        raise SystemExit(TRAIL_SOURCE)
+    _require_layers(services, generation_id, context, LAYER_ROLES)
+    if seed is None:
+        seed = state.get("seed")
+    if seed is None:
+        seed = random.randint(0, trail_style.TRAIL_SEED_MAX)
+    state["seed"] = seed
+    if state_path:
+        services.state.save(state_path, state)
+
+    spec = {"points": points, "front": front, "path": path, "rule": rule, "width": width,
+            "color": color, "head": head, "head_at_end": head_at_end, "seed": seed}
+    back_box = _back_box(parameters) if in_frame else None
+    prefix = f"trail-{generation_id}"
+    token = uuid.uuid4().hex[:8]
+    layers = layer_bytes(management, generation_id, context, LAYER_ROLES)
+    uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
+                for role, data in layers.items()}
+    graph = services.trail_graph(uploaded["layer-figure"], uploaded["layer-outline"],
+                                 uploaded["layer-backdrop"], prefix, trail=spec,
+                                 back_box=back_box)
+    prompt_id = _run(services, prefix=prefix, graph=graph, state=state,
+                     state_path=state_path)
+    outputs = classify_trail_outputs(services.comfyui.wait_for(prompt_id))
+    fetched = _fetch(services, outputs, ("trailed", "layer-backdrop", FRONT_ROLE), prefix)
+    recorded = {"template": template, **spec, "in_frame": in_frame}
+    result = _record(
+        services, generation_id=generation_id, context=context, key_prefix=key_prefix,
+        request_id=request_id, prompt_id=prompt_id, graph=graph, picture=fetched["trailed"],
+        layers={"layer-figure": (f"{prefix}{LAYER_FIGURE_SUFFIX}.png", layers["layer-figure"]),
+                "layer-outline": (f"{prefix}{LAYER_OUTLINE_SUFFIX}.png", layers["layer-outline"]),
+                "layer-backdrop": fetched["layer-backdrop"],
+                FRONT_ROLE: fetched[FRONT_ROLE]},
+        raw_instruction=f"{generation_id} に軌跡（{template}）",
+        parameters={"kind": "trail", "base_generation": generation_id, **recorded},
+        references=[{"source_generation_id": generation_id, "purpose": "rebuild",
+                     "aspect": "composition", "instruction": "この絵に軌跡を描く"}],
+        title="trail")
+    result["seed"] = seed
     return _finish(services, state_path, state, result)
 
 

@@ -553,6 +553,29 @@ class ExecuteTest(unittest.TestCase):
             self.assertEqual((kwargs["request_id"], kwargs["strength"]), ("req-11", 0.5))
             self.assertEqual(kwargs["key_prefix"], "request:req-11")
 
+    def test_trail_kind_resolves_in_the_staged_pictures_recipe_and_reports_the_seed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            calls = []
+
+            def fake_trail(generation_id, stage_services, **kwargs):
+                calls.append((generation_id, stage_services, kwargs))
+                return {"generation_ids": ["g7"], "seed": 42}
+
+            staged = {"request": {"id": "request-1", "recipe": "akari", "kind": "stage",
+                                  "parameters": {"kind": "stage"}}, "generations": []}
+            services = dataclasses.replace(
+                make_services(directory, ManagementFake(context=staged)), trail=fake_trail)
+            row = {**saturation_row(), "kind": "trail",
+                   "payload": {"generation_id": "gen-1", "options": {"template": "z"}}}
+            result = execute(services, row)
+            generation_id, stage_services, kwargs = calls[0]
+            self.assertEqual((generation_id, stage_services), ("gen-1", "stage-services"))
+            self.assertEqual((kwargs["template"], kwargs["color"], kwargs["seed"]),
+                             ("z", "#ab6331", None))
+            self.assertEqual((result["resolved_options"]["seed"], result["resolved_options"]["color"]),
+                             (42, "#ab6331"))
+            self.assertNotIn("seed", {k for k in result if k != "resolved_options"})
+
     def test_saturation_of_a_drawing_cuts_it_out_with_the_deliver_services(self):
         with tempfile.TemporaryDirectory() as directory:
             calls = []
@@ -661,15 +684,15 @@ class ExecuteTest(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "no longer supported"):
                 execute(services, finalize_row())
 
-    def test_the_default_kinds_are_exactly_the_ten(self):
+    def test_the_default_kinds_are_exactly_these(self):
         self.assertEqual(
             WorkServices.__dataclass_fields__["kinds"].default,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation", "reference", "reference_render"))
+             "trail", "lighting", "saturation", "reference", "reference_render"))
         self.assertEqual(
             DEFAULT_KINDS,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation", "reference", "reference_render"))
+             "trail", "lighting", "saturation", "reference", "reference_render"))
 
     def test_unsupported_kind_fails(self):
         with tempfile.TemporaryDirectory() as directory:

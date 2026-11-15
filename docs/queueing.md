@@ -6,7 +6,7 @@
 Every render is a row on chimera's `requests` queue, posted through the MCP
 (`derive_request`, `redraw_generation`, `deliver_generation`,
 `dof_generation`, `lens_generation`, `photo_generation`, `stage_generation`,
-`lighting_generation`,
+`lighting_generation`, `trail_generation`,
 `create_request`) or `POST /api/v1/requests`.
 `chagama work` on the GPU box claims a row, runs it, and ingests the
 result back into chimera. Nothing else submits to ComfyUI.
@@ -19,8 +19,8 @@ Options, defaults and ranges live here:
 | Question | Source |
 |---|---|
 | The wire contract (claim, heartbeat, done/failed) | chimera `docs/worker-protocol.md` |
-| Every option of a kind, its default and range | `uv run chagama <generate\|work\|redraw\|deliver\|saturation\|stage\|lighting\|dof\|lens\|photo> --help`, `application/request_options.py` |
-| Poses, costumes, parts, patch targets, dials, redraw, deliver, saturation, stage, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run chagama catalog` |
+| Every option of a kind, its default and range | `uv run chagama <generate\|work\|redraw\|deliver\|saturation\|stage\|lighting\|dof\|lens\|photo> --help`, `application/request_options.py` (`trail_arguments` for `trail`) |
+| Poses, costumes, parts, patch targets, dials, redraw, deliver, saturation, stage, trail, lighting, dof, lens and photo defaults | `list_catalog` / `get_catalog_pose` on the MCP, or `uv run chagama catalog` |
 | Patch targets, their ops and the catalog `patches` grammar chimera validates | `domain/generation/patches.py`, `docs/architecture.md` |
 | What a request would render, without rendering | `uv run chagama generate --request r.json --dry-run` |
 
@@ -33,6 +33,7 @@ Options, defaults and ranges live here:
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: backdrop, outline bands; never redraws |
 | `saturation` | `{generation_id, options}` | on a drawing: cut the figure out with no outline and compress its saturation, for a later `deliver` to outline; on a delivery: compress its figure and outline layers and recompose the picture |
 | `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern, in a frame or in a photo, unblurred |
+| `trail` | `{generation_id, options}` | draw a shooting-star trail across a staged picture, behind the figure on some stretches and over it on others ([trail.md](trail.md)) |
 | `lighting` | `{generation_id, options}` | light a staged picture's figure and outline by its backdrop: exposure, colour cast, optional side shading |
 | `dof` | `{generation_id, options}` | depth-of-field blur over a delivered or staged picture's layers |
 | `lens` | `{generation_id, options}` | fisheye / inverse fisheye over a delivered picture, or a spherize bulge / pinch of a disc in it |
@@ -43,7 +44,7 @@ Options, defaults and ranges live here:
 A `finalize`, `repair` or `masked_redraw` row is refused. They stack as
 separate requests in the workbench's order: `redraw` (green key),
 `saturation` (on the drawing), `deliver` (transparent; with no `saturation`
-before it, it compresses the figure itself), `stage`, `lighting`, `dof`,
+before it, it compresses the figure itself), `stage`, `trail`, `lighting`, `dof`,
 then `lens`. A cut `redraw` (`cut: true`, with `cutout` and `alpha`) and a
 `saturation` of a drawing stand in for a transparent delivery with no
 outlines. `photo` is the older one-step stage-and-blur.
@@ -158,8 +159,8 @@ outlines. `photo` is the older one-step stage-and-blur.
 
 ### Lighting options
 
-- The source must be a stage output, a delivery or its saturation, or a cut
-  redraw; a lighting output is refused. With no backdrop layer there is no
+- The source must be a stage or trail output, a delivery or its saturation, or
+  a cut redraw; a lighting output is refused. With no backdrop layer there is no
   ambient: only `direction` / `scene` shade (one required), staying transparent.
 - The ambient is the backdrop in a ring around the card (6% of the longest
   side). Figure and outline take `(ambient luminance / 0.35) ** (0.4 ×
@@ -175,7 +176,7 @@ outlines. `photo` is the older one-step stage-and-blur.
 ### Dof options
 
 - The source must be a delivered picture carrying its layer assets: a
-  delivery, a saturation, stage or lighting output, or a cut redraw. A dof output, a picture
+  delivery, a saturation, stage, trail or lighting output, or a cut redraw. A dof output, a picture
   that was not delivered and a delivery without layers (delivered before
   layers existed: deliver it again) are refused.
 - `focus` (`[x, y]`, fractions of the picture) is required. `f_number`

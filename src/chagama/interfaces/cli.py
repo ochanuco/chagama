@@ -243,7 +243,7 @@ def parser() -> argparse.ArgumentParser:
     work_parser.add_argument("--worker-id", default=default_worker_id())
     work_parser.add_argument(
         "--kinds",
-        default="generate,redraw,deliver,dof,lens,photo,stage,lighting,saturation,reference,reference_render",
+        default="generate,redraw,deliver,dof,lens,photo,stage,trail,lighting,saturation,reference,reference_render",
         help="comma-separated request kinds to claim")
     work_parser.add_argument(
         "--no-hub", action="store_true",

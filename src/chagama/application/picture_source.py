@@ -10,8 +10,8 @@ from .cut_assets import ALPHA_ROLE, CUTOUT_ROLE
 
 # "hires-chain" and the request kind "finalize" name pictures delivered before
 # deliver existed; their rows are still read.
-DELIVERED_KINDS = ("deliver", "saturation", "dof", "lens", "photo", "stage", "lighting",
-                   "hires-chain")
+DELIVERED_KINDS = ("deliver", "saturation", "dof", "lens", "photo", "stage", "trail",
+                   "lighting", "hires-chain")
 # "repair" and "masked_redraw" are no longer created; their stored outputs are
 # still valid sources.
 DERIVED_KINDS = ("repair", "masked_redraw", "redraw")
@@ -22,7 +22,7 @@ def is_delivered(request: dict) -> bool:
     parameters = request.get("parameters") or {}
     kind = parameters.get("kind")
     return bool(request.get("kind") in ("deliver", "saturation", "dof", "lens", "photo",
-                                        "stage", "lighting", "finalize")
+                                        "stage", "trail", "lighting", "finalize")
                 or kind in DELIVERED_KINDS
                 or (kind == "repair" and parameters.get("deliver_only")))
 

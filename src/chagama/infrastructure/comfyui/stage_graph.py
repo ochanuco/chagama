@@ -15,6 +15,8 @@ from .refinement_graph import (
 
 STAGE_SUFFIX = "-set"
 LIT_SUFFIX = "-lit"
+TRAIL_SUFFIX = "-trailed"
+LAYER_FRONT_SUFFIX = "-layer-front"
 
 
 def _builder() -> tuple[dict, Callable[[], str], Callable[[str], str]]:
@@ -77,7 +79,8 @@ def stage_graph(figure_image: str, outline_image: str, prefix: str, *,
 
 def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
                    prefix: str, *, direction: str | None, strength: float,
-                   scene: str | None = None, tint_backdrop: bool = False) -> dict:
+                   scene: str | None = None, tint_backdrop: bool = False,
+                   front_image: str | None = None) -> dict:
     """Light the uploaded layer images by their uploaded backdrop, in the
     light `scene` when one is given (tinting the backdrop when
     `tint_backdrop`). The picture is saved under `prefix` + LIT_SUFFIX and
@@ -94,7 +97,10 @@ def lighting_graph(figure_image: str, outline_image: str, backdrop_image: str | 
     if backdrop_id is not None:
         inputs["backdrop"] = [backdrop_id, 0]
     graph[light_id] = {"class_type": "YukariRelight", "inputs": inputs}
-    _save(graph, allocate, [light_id, 0], prefix + LIT_SUFFIX)
+    lit_ref = [light_id, 0]
+    if front_image is not None:
+        lit_ref = over_front(graph, allocate, lit_ref, load(front_image))
+    _save(graph, allocate, lit_ref, prefix + LIT_SUFFIX)
     _save(graph, allocate, [light_id, 1], prefix + LAYER_FIGURE_SUFFIX)
     _save(graph, allocate, [light_id, 2], prefix + LAYER_OUTLINE_SUFFIX)
     if backdrop_id is not None:
@@ -124,3 +130,32 @@ def saturation_graph(figure_image: str, outline_image: str, prefix: str, *,
     if backdrop_id is not None:
         _save(graph, allocate, [backdrop_id, 0], prefix + LAYER_BACKDROP_SUFFIX)
     return graph
+
+
+def trail_graph(figure_image: str, outline_image: str, backdrop_image: str, prefix: str, *,
+                trail: dict, back_box: list[float] | None) -> dict:
+    """Draw the `trail` across the uploaded staged layers: the picture under
+    `prefix` + TRAIL_SUFFIX, the backdrop with the back part painted in and
+    the front part beside it."""
+    graph, allocate, load = _builder()
+    figure_id, outline_id, backdrop_id = load(figure_image), load(outline_image), load(backdrop_image)
+    trail_id = allocate()
+    inputs = {"figure": [figure_id, 0], "figure_mask": [figure_id, 1],
+              "outline": [outline_id, 0], "outline_mask": [outline_id, 1],
+              "backdrop": [backdrop_id, 0], "trail": json.dumps(trail, sort_keys=True)}
+    if back_box is not None:
+        inputs["back_box"] = json.dumps(back_box)
+    graph[trail_id] = {"class_type": "YukariTrail", "inputs": inputs}
+    _save(graph, allocate, [trail_id, 0], prefix + TRAIL_SUFFIX)
+    _save(graph, allocate, [trail_id, 1], prefix + LAYER_BACKDROP_SUFFIX)
+    _save(graph, allocate, [trail_id, 2], prefix + LAYER_FRONT_SUFFIX)
+    return graph
+
+
+def over_front(graph: dict, allocate: Callable[[], str], picture_ref: list,
+               front_id: str) -> list:
+    """`picture_ref` with the uploaded front layer `front_id` laid over it."""
+    over_id = allocate()
+    graph[over_id] = {"class_type": "YukariOver", "inputs": {
+        "image": picture_ref, "layer": [front_id, 0], "layer_mask": [front_id, 1]}}
+    return [over_id, 0]

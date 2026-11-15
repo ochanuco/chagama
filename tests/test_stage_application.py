@@ -15,7 +15,7 @@ from PIL import Image
 
 from chagama.application.cut_assets import current_cut
 from chagama.application.dof import DofServices, dof
-from chagama.application.stage import StageServices, lighting, saturation, stage
+from chagama.application.stage import StageServices, lighting, saturation, stage, trail
 from chagama.domain.recipes import RECIPES
 from chagama.domain.yukari.delivery_style import BACKDROP_PALETTE
 from chagama.infrastructure.imaging.stage import _png
@@ -597,3 +597,91 @@ class CutRedrawDofTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+TRAIL = {"template": "tsu", "points": [[0.02, 0.34], [0.72, 0.2], [1.0, 0.52], [0.22, 0.94]],
+         "front": [False, False, True, True], "path": "curve", "rule": "both", "width": 5.0,
+         "color": "#6f5c78", "head": "light", "head_at_end": True, "in_frame": True}
+FRAMED = {"kind": "stage", "base_generation": "dlv", "backdrop": "stickers-night",
+          "frame": {"box": [0.05, 0.05, 0.95, 0.95], "canvas": [-0.1, 0.0, 1.1, 1.0]}}
+
+
+class TrailTest(unittest.TestCase):
+    def test_a_staged_picture_gets_its_back_part_in_the_backdrop_and_a_front_layer(self):
+        management = ManagementFake({"stg": (FRAMED, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            result = trail("stg", services, seed=7, **TRAIL)
+        inputs = node(services, "YukariTrail")["inputs"]
+        spec = json.loads(inputs["trail"])
+        self.assertEqual((spec["seed"], spec["rule"], spec["front"]), (7, "both", [False, False, True, True]))
+        box = json.loads(inputs["back_box"])
+        np.testing.assert_allclose(box, [0.125, 0.05, 0.875, 0.95])
+        self.assertEqual(result["seed"], 7)
+        parameters = management.resolution()["parameters"]
+        self.assertEqual((parameters["kind"], parameters["base_generation"], parameters["seed"],
+                          parameters["template"]), ("trail", "stg", 7, "tsu"))
+        self.assertEqual(sorted(management.asset_roles()),
+                         ["layer-backdrop", "layer-figure", "layer-front", "layer-outline"])
+
+    def test_without_in_frame_the_back_part_may_leave_the_frame(self):
+        management = ManagementFake({"stg": (FRAMED, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            trail("stg", services, seed=1, **{**TRAIL, "in_frame": False})
+        self.assertNotIn("back_box", node(services, "YukariTrail")["inputs"])
+
+    def test_an_absent_seed_is_picked_and_returned(self):
+        management = ManagementFake({"stg": ({"kind": "stage", "base_generation": "dlv"}, LAYERS)})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            result = trail("stg", services, seed=None, **TRAIL)
+        self.assertIsInstance(result["seed"], int)
+        self.assertEqual(management.resolution()["parameters"]["seed"], result["seed"])
+
+    def test_only_a_stage_output_takes_a_trail(self):
+        for parameters, message in ((DELIVERY, "stage の出力"),
+                                    ({"kind": "trail", "base_generation": "stg"}, "もう軌跡")):
+            management = ManagementFake({"src": (parameters, LAYERS)})
+            with tempfile.TemporaryDirectory() as directory, self.subTest(kind=parameters["kind"]):
+                services = services_for(StageServices, management, directory)
+                with self.assertRaises(SystemExit) as raised:
+                    trail("src", services, seed=1, **TRAIL)
+                self.assertIn(message, str(raised.exception))
+
+    def test_lighting_a_trail_lays_the_front_layer_back_over_and_keeps_it(self):
+        management = ManagementFake({"trl": ({"kind": "trail", "base_generation": "stg"},
+                                             {**LAYERS, "layer-front": b"front-png"})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(StageServices, management, directory)
+            lighting("trl", services, direction="nw", strength=0.7)
+        over = node(services, "YukariOver")["inputs"]
+        graph = services.comfyui.submitted[-1]
+        self.assertEqual(graph[over["layer"][0]]["inputs"]["image"],
+                         next(f"uploaded-{n}" for n, _ in services.comfyui.uploaded if "layer-front" in n))
+        saved = next(n for n in graph.values() if n["class_type"] == "SaveImage"
+                     and n["inputs"]["filename_prefix"].endswith("-lit"))
+        self.assertEqual(graph[saved["inputs"]["images"][0]]["class_type"], "YukariOver")
+        self.assertIn("layer-front", management.asset_roles())
+
+
+class TrailDofTest(unittest.TestCase):
+    def test_dof_of_a_lit_trail_walks_to_the_delivery_and_lays_the_front_over_the_blur(self):
+        management = ManagementFake({
+            "lit": ({"kind": "lighting", "base_generation": "trl"},
+                    {**LAYERS, "layer-front": b"front-png"}),
+            "trl": ({"kind": "trail", "base_generation": "stg"},
+                    {**LAYERS, "layer-front": b"front-png"}),
+            "stg": ({"kind": "stage", "base_generation": "dlv", "backdrop": "dots-night"}, LAYERS),
+            "dlv": (DELIVERY, LAYERS), "src": ({"kind": "generate"}, {})})
+        with tempfile.TemporaryDirectory() as directory:
+            services = services_for(DofServices, management, directory)
+            dof("lit", services, focus=(0.5, 0.5), f_number=2.8,
+                scope={"figure": True, "outline": True, "backdrop": True}, viewfinder="off")
+        self.assertIn(b"image:src", [data for _, data in services.comfyui.uploaded])
+        graph = services.comfyui.submitted[-1]
+        over = node(services, "YukariOver")["inputs"]
+        self.assertEqual(graph[over["image"][0]]["class_type"], "YukariDepthOfField")
+        saved = next(n for n in graph.values() if n["class_type"] == "SaveImage"
+                     and n["inputs"]["filename_prefix"].endswith("-dof"))
+        self.assertEqual(graph[saved["inputs"]["images"][0]]["class_type"], "YukariOver")

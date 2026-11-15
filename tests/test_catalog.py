@@ -436,14 +436,18 @@ class BackdropsBlockTest(unittest.TestCase):
                                  (yukari["name"], yukari["label"]))
                 self.assertNotEqual(akari["thumbnail"], yukari["thumbnail"])
 
-    def test_lists_every_pattern_in_registry_order_with_name_label_and_thumbnail(self):
+    def test_lists_every_pattern_in_registry_order_then_its_night_variant(self):
         catalog = build_catalog(GIT)
         backdrops = catalog["backdrops"]
-        self.assertEqual([entry["name"] for entry in backdrops], list(BACKDROP_PATTERNS))
+        self.assertEqual([entry["name"] for entry in backdrops],
+                         [*BACKDROP_PATTERNS, *(f"{name}-night" for name in BACKDROP_PATTERNS)])
         for entry in backdrops:
             with self.subTest(name=entry["name"]):
-                self.assertEqual(set(entry), {"name", "label", "thumbnail"})
-                self.assertEqual(entry["label"], BACKDROP_LABELS[entry["name"]])
+                self.assertEqual(set(entry), {"name", "label", "night", "thumbnail"})
+                base = entry["name"].removesuffix("-night")
+                self.assertEqual(entry["night"], entry["name"] != base)
+                self.assertEqual(entry["label"],
+                                 BACKDROP_LABELS[base] + ("（夜）" if entry["night"] else ""))
                 self.assertTrue(entry["thumbnail"].startswith("data:image/png;base64,"))
                 raw = base64.b64decode(entry["thumbnail"].split(",", 1)[1])
                 image = Image.open(io.BytesIO(raw))

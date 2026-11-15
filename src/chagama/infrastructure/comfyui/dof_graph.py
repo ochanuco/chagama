@@ -6,6 +6,7 @@ import json
 
 from ...domain.yukari.delivery_style import PHOTO_FOCAL_LENGTH, PHOTO_FOCAL_LENGTHS
 from .deliver_graph import depth_nodes
+from .stage_graph import over_front
 
 DOF_SUFFIX = "-dof"
 # The dof picture with the camera viewfinder drawn over it.
@@ -16,7 +17,8 @@ def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
               prefix: str, *, depth_image: str | None, source_image: str | None,
               source_size: tuple[int, int] | None = None,
               focus: tuple[float, float], f_number: float, scope: dict,
-              viewfinder: str, depth_place: list[float] | None = None) -> dict:
+              viewfinder: str, depth_place: list[float] | None = None,
+              front_image: str | None = None) -> dict:
     """The dof graph over the uploaded layer images of a delivery.
 
     The depth is the uploaded `depth_image` of the delivery's source, or is
@@ -60,6 +62,8 @@ def dof_graph(figure_image: str, outline_image: str, backdrop_image: str | None,
         **({"backdrop": [backdrop_id, 0]} if backdrop_id is not None else {}),
         **({"depth_place": json.dumps(depth_place)} if depth_place is not None else {})}}
     picture_ref = [blur_id, 0]
+    if front_image is not None:
+        picture_ref = over_front(graph, allocate, picture_ref, load(front_image))
     saved_ref = picture_ref
     if viewfinder != "off":
         view_id = allocate()
@@ -86,7 +90,8 @@ def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
                     stand_at: tuple[float, float] | None, nearer: float,
                     focus: tuple[float, float] | str, f_number: float,
                     tilt: float, bokeh: float, viewfinder: str,
-                    focal_length: str = PHOTO_FOCAL_LENGTH["default"]) -> dict:
+                    focal_length: str = PHOTO_FOCAL_LENGTH["default"],
+                    front_image: str | None = None) -> dict:
     """The dof graph over the layers of a delivery set in a photo.
 
     The depth is the photo's uploaded `depth_image`, or is built from the
@@ -130,6 +135,8 @@ def photo_dof_graph(figure_image: str, outline_image: str, backdrop_image: str,
         "focus_x": point[0], "focus_y": point[1], "f_number": f_number,
         "tilt": tilt, "bokeh": bokeh, "focal_mm": PHOTO_FOCAL_LENGTHS[focal_length]}}
     saved_ref = [blur_id, 0]
+    if front_image is not None:
+        saved_ref = over_front(graph, allocate, saved_ref, load(front_image))
     if viewfinder != "off" and focus != "subject":
         view_id = allocate()
         graph[view_id] = {"class_type": "YukariViewfinder", "inputs": {

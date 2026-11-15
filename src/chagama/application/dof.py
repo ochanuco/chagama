@@ -42,7 +42,8 @@ NOT_DELIVERED = ("dof をかけられるのは納品の絵か切り抜いた描�
 NO_LAYERS = "この納品の絵には層が無いので、納品し直してください"
 PHOTO_ONLY = ("stand_at / nearer / tilt / bokeh / focal_length は"
               "写真に置いた絵（stage の photo）の dof だけで使えます")
-LAYERED_KINDS = ("deliver", "saturation", "stage", "lighting")
+LAYERED_KINDS = ("deliver", "saturation", "stage", "trail", "lighting")
+FRONT_ROLE = "layer-front"
 SETTING_HOPS = 4
 PHOTO_BLUR_DEFAULTS = {"stand_at": None, "nearer": PHOTO_NEARER["default"],
                        "tilt": PHOTO_TILT["default"], "bokeh": PHOTO_BOKEH["default"],
@@ -92,7 +93,7 @@ def _setting(management, generation_id: str, context: dict
         if kind == "deliver":
             return (parameters.get("base_generation")
                     or (record.get("refines_generation") or {}).get("id")), None, canvas
-        if (kind not in ("saturation", "stage", "lighting")
+        if (kind not in ("saturation", "stage", "trail", "lighting")
                 or not parameters.get("base_generation")):
             break
         record_id = parameters["base_generation"]
@@ -187,6 +188,8 @@ def dof(generation_id: str, services: DofServices, *,
         source_size = services.image_size(source_bytes)
         source_image = services.comfyui.upload_image(
             f"{prefix}-source-{token}.png", source_bytes)
+    if FRONT_ROLE in layer_roles_present(management, generation_id, context):
+        roles = [*roles, FRONT_ROLE]
     uploaded = {role: services.comfyui.upload_image(f"{prefix}-{role}-{token}.png", data)
                 for role, data in layer_bytes(management, generation_id, context,
                                               roles).items()}
@@ -196,13 +199,14 @@ def dof(generation_id: str, services: DofServices, *,
             uploaded["layer-backdrop"], prefix, depth_image=depth_image,
             photo_image=source_image, photo_size=source_size, place=tuple(staged["place"]),
             height=staged["height"], focus=focus, f_number=f_number,
-            viewfinder=viewfinder, **photo_blur)
+            viewfinder=viewfinder, front_image=uploaded.get(FRONT_ROLE), **photo_blur)
     else:
         graph = services.dof_graph(
             uploaded["layer-figure"], uploaded["layer-outline"],
             uploaded.get("layer-backdrop"), prefix, depth_image=depth_image,
             source_image=source_image, source_size=source_size, focus=focus, f_number=f_number, scope=scope,
-            viewfinder=viewfinder, depth_place=_depth_place(framed))
+            viewfinder=viewfinder, depth_place=_depth_place(framed),
+            front_image=uploaded.get(FRONT_ROLE))
 
     prompt_id = state.get("prompt_id")
     knows = getattr(services.comfyui, "knows", None)
