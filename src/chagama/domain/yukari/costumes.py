@@ -18,6 +18,16 @@ COSTUMES = {
     "suspender": ("(muted orange t-shirt:1.2), (plain t-shirt:1.15), "
                   "(suspender skirt:1.4), (navy blue skirt:1.3), "
                   "(knee-length skirt:1.8), (pleated skirt:1.1), "),
+    "rei": ("(black dress:1.3), (high-waist dress:1.2), "
+            "(see-through sleeves:1.2), (grey striped short sleeves:1.15), "
+            "(high collar:1.1), (gold choker ornament:1.1), "
+            "(dark purple sash:1.2), (ribbon belt:1.1), "
+            "(gradient skirt:1.3), (black to purple gradient:1.25), "
+            "(starry print skirt:1.1), (knee-length skirt:1.3), "
+            "(gold chain:1.15), (round gold ornaments:1.1), "
+            "(layered skirt:1.05), (gold trim:1.1), "
+            "(black headphones:1.3), (headset microphone:1.1), "
+            "(black gloves:1.2), "),
 }
 
 # A costume's tags when the request's angle shows her back. The official
@@ -37,6 +47,7 @@ BEHIND_COSTUME_BAN = {
 COSTUME_BAN = {
     "suspender": ("(text:1.3), (print:1.2), (logo:1.2), (number:1.2), "
                   "(bright orange:1.2), "),
+    "rei": "(horizontal-striped legwear:1.3), ",
 }
 
 # The `opaque` legwear: each costume's own tights.
@@ -44,6 +55,8 @@ LEGWEAR = {
     "roomwear": "",
     "outing": "(black pantyhose:1.5), (opaque pantyhose:1.4), ",
     "suspender": "(black pantyhose:1.5), (opaque pantyhose:1.4), ",
+    "rei": ("(purple pantyhose:1.45), (vertical-striped pantyhose:1.4), "
+            "(opaque pantyhose:1.3), "),
     "standard": ("(dark purple pantyhose:1.45), (opaque pantyhose:1.3), "
                  "(gradient legwear:1.2), (purple gradient:1.1), "),
 }
