@@ -106,9 +106,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           ref: main
-          sparse-checkout: |
-            .github/actions
-            scripts/release
+          sparse-checkout: scripts/release
           persist-credentials: false
 
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -118,10 +116,14 @@ jobs:
       - id: release
         run: bash scripts/release/publish.sh
 
-      - uses: ./.github/actions/gpu-box-app
+      - uses: ochanuco/.github/actions/chabatake-dispatch@194995de7425c6457f8d802510787afd02ed9235 # v1.7.0
         with:
-          action: deploy
-          version: ${{ steps.release.outputs.version }}
+          workflow: gpu-box-app.yml
+          inputs: '{"app": "chagama", "action": "deploy", "version": "${{ steps.release.outputs.version }}"}'
+          title: 'gpu-box-app: deploy ${{ steps.release.outputs.version }}'
+          wait-minutes: "230"
+          poll-seconds: "30"
+          cancelled-message: superseded by a later call, did not run
           op-service-account-token: ${{ secrets.OP_SA_DEPLOY }}
 
       - run: bash scripts/release/prune.sh 3
