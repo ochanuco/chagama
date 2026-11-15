@@ -22,18 +22,20 @@ COSTUMES = {
             "(short sleeves:1.3), (puffy short sleeves:1.2), "
             "(see-through puffy sleeves:1.2), "
             "(high collar:1.1), (gold choker ornament:1.1), "
-            "(dark purple sash:1.25), (black ribbon tails:1.3), "
-            "(black hanging ribbon from hip ornament:1.2), (gold tassels:1.15), "
+            "(dark slate grey sash:1.25), (black ribbon tails:1.3), "
+            "(gold cord hanging from hip ornament:1.3), (gold tassels:1.15), "
             "(flared skirt:1.35), (a-line skirt:1.2), (knee-length skirt:1.5), "
             "(gradient skirt:1.3), (black to purple gradient:1.25), "
             "(sparkle print:1.1), (gold trim on hem:1.2), "
-            "(grey see-through petticoat:1.15), "
+            "(black tulle petticoat:1.25), "
             "(large gold spiral ornament on hip:1.2), "
             "(gold chain draped across skirt:1.15), "
             "(white shawl:1.3), (shawl draped over arms:1.2), "
             "(gold stripes on shawl:1.05), "
             "(black headphones:1.45), (headphones on head:1.2), "
-            "(gold trim:1.05), (black wrist gloves:1.3), (bare forearms:1.25), "),
+            "(gold trim:1.05), (black wrist gloves:1.3), (bare forearms:1.25), "
+            "(limited palette:1.25), "
+            "(black white purple and gold color scheme:1.3), "),
 }
 
 # A costume's tags when the request's angle shows her back. The official
