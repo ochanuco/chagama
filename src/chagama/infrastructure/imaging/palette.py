@@ -36,8 +36,11 @@ def smoothstep(x):
 
 
 def window_w(H, lo, hi, feather=10.0):
-    return smoothstep((H - (lo - feather)) / feather) * \
-        smoothstep(((hi + feather) - H) / feather)
+    """Weight of hue window lo..hi; hue is circular, 255 borders 0."""
+    def linear(h):
+        return smoothstep((h - (lo - feather)) / feather) * \
+            smoothstep(((hi + feather) - h) / feather)
+    return np.maximum.reduce([linear(H - 256.0), linear(H), linear(H + 256.0)])
 
 
 def band_w(V, feather=30.0):
