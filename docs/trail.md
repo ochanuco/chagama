@@ -44,6 +44,16 @@ the outer outline band 12% darker.
 - `seed` fixes the scatter; without one the worker picks one, keeps it in its
   run state and reports it in `resolved_options`.
 
+## The browser preview
+
+`imaging/trail.py` first builds a plan (every wash, ribbon, glitter dot,
+bokeh, sparkle and head primitive, the front polygons and the head's layer)
+and only then draws pixels. The scatter comes from mulberry32 in a fixed draw
+order, so chimera's workbench builds the same plan in the browser and its
+preview matches the run for the same seed; only the anti-aliasing differs.
+`tests/fixtures/trail_plan.json` pins the plan, and chimera tests its port
+against a copy of it: a change to the plan changes both.
+
 ## Night backdrops
 
 The light reads only on a dark ground. Every backdrop pattern has a night

@@ -106,3 +106,32 @@ class PngTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PlanFixtureTest(unittest.TestCase):
+    """tests/fixtures/trail_plan.json is also checked by chimera's browser
+    preview: both must build this plan from the same trail."""
+
+    def test_the_plan_matches_the_shared_fixture(self):
+        import json
+        import pathlib
+        fixture = json.loads((pathlib.Path(__file__).parent / "fixtures" / "trail_plan.json").read_text())
+        rng = T.Rng(7)
+        np.testing.assert_allclose([rng.random() for _ in range(5)], fixture["rng_seed_7"], rtol=0, atol=0)
+        for case in fixture["cases"]:
+            with self.subTest(case=case["name"]):
+                spec = case["trail"]
+                trail = T.Trail(points=tuple(map(tuple, spec["points"])), front=tuple(spec["front"]),
+                                path=spec["path"], rule=spec["rule"], width=spec["width"],
+                                color=spec["color"], head=spec["head"],
+                                head_at_end=spec["head_at_end"], seed=spec["seed"])
+                drawn = T.plan(trail, case["height"], case["width"], light_ground=case["light_ground"])
+                counts = {}
+                for prim in drawn["body"]:
+                    counts[prim[0]] = counts.get(prim[0], 0) + 1
+                self.assertEqual(counts, case["counts"])
+                self.assertEqual(drawn["head_in_front"], case["head_in_front"])
+                for got, want in ((drawn["body"][:60], case["body_head"]),
+                                  (drawn["body"][-60:], case["body_tail"]),
+                                  (drawn["head"], case["head"]), (drawn["front"], case["front"])):
+                    self.assertEqual(json.dumps(got), json.dumps(want))

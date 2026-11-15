@@ -104,10 +104,10 @@ def pieces(front: Sequence[bool], rule: str) -> list[list[tuple[float, float, bo
     return out
 
 
-def front_mask(path: Path, front: Sequence[bool], rule: str, reach: float,
-               shape: tuple[int, int]) -> np.ndarray:
-    """Coverage 0..1 of the stretches that cross in front."""
-    mask = np.zeros(shape, np.uint8)
+def front_polygons(path: Path, front: Sequence[bool], rule: str,
+                   reach: float) -> list[np.ndarray]:
+    """The regions of the stretches that cross in front, as polygons."""
+    polys = []
     last = len(path.xy) - 1
     for i, stretches in enumerate(pieces(front, rule)):
         for t0, t1, is_front in stretches:
@@ -127,9 +127,16 @@ def front_mask(path: Path, front: Sequence[bool], rule: str, reach: float,
             if ks[-1] == last:
                 fwd = path.tangent[last] * reach * 2
                 left, right = np.vstack([left, left[-1:] + fwd]), np.vstack([right, right[-1:] + fwd])
-            poly = np.vstack([left, right[::-1]])
-            cv2.fillPoly(mask, [np.round(poly * 16).astype(np.int32)], 255,
-                         lineType=cv2.LINE_AA, shift=4)
+            polys.append(np.vstack([left, right[::-1]]))
+    return polys
+
+
+def front_mask(polys: Sequence[np.ndarray], shape: tuple[int, int]) -> np.ndarray:
+    """Coverage 0..1 of the front polygons."""
+    mask = np.zeros(shape, np.uint8)
+    for poly in polys:
+        cv2.fillPoly(mask, [np.round(poly * 16).astype(np.int32)], 255,
+                     lineType=cv2.LINE_AA, shift=4)
     return mask.astype(float) / 255.0
 
 
@@ -229,22 +236,53 @@ class Canvas:
         cover = cv2.resize(mask, (bx1 - bx0, by1 - by0), interpolation=cv2.INTER_AREA) / 255.0
         self.over(box, rgb, cover * alpha)
 
+    def streak(self, cx, cy, angle, radius, rgb, alpha) -> None:
+        """An ellipse of light, 3.2 x 0.7 radii long, trailing behind `angle`."""
+        reach = radius * 3.6
+        box = self._box(cx - reach, cy - reach, cx + reach, cy + reach)
+        if box is None:
+            return
+        xs, ys = self.grid(box)
+        c, s = math.cos(angle), math.sin(angle)
+        u = (xs - cx) * c + (ys - cy) * s + radius * 0.35
+        v = -(xs - cx) * s + (ys - cy) * c
+        t = np.hypot(u / 3.2, v / 0.7) / radius
+        self.over(box, rgb, np.clip(1 - t, 0.0, 1.0) * alpha)
+
     def straight(self) -> np.ndarray:
         colour = self.rgb / np.maximum(self.a, 1e-6)[..., None]
         return np.concatenate([np.clip(colour, 0, 255), self.a[..., None]], axis=-1)
 
 
-def _mix(rgb: np.ndarray, f: float) -> np.ndarray:
+class Rng:
+    """mulberry32: the browser preview draws with the same sequence."""
+
+    def __init__(self, seed: int) -> None:
+        self.state = seed & 0xFFFFFFFF
+
+    def random(self) -> float:
+        m = 0xFFFFFFFF
+        self.state = (self.state + 0x6D2B79F5) & m
+        a = self.state
+        t = ((a ^ (a >> 15)) * (1 | a)) & m
+        t = ((t + (((t ^ (t >> 7)) * (61 | t)) & m)) & m) ^ t
+        return ((t ^ (t >> 14)) & m) / 4294967296.0
+
+    def gauss(self) -> float:
+        u1, u2 = self.random(), self.random()
+        return math.sqrt(-2.0 * math.log(u1 + 1e-12)) * math.cos(2.0 * math.pi * u2)
+
+
+def _mix(rgb, f: float) -> list[float]:
     """Toward white for f > 0, toward black for f < 0."""
     target = 255.0 if f > 0 else 0.0
-    return rgb + (target - rgb) * abs(f)
+    return [v + (target - v) * abs(f) for v in rgb]
 
 
-def _star(cx, cy, outer, inner, points, rot) -> np.ndarray:
-    k = np.arange(points * 2)
-    a = rot + k * math.pi / points
-    r = np.where(k % 2, inner, outer)
-    return np.stack([cx + np.cos(a) * r, cy + np.sin(a) * r], axis=1)
+def _star(cx, cy, outer, inner, points, rot) -> list[list[float]]:
+    return [[cx + math.cos(rot + k * math.pi / points) * (inner if k % 2 else outer),
+             cy + math.sin(rot + k * math.pi / points) * (inner if k % 2 else outer)]
+            for k in range(points * 2)]
 
 
 class _Along:
@@ -253,22 +291,34 @@ class _Along:
     def __init__(self, path: Path) -> None:
         self.path = path
 
-    def __call__(self, s, off):
+    def __call__(self, s: float, off: float) -> tuple[float, float]:
         p = self.path
-        s = np.asarray(s, float)
-        x = np.interp(s, p.arc, p.xy[:, 0])
-        y = np.interp(s, p.arc, p.xy[:, 1])
-        nx = np.interp(s, p.arc, p.normal[:, 0])
-        ny = np.interp(s, p.arc, p.normal[:, 1])
-        nl = np.maximum(np.hypot(nx, ny), 1e-9)
+        x = float(np.interp(s, p.arc, p.xy[:, 0]))
+        y = float(np.interp(s, p.arc, p.xy[:, 1]))
+        nx = float(np.interp(s, p.arc, p.normal[:, 0]))
+        ny = float(np.interp(s, p.arc, p.normal[:, 1]))
+        nl = max(math.hypot(nx, ny), 1e-9)
         return x + nx / nl * off, y + ny / nl * off
 
 
-def _body(canvas: Canvas, path: Path, w: float, base: np.ndarray, rng: np.random.Generator,
-          head_at_end: bool, k: float) -> None:
-    """The trail behind the head: wash, ribbons, glitter, bokeh and sparkles."""
+def _pick(rng: Rng, count: int, length: float, q_of, density) -> list[tuple[float, float]]:
+    """Up to `count` arc positions, each candidate kept with `density(q)`."""
+    out = []
+    for _ in range(count * 3):
+        s = rng.random() * length
+        q = q_of(s)
+        if rng.random() < density(q):
+            out.append((s, q))
+            if len(out) == count:
+                break
+    return out
+
+
+def _body(path: Path, w: float, base, rng: Rng, head_at_end: bool, k: float) -> list:
+    """The trail behind the head as primitives: wash, ribbons, glitter, bokeh, sparkles."""
     length = path.length
     at = _Along(path)
+    prims: list = []
 
     def q_of(s):
         return (length - s) / length if head_at_end else s / length
@@ -276,108 +326,147 @@ def _body(canvas: Canvas, path: Path, w: float, base: np.ndarray, rng: np.random
     def sd(q):
         return w * (0.18 + 1.1 * q)
 
-    def pick(count: int, density) -> np.ndarray:
-        s = rng.random(count * 3) * length
-        keep = rng.random(len(s)) < density(q_of(s))
-        return s[keep][:count]
-
-    for s in np.arange(0.0, length, w * 0.2):
+    light = _mix(base, 0.45)
+    steps = math.ceil(length / (w * 0.2))
+    for n in range(steps):
+        s = n * w * 0.2
         q = q_of(s)
         if q < 0.03:
             continue
-        x, y = at(s, rng.standard_normal() * sd(q) * 0.35)
+        x, y = at(s, rng.gauss() * sd(q) * 0.35)
         a = 0.2 * (1 - q) ** 0.5 * min(1.0, q / 0.12)
-        light = _mix(base, 0.45)
-        canvas.radial(float(x), float(y), sd(q) * 1.3, [(0, light, a), (1, light, 0.0)])
+        prims.append(["radial", x, y, sd(q) * 1.3, [[0, light, a], [1, light, 0.0]]])
 
     for i in range(2):
         phase, period = rng.random() * 2 * math.pi, w * (1.9 + i * 0.8)
-        s = np.arange(0.0, length + 1e-9, 4.0)
-        q = q_of(s)
-        live = (q >= 0.01) & (q <= 0.9)
-        off = sd(q) * (0.55 + 0.35 * i) * np.sin(s / period + phase) * (0.4 + q)
-        x, y = at(s, off)
-        pts = np.stack([x, y], axis=1)
-        for run in np.split(np.arange(len(s)), np.nonzero(np.diff(live.astype(int)))[0] + 1):
-            if live[run[0]]:
-                canvas.polyline(pts[run], (1 + i * 0.4) * k, _mix(base, 0.15 + i * 0.1), 0.8)
+        run: list = []
+        colour = _mix(base, 0.15 + i * 0.1)
+        for n in range(int(length // 4) + 1):
+            s = n * 4.0
+            q = q_of(s)
+            if 0.01 <= q <= 0.9:
+                run.append(list(at(s, sd(q) * (0.55 + 0.35 * i) * math.sin(s / period + phase) * (0.4 + q))))
+            elif run:
+                prims.append(["polyline", run, (1 + i * 0.4) * k, colour, 0.8])
+                run = []
+        if run:
+            prims.append(["polyline", run, (1 + i * 0.4) * k, colour, 0.8])
 
-    s = pick(round(length * 8 / k), lambda q: np.where(q < 0.02, 0.0, np.minimum(1, q / 0.15) * (1 - q) ** 0.9))
-    q = q_of(s)
-    xs, ys = at(s, rng.standard_normal(len(s)) * sd(q) * 0.45)
-    radius = (0.6 + rng.random(len(s)) ** 2 * 2) * k
-    tone = rng.random(len(s)) * 0.7 - 0.25
-    alpha = 0.55 + 0.45 * rng.random(len(s))
-    for x, y, r, f, a in zip(xs, ys, radius, tone, alpha):
-        canvas.disc(x, y, r, _mix(base, f), a)
+    for s, q in _pick(rng, round(length * 8 / k), length, q_of,
+                      lambda q: 0.0 if q < 0.02 else min(1.0, q / 0.15) * (1 - q) ** 0.9):
+        x, y = at(s, rng.gauss() * sd(q) * 0.45)
+        radius = (0.6 + rng.random() ** 2 * 2) * k
+        tone = rng.random() * 0.7 - 0.25
+        prims.append(["disc", x, y, radius, _mix(base, tone), 0.55 + 0.45 * rng.random()])
 
-    s = pick(round(length / 8 / k), lambda q: np.where(q < 0.02, 0.0, (1 - q) ** 0.5))
-    q = q_of(s)
-    xs, ys = at(s, rng.standard_normal(len(s)) * sd(q) * 1.5)
-    for x, y in zip(xs, ys):
+    for s, q in _pick(rng, round(length / 8 / k), length, q_of,
+                      lambda q: 0.0 if q < 0.02 else (1 - q) ** 0.5):
+        x, y = at(s, rng.gauss() * sd(q) * 1.5)
         r = (1.5 + rng.random() ** 2 * 7) * k
         if rng.random() < 0.4:
             soft = _mix(base, 0.5)
-            canvas.radial(x, y, r * 2.2, [(0, soft, 0.35), (1, soft, 0.0)])
+            prims.append(["radial", x, y, r * 2.2, [[0, soft, 0.35], [1, soft, 0.0]]])
         else:
-            canvas.radial(x, y, r, [(0, _mix(base, 0.45), 0.95), (1, _mix(base, -0.05), 0.8)])
+            prims.append(["radial", x, y, r, [[0, _mix(base, 0.45), 0.95], [1, _mix(base, -0.05), 0.8]]])
 
-    s = pick(round(length / 55 / k), lambda q: np.where(q < 0.03, 0.0, 0.3 + 0.7 * (1 - q)))
-    q = q_of(s)
-    xs, ys = at(s, rng.standard_normal(len(s)) * sd(q) * 1.9)
-    for x, y in zip(xs, ys):
+    for s, q in _pick(rng, round(length / 55 / k), length, q_of,
+                      lambda q: 0.0 if q < 0.03 else 0.3 + 0.7 * (1 - q)):
+        x, y = at(s, rng.gauss() * sd(q) * 1.9)
         if rng.random() < 0.8:
-            r = (3 + rng.random() * 7) * k * (2 if rng.random() < 0.15 else 1)
+            r = (3 + rng.random() * 7) * k
+            r *= 2 if rng.random() < 0.15 else 1
             glow = _mix(base, 0.6)
-            canvas.radial(x, y, r * 0.9, [(0, glow, 0.45), (1, glow, 0.0)])
-            canvas.polygon(_star(x, y, r, r * 0.14, 4, -math.pi / 2), _mix(base, 0.35), 0.95)
+            prims.append(["radial", x, y, r * 0.9, [[0, glow, 0.45], [1, glow, 0.0]]])
+            prims.append(["poly", _star(x, y, r, r * 0.14, 4, -math.pi / 2), _mix(base, 0.35), 0.95])
         else:
             r = (5 + rng.random() * 6) * k
-            canvas.polygon(_star(x, y, r, r * 0.45, 5, -math.pi / 2 + rng.random()), _mix(base, 0.1), 0.9)
+            prims.append(["poly", _star(x, y, r, r * 0.45, 5, -math.pi / 2 + rng.random()),
+                          _mix(base, 0.1), 0.9])
+    return prims
 
 
-def _flare(canvas: Canvas, x: float, y: float, direction: np.ndarray, w: float,
-           base: np.ndarray, light_ground: bool) -> None:
+def _flare(x: float, y: float, direction, w: float, base, light_ground: bool) -> list:
     """Light burst: halo, a streak trailing behind, cross rays and a white core."""
     r = w
-    white = np.array([255.0, 255.0, 255.0])
+    white = [255.0, 255.0, 255.0]
     core = _mix(base, 0.25) if light_ground else white
-    if light_ground:
-        canvas.radial(x, y, r * 2.8, [(0, base, 0.95), (0.25, _mix(base, -0.05), 0.5), (1, base, 0.0)])
-    else:
-        canvas.radial(x, y, r * 2.8, [(0, _mix(base, 0.35), 0.75), (0.3, _mix(base, 0.1), 0.35), (1, base, 0.0)])
-    angle = math.atan2(direction[1], direction[0])
-    box = canvas._box(x - r * 3.6, y - r * 3.6, x + r * 3.6, y + r * 3.6)
-    if box is not None:
-        xs, ys = canvas.grid(box)
-        u = (xs - x) * math.cos(angle) + (ys - y) * math.sin(angle) + r * 0.35
-        v = -(xs - x) * math.sin(angle) + (ys - y) * math.cos(angle)
-        t = np.hypot(u / 3.2, v / 0.7) / r
-        canvas.over(box, _mix(base, 0.55), np.clip(1 - t, 0, 1) * 0.6)
+    edge = _mix(base, -0.1 if light_ground else 0.2)
     fade = _mix(base, 0.3)
+    halo = ([[0, list(base), 0.95], [0.25, _mix(base, -0.05), 0.5], [1, list(base), 0.0]] if light_ground
+            else [[0, _mix(base, 0.35), 0.75], [0.3, _mix(base, 0.1), 0.35], [1, list(base), 0.0]])
+    prims: list = [["radial", x, y, r * 2.8, halo],
+                   ["streak", x, y, math.atan2(direction[1], direction[0]), r, _mix(base, 0.55), 0.6]]
     for a, length in ((-math.pi / 2, 3.4), (math.pi / 2, 3.0), (0.0, 2.6), (math.pi, 2.6)):
-        canvas.ray(x, y, a, r * length, r * 0.09 * 2.6, _mix(base, -0.1 if light_ground else 0.2), 0.8, fade)
-        canvas.ray(x, y, a, r * length, r * 0.09, core, 1.0, fade)
+        prims.append(["ray", x, y, a, r * length, r * 0.09 * 2.6, edge, 0.8, fade])
+        prims.append(["ray", x, y, a, r * length, r * 0.09, core, 1.0, fade])
     for j in (1, 3, 5, 7):
         a = j * math.pi / 4 + 0.08
-        canvas.ray(x, y, a, r * 1.3, r * 0.05 * 2.6, _mix(base, -0.1 if light_ground else 0.2), 0.8, fade)
-        canvas.ray(x, y, a, r * 1.3, r * 0.05, core, 1.0, fade)
-    canvas.radial(x, y, r * 0.55, [(0, white, 1.0), (0.25, white, 1.0), (0.5, core, 1.0), (1, _mix(base, 0.2), 0.0)])
+        prims.append(["ray", x, y, a, r * 1.3, r * 0.05 * 2.6, edge, 0.8, fade])
+        prims.append(["ray", x, y, a, r * 1.3, r * 0.05, core, 1.0, fade])
+    prims.append(["radial", x, y, r * 0.55, [[0, white, 1.0], [0.25, white, 1.0], [0.5, core, 1.0],
+                                           [1, _mix(base, 0.2), 0.0]]])
+    return prims
 
 
-def _sparkle_head(canvas: Canvas, x: float, y: float, w: float, base: np.ndarray,
-                  rng: np.random.Generator) -> None:
+def _sparkle_head(x: float, y: float, w: float, base, rng: Rng) -> list:
     r = w * 1.3
     glow = _mix(base, 0.3)
-    canvas.radial(x, y, r * 1.6, [(0, glow, 0.55), (1, glow, 0.0)])
-    canvas.polygon(_star(x, y, r * 0.5, r * 0.12, 4, -math.pi / 4), _mix(base, 0.2), 0.85)
-    canvas.polygon(_star(x, y, r, r * 0.11, 4, -math.pi / 2), _mix(base, 0.05), 1.0)
-    canvas.polygon(_star(x, y, r * 0.55, r * 0.1, 4, -math.pi / 2), _mix(base, 0.6), 1.0)
+    prims: list = [["radial", x, y, r * 1.6, [[0, glow, 0.55], [1, glow, 0.0]]],
+                   ["poly", _star(x, y, r * 0.5, r * 0.12, 4, -math.pi / 4), _mix(base, 0.2), 0.85],
+                   ["poly", _star(x, y, r, r * 0.11, 4, -math.pi / 2), _mix(base, 0.05), 1.0],
+                   ["poly", _star(x, y, r * 0.55, r * 0.1, 4, -math.pi / 2), _mix(base, 0.6), 1.0]]
     for _ in range(6):
-        a, d = rng.random() * 2 * math.pi, r * (0.7 + rng.random() * 0.9)
+        a = rng.random() * 2 * math.pi
+        d = r * (0.7 + rng.random() * 0.9)
         rr = r * (0.1 + rng.random() * 0.16)
-        canvas.polygon(_star(x + math.cos(a) * d, y + math.sin(a) * d, rr, rr * 0.18, 4, -math.pi / 2),
-                       _mix(base, 0.35), 0.95)
+        prims.append(["poly", _star(x + math.cos(a) * d, y + math.sin(a) * d, rr, rr * 0.18, 4, -math.pi / 2),
+                      _mix(base, 0.35), 0.95])
+    return prims
+
+
+def plan(trail: Trail, height: int, width: int, *, light_ground: bool = False) -> dict:
+    """What to draw, in drawing order, before any pixel: the body and head
+    primitives, the polygons of the front stretches and whether the head is
+    in front. The browser preview builds the same plan."""
+    longest = max(height, width)
+    k = longest / REFERENCE_LONG_SIDE
+    w = trail.width / 100.0 * longest
+    path = sample_path([(x * width, y * height) for x, y in trail.points], trail.path == "curve")
+    base = [float(v) for v in hex_rgb(trail.color)]
+    rng = Rng(trail.seed)
+    body = _body(path, w, base, rng, trail.head_at_end, k)
+    end = len(path.xy) - 1 if trail.head_at_end else 0
+    hx, hy = (float(v) for v in path.xy[end])
+    direction = path.tangent[end] if trail.head_at_end else -path.tangent[0]
+    head = (_sparkle_head(hx, hy, w, base, rng) if trail.head == "sparkle"
+            else _flare(hx, hy, direction, w, base, light_ground))
+    stretch = pieces(trail.front, trail.rule)[-1 if trail.head_at_end else 0]
+    return {"body": body, "head": head,
+            "front": [poly.tolist() for poly in front_polygons(path, trail.front, trail.rule, w * 3.2)],
+            "head_in_front": bool(stretch[-1 if trail.head_at_end else 0][2])}
+
+
+def _draw(canvas: Canvas, prims: list) -> None:
+    for prim in prims:
+        kind, rest = prim[0], prim[1:]
+        if kind == "radial":
+            x, y, r, stops = rest
+            canvas.radial(x, y, r, [(o, np.asarray(c), a) for o, c, a in stops])
+        elif kind == "disc":
+            x, y, r, c, a = rest
+            canvas.disc(x, y, r, np.asarray(c), a)
+        elif kind == "poly":
+            pts, c, a = rest
+            canvas.polygon(np.asarray(pts), np.asarray(c), a)
+        elif kind == "polyline":
+            pts, thickness, c, a = rest
+            canvas.polyline(np.asarray(pts), thickness, np.asarray(c), a)
+        elif kind == "ray":
+            x, y, angle, length, wid, c0, a0, c1 = rest
+            canvas.ray(x, y, angle, length, wid, np.asarray(c0), a0, np.asarray(c1))
+        elif kind == "streak":
+            x, y, angle, r, c, a = rest
+            canvas.streak(x, y, angle, r, np.asarray(c), a)
 
 
 def render(trail: Trail, height: int, width: int, *, light_ground: bool = False,
@@ -385,36 +474,18 @@ def render(trail: Trail, height: int, width: int, *, light_ground: bool = False,
     """The back and front layers (H x W x 4, straight colour 0..255, alpha 0..1).
 
     `back_box` (x0, y0, x1, y1 as shares) keeps the back layer inside a frame."""
-    longest = max(height, width)
-    k = longest / REFERENCE_LONG_SIDE
-    w = trail.width / 100.0 * longest
-    pts = [(x * width, y * height) for x, y in trail.points]
-    path = sample_path(pts, trail.path == "curve")
-    base = hex_rgb(trail.color)
-    rng = np.random.default_rng(trail.seed)
-
+    drawn = plan(trail, height, width, light_ground=light_ground)
     body = Canvas(height, width)
-    _body(body, path, w, base, rng, trail.head_at_end, k)
+    _draw(body, drawn["body"])
     layer = body.straight()
-    cover = front_mask(path, trail.front, trail.rule, w * 3.2, (height, width))
+    cover = front_mask([np.asarray(p) for p in drawn["front"]], (height, width))
     front = layer.copy()
     front[..., 3] *= cover
     back = layer
     back[..., 3] *= 1 - cover
-
     head = Canvas(height, width)
-    end = len(path.xy) - 1 if trail.head_at_end else 0
-    hx, hy = path.xy[end]
-    direction = path.tangent[end] if trail.head_at_end else -path.tangent[0]
-    if trail.head == "sparkle":
-        _sparkle_head(head, hx, hy, w, base, rng)
-    else:
-        _flare(head, hx, hy, direction, w, base, light_ground)
-    stretch = pieces(trail.front, trail.rule)[-1 if trail.head_at_end else 0]
-    head_in_front = stretch[-1 if trail.head_at_end else 0][2]
-    target = front if head_in_front else back
-    _merge(target, head.straight())
-
+    _draw(head, drawn["head"])
+    _merge(front if drawn["head_in_front"] else back, head.straight())
     if back_box is not None:
         x0, y0, x1, y1 = back_box
         box = np.zeros((height, width))
