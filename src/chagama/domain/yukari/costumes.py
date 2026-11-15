@@ -19,13 +19,14 @@ COSTUMES = {
                   "(suspender skirt:1.4), (navy blue skirt:1.3), "
                   "(knee-length skirt:1.8), (pleated skirt:1.1), "),
     "rei": ("(black dress:1.3), (high-waist dress:1.2), "
-            "(see-through sleeves:1.2), (grey striped short sleeves:1.15), "
+            "(short sleeves:1.3), (puffy short sleeves:1.2), "
+            "(see-through sleeves:1.2), (grey striped sleeves:1.1), "
             "(high collar:1.1), (gold choker ornament:1.1), "
             "(dark purple sash:1.25), (long sash tails:1.15), "
-            "(flared skirt:1.35), (a-line skirt:1.2), (knee-length skirt:1.3), "
+            "(flared skirt:1.35), (a-line skirt:1.2), (knee-length skirt:1.5), "
             "(gradient skirt:1.3), (black to purple gradient:1.25), "
             "(sparkle print:1.1), (gold trim on hem:1.2), "
-            "(see-through petticoat:1.1), "
+            "(grey see-through petticoat:1.15), "
             "(large gold spiral ornament on hip:1.2), "
             "(gold chain draped across skirt:1.15), "
             "(white shawl:1.3), (shawl draped over arms:1.2), "
@@ -52,7 +53,9 @@ COSTUME_BAN = {
     "suspender": ("(text:1.3), (print:1.2), (logo:1.2), (number:1.2), "
                   "(bright orange:1.2), "),
     "rei": ("(horizontal-striped legwear:1.3), (side slit:1.3), "
-            "(front slit:1.3), (open skirt:1.3), (coin:1.2), "
+            "(front slit:1.3), (open skirt:1.3), (split skirt:1.3), "
+            "(white petticoat:1.3), (long sleeves:1.3), (long skirt:1.3), "
+            "(pink cord:1.2), (coin:1.2), "
             "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
             "(sneakers:1.3), "),
 }
