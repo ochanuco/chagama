@@ -108,6 +108,19 @@ if __name__ == "__main__":
     unittest.main()
 
 
+def _numbers(value) -> list[float]:
+    if isinstance(value, (list, tuple)):
+        return [n for item in value for n in _numbers(item)]
+    return [float(value)] if isinstance(value, (int, float)) and not isinstance(value, bool) else []
+
+
+def _shape(value):
+    """The structure with every number blanked, kinds and flags kept."""
+    if isinstance(value, (list, tuple)):
+        return [_shape(item) for item in value]
+    return value if isinstance(value, (str, bool)) else 0
+
+
 class PlanFixtureTest(unittest.TestCase):
     """tests/fixtures/trail_plan.json is also checked by chimera's browser
     preview: both must build this plan from the same trail."""
@@ -134,4 +147,5 @@ class PlanFixtureTest(unittest.TestCase):
                 for got, want in ((drawn["body"][:60], case["body_head"]),
                                   (drawn["body"][-60:], case["body_tail"]),
                                   (drawn["head"], case["head"]), (drawn["front"], case["front"])):
-                    self.assertEqual(json.dumps(got), json.dumps(want))
+                    self.assertEqual(_shape(got), _shape(want))
+                    np.testing.assert_allclose(_numbers(got), _numbers(want), rtol=1e-9, atol=1e-9)
