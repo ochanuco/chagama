@@ -346,6 +346,16 @@ class PromptTest(unittest.TestCase):
         self.assertIn(COSTUME_BAN["suspender"], neg)
         self.assertIn("(bright orange:1.2), ", neg)
 
+    def test_rei_costume_is_a_black_gradient_dress_over_purple_striped_tights(self):
+        text = positive("stand", costume="rei", legwear="opaque")
+        self.assertIn(COSTUMES["rei"], text)
+        self.assertIn("(vertical-striped pantyhose:1.4), ", text)
+        self.assertIn("(black headphones:1.3), ", text)
+        neg = negative("stand", costume="rei")
+        self.assertIn(ps.HOOD_BAN, neg)
+        self.assertIn(COSTUME_BAN["rei"], neg)
+        self.assertNotIn(ps.GARMENT_BLACK_BAN, neg)
+
     def test_costume_bans_stay_with_their_costume(self):
         for costume in COSTUMES:
             if costume == "suspender":
