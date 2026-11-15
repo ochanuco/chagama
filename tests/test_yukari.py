@@ -22,7 +22,7 @@ from chagama.domain.anima.legwear import (OFF_LEGWEAR, OFF_LEGWEAR_BAN,
 from chagama.domain.yukari import prompt_style as ps
 from chagama.domain.yukari.character import YUKARI
 from chagama.domain.yukari.costumes import (COSTUME_BAN, COSTUMES,
-                                            SHEER_GLOSS_LEGWEAR,
+                                            SHEER_GLOSS_LEGWEAR, SHOES,
                                             SHEER_LEGWEAR)
 from chagama.domain.yukari.expressions import EXPRESSIONS
 from chagama.domain.yukari.poses import POSES
@@ -350,7 +350,11 @@ class PromptTest(unittest.TestCase):
         text = positive("stand", costume="rei", legwear="opaque")
         self.assertIn(COSTUMES["rei"], text)
         self.assertIn("(vertical-striped pantyhose:1.4), ", text)
-        self.assertIn("(black headphones:1.3), ", text)
+        self.assertIn("(black headphones:1.45), ", text)
+        self.assertIn(SHOES["rei"], text)
+        self.assertNotIn("sneakers", text)
+        self.assertIn("(white sneakers:1.2), ",
+                      positive("stand", costume="standard"))
         neg = negative("stand", costume="rei")
         self.assertIn(ps.HOOD_BAN, neg)
         self.assertIn(COSTUME_BAN["rei"], neg)

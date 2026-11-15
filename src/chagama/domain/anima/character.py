@@ -4,10 +4,12 @@ so one style serves any character that fills a `Character`."""
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .expression import EyeQuality
 from .legwear import OFF_LEGWEAR, REMOVING_LEGWEAR, LegwearState
+
+SNEAKERS = "(sneakers:1.3), (white sneakers:1.2), "
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,14 @@ class Wardrobe:
     sheer: str
     sheer_gloss: str
     sheer_tone_ban: str
+    # A costume's own footwear, put in place of a pose's sneakers.
+    shoes: Mapping[str, str] = field(default_factory=dict)
+
+    def gesture_text(self, costume: str, gesture: str) -> str:
+        shoes = self.shoes.get(costume)
+        if shoes is None:
+            return gesture
+        return gesture.replace(SNEAKERS, shoes)
 
     def costume_text(self, costume: str, behind: bool) -> str:
         if behind:
