@@ -55,7 +55,8 @@ COSTUME_BAN = {
     "rei": ("(horizontal-striped legwear:1.3), (side slit:1.3), "
             "(front slit:1.3), (open skirt:1.3), (split skirt:1.3), "
             "(white petticoat:1.3), (long sleeves:1.3), (long skirt:1.3), "
-            "(pink cord:1.2), (pink ribbon:1.2), (white frills:1.25), "
+            "(pink cord:1.2), (pink ribbon:1.2), (cable:1.35), (cord:1.25), "
+            "(white frills:1.25), "
             "(lace trim:1.2), (pencil skirt:1.25), (coat:1.2), (coin:1.2), "
             "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
             "(sneakers:1.3), "),
