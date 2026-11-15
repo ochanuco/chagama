@@ -21,13 +21,17 @@ COSTUMES = {
     "rei": ("(black dress:1.3), (high-waist dress:1.2), "
             "(see-through sleeves:1.2), (grey striped short sleeves:1.15), "
             "(high collar:1.1), (gold choker ornament:1.1), "
-            "(dark purple sash:1.2), (ribbon belt:1.1), "
+            "(dark purple sash:1.25), (long sash tails:1.15), "
+            "(flared skirt:1.35), (a-line skirt:1.2), (knee-length skirt:1.3), "
             "(gradient skirt:1.3), (black to purple gradient:1.25), "
-            "(starry print skirt:1.1), (knee-length skirt:1.3), "
-            "(gold chain:1.15), (round gold ornaments:1.1), "
-            "(layered skirt:1.05), (gold trim:1.1), "
-            "(black headphones:1.3), (headset microphone:1.1), "
-            "(black gloves:1.2), "),
+            "(sparkle print:1.1), (gold trim on hem:1.2), "
+            "(see-through petticoat:1.1), "
+            "(large gold spiral ornament on hip:1.2), "
+            "(gold chain draped across skirt:1.15), "
+            "(white shawl:1.3), (shawl draped over arms:1.2), "
+            "(gold stripes on shawl:1.05), "
+            "(black headphones:1.45), (headphones on head:1.2), "
+            "(gold trim:1.05), (black gloves:1.2), "),
 }
 
 # A costume's tags when the request's angle shows her back. The official
@@ -47,7 +51,15 @@ BEHIND_COSTUME_BAN = {
 COSTUME_BAN = {
     "suspender": ("(text:1.3), (print:1.2), (logo:1.2), (number:1.2), "
                   "(bright orange:1.2), "),
-    "rei": "(horizontal-striped legwear:1.3), ",
+    "rei": ("(horizontal-striped legwear:1.3), (side slit:1.3), "
+            "(front slit:1.3), (open skirt:1.3), (coin:1.2), "
+            "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
+            "(sneakers:1.3), "),
+}
+
+# Footwear a costume puts in place of a pose's sneakers.
+SHOES = {
+    "rei": "(black high heels:1.3), (gold-trimmed heels:1.1), ",
 }
 
 # The `opaque` legwear: each costume's own tights.
@@ -88,4 +100,5 @@ WARDROBE = Wardrobe(
     sheer=SHEER_LEGWEAR,
     sheer_gloss=SHEER_GLOSS_LEGWEAR,
     sheer_tone_ban=SHEER_TONE_BAN,
+    shoes=SHOES,
 )
