@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import functools
 import io
 
 import numpy as np
 from PIL import Image
 
-from ...domain.yukari import delivery_style
+from ...domain.yukari import delivery_style, trail_style
 from ...domain.yukari.delivery_style import BackdropPalette
 
 
@@ -445,6 +446,31 @@ PATTERNS = {
 }
 
 
+def night(pixels: np.ndarray) -> np.ndarray:
+    """A pattern sunk toward night blue, its motifs kept faintly."""
+    blue = np.array(trail_style.NIGHT_BLUE)
+    return np.clip(pixels * trail_style.NIGHT_KEEP + blue * trail_style.NIGHT_TINT, 0.0, 255.0)
+
+
+def _pattern(name: str):
+    """The pattern function for a `PATTERNS` key or its night variant."""
+    if name in PATTERNS:
+        return PATTERNS[name]
+    base = name.removesuffix(trail_style.NIGHT_SUFFIX)
+    if name.endswith(trail_style.NIGHT_SUFFIX) and base in PATTERNS:
+        return lambda height, width, palette: night(PATTERNS[base](height, width, palette))
+    return None
+
+
+def names() -> list[str]:
+    """Every backdrop a request may name: the patterns, then their night variants."""
+    return [*PATTERNS, *(name + trail_style.NIGHT_SUFFIX for name in PATTERNS)]
+
+
+def is_night(name: str) -> bool:
+    return name.endswith(trail_style.NIGHT_SUFFIX) and _pattern(name) is not None
+
+
 def render(backdrop: str | None, height: int, width: int,
            palette: BackdropPalette) -> np.ndarray:
     """The delivery backdrop as a full `(height, width, 3)` float array.
@@ -455,8 +481,9 @@ def render(backdrop: str | None, height: int, width: int,
     """
     from .delivery import parse_color
 
-    if backdrop in PATTERNS:
-        return PATTERNS[backdrop](height, width, palette)
+    pattern = _pattern(backdrop) if backdrop is not None else None
+    if pattern is not None:
+        return pattern(height, width, palette)
     color = parse_color(backdrop if backdrop is not None else delivery_style.BACKDROP)
     return np.broadcast_to(
         np.array(color, dtype=float), (height, width, 3)).copy()
@@ -464,7 +491,7 @@ def render(backdrop: str | None, height: int, width: int,
 
 def is_backdrop(value: str) -> bool:
     """True for a `PATTERNS` key or a parseable `#RRGGBB` colour."""
-    if value in PATTERNS:
+    if _pattern(value) is not None:
         return True
     from .delivery import parse_color
 
@@ -475,12 +502,20 @@ def is_backdrop(value: str) -> bool:
     return True
 
 
+@functools.lru_cache(maxsize=64)
+def _thumbnail_pixels(name: str, palette: BackdropPalette) -> np.ndarray:
+    pixels = PATTERNS[name](delivery_style.BACKDROP_THUMBNAIL_HEIGHT,
+                            delivery_style.BACKDROP_THUMBNAIL_WIDTH, palette)
+    pixels.setflags(write=False)
+    return pixels
+
+
 def thumbnail(name: str, palette: BackdropPalette) -> bytes:
     """PNG bytes of the named pattern alone in `palette`, at the catalog's
     thumbnail size."""
-    width = delivery_style.BACKDROP_THUMBNAIL_WIDTH
-    height = delivery_style.BACKDROP_THUMBNAIL_HEIGHT
-    pixels = np.clip(PATTERNS[name](height, width, palette), 0, 255).astype(np.uint8)
+    base = name.removesuffix(trail_style.NIGHT_SUFFIX)
+    day = _thumbnail_pixels(base, palette)
+    pixels = np.clip(night(day) if is_night(name) else day, 0, 255).astype(np.uint8)
     output = io.BytesIO()
     Image.fromarray(pixels, "RGB").save(output, "PNG")
     return output.getvalue()

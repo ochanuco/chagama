@@ -152,3 +152,23 @@ class ThumbnailTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NightVariantTest(unittest.TestCase):
+    def test_every_pattern_has_a_night_variant_sunk_toward_night_blue(self):
+        from chagama.domain.yukari.delivery_style import BACKDROP_PALETTE
+        from chagama.infrastructure.imaging import backdrops
+        for name in backdrops.PATTERNS:
+            with self.subTest(name=name):
+                day = backdrops.render(name, 48, 32, BACKDROP_PALETTE)
+                night = backdrops.render(f"{name}-night", 48, 32, BACKDROP_PALETTE)
+                np.testing.assert_allclose(night, backdrops.night(day))
+                self.assertLess(night.mean(), day.mean())
+                self.assertTrue(backdrops.is_backdrop(f"{name}-night"))
+                self.assertTrue(backdrops.is_night(f"{name}-night"))
+                self.assertFalse(backdrops.is_night(name))
+
+    def test_a_night_suffix_on_anything_else_is_not_a_backdrop(self):
+        from chagama.infrastructure.imaging import backdrops
+        self.assertFalse(backdrops.is_backdrop("nope-night"))
+        self.assertFalse(backdrops.is_night("#000000-night"))

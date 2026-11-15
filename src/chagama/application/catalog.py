@@ -26,6 +26,7 @@ from ..domain.anima.framing import FRAMING, FRAMING_LABELS
 from ..domain.anima.legwear import LEGWEAR_STATES, LEGWEARS
 from ..domain.anima.style import HEIGHT, WIDTH
 from ..domain.recipes import DEFAULT_RECIPE, RECIPES, RecipeEntry, deliver_outlines
+from ..domain.yukari import trail_style
 from ..domain.yukari.delivery_style import (
     BACKDROP,
     BACKDROP_LABELS,
@@ -67,7 +68,7 @@ from ..domain.yukari.delivery_style import (
     STROKE_LIGHTS,
     BackdropPalette,
 )
-from ..infrastructure.imaging.backdrops import PATTERNS as BACKDROP_PATTERNS
+from ..infrastructure.imaging import backdrops as backdrop_patterns
 from ..infrastructure.imaging.backdrops import thumbnail as backdrop_thumbnail
 from ..infrastructure.imaging.depth_blur import sharp_reach_per_f
 from .generate import KNOWN_PARAMETERS, RECIPE_REJECTED_PARAMETERS
@@ -171,6 +172,7 @@ def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
         "stage": {
             "frame": {"line": dict(entry.frame_line), "rim": dict(entry.frame_rim)},
         },
+        "trail": {"color": trail_style.default_color(entry.outlines[-1]["color"])},
         "redraw": {
             "defaults": {
                 "hires": {"hires_denoise": HIRES_DENOISE},
@@ -205,16 +207,40 @@ def _patches_block() -> dict:
     }
 
 
+def _trail_block() -> dict:
+    return {
+        "templates": [
+            {"name": t.name, "label": t.label, "points": [list(p) for p in t.points],
+             "front": list(t.front)}
+            for t in trail_style.TRAIL_TEMPLATES
+        ],
+        "default_template": trail_style.TRAIL_DEFAULT_TEMPLATE,
+        "paths": list(trail_style.TRAIL_PATHS),
+        "rules": list(trail_style.TRAIL_RULES),
+        "heads": list(trail_style.TRAIL_HEADS),
+        "width": dict(trail_style.TRAIL_WIDTH),
+        "point_range": list(trail_style.TRAIL_POINT_RANGE),
+    }
+
+
+def _backdrop_label(name: str) -> str:
+    base = name.removesuffix(trail_style.NIGHT_SUFFIX)
+    if backdrop_patterns.is_night(name):
+        return BACKDROP_LABELS[base] + trail_style.NIGHT_LABEL_SUFFIX
+    return BACKDROP_LABELS[name]
+
+
 def _backdrops_block(palette: BackdropPalette) -> list[dict]:
     return [
         {
             "name": name,
-            "label": BACKDROP_LABELS[name],
+            "label": _backdrop_label(name),
+            "night": backdrop_patterns.is_night(name),
             "thumbnail": ("data:image/png;base64,"
                          + base64.b64encode(backdrop_thumbnail(name, palette))
                          .decode("ascii")),
         }
-        for name in BACKDROP_PATTERNS
+        for name in backdrop_patterns.names()
     ]
 
 
@@ -350,6 +376,7 @@ def build_catalog(git: dict) -> dict:
         "photo": _photo_block(),
         "stage": _stage_block(),
         "lighting": _lighting_block(),
+        "trail": _trail_block(),
         "saturation": {"strength": SATURATION_STRENGTH,
                        "help": "compresses a delivery's figure and outline layers, "
                                "outline colours included; refused for a deliver that "

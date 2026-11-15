@@ -429,3 +429,35 @@ class PhotoArgumentsTest(unittest.TestCase):
                 photo_arguments(bad)
         with self.assertRaisesRegex(ValueError, "object"):
             photo_arguments([])
+
+
+class TrailArgumentsTest(unittest.TestCase):
+    def test_an_empty_request_draws_the_default_template_in_the_recipes_colour(self):
+        from chagama.application.request_options import trail_arguments
+        yukari = trail_arguments({}, recipe="yukari")
+        self.assertEqual((yukari["template"], yukari["front"], yukari["path"], yukari["rule"],
+                          yukari["width"], yukari["head"], yukari["head_at_end"],
+                          yukari["in_frame"], yukari["seed"]),
+                         ("tsu", [False, False, True, True], "curve", "both", 5.0, "light",
+                          True, True, None))
+        self.assertEqual(yukari["color"], "#6f5c78")
+        self.assertEqual(trail_arguments({}, recipe="akari")["color"], "#ab6331")
+
+    def test_points_and_front_override_the_template(self):
+        from chagama.application.request_options import trail_arguments
+        resolved = trail_arguments({"template": "z", "points": [[-1, 0], [2, 0], [0, 1], [1, 1]],
+                                    "front": [True, False, False, True]})
+        self.assertEqual(resolved["points"], [[-1.0, 0.0], [2.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
+        self.assertEqual(resolved["front"], [True, False, False, True])
+
+    def test_out_of_range_or_unknown_options_are_refused(self):
+        from chagama.application.request_options import trail_arguments
+        for options in ({"template": "nope"}, {"points": [[0, 0]] * 3},
+                        {"points": [[0, 0], [0, 0], [0, 0], [0, 2.5]]},
+                        {"front": [True, False, True]}, {"front": [1, 0, 1, 0]},
+                        {"path": "zigzag"}, {"rule": "any"}, {"width": 0.5},
+                        {"width": 16}, {"color": "purple"}, {"head": "star"},
+                        {"head_at_end": "yes"}, {"in_frame": 1}, {"seed": -1},
+                        {"seed": 2**31}, {"texture": "wet"}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                trail_arguments(options)

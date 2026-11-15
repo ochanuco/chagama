@@ -244,6 +244,9 @@ deliver_generation    the pick, delivered: one ComfyUI graph that cuts a matte
 stage_generation      optional: set a (transparent) delivery's layers on a
                       backdrop pattern with its drop shadow, or in a photo
                       uploaded on chimera, unblurred (kind `stage`).
+trail_generation      optional: a shooting-star trail across a staged
+                      picture, behind the figure on some stretches and over
+                      it on others (kind `trail`; docs/trail.md).
 lighting_generation   optional: light a staged picture's figure and outline
                       by its backdrop: exposure, colour cast, optional side
                       shading (kind `lighting`).

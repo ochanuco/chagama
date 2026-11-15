@@ -27,6 +27,7 @@ from chagama.infrastructure.imaging import (
 from chagama.infrastructure.imaging import light as lighting
 from chagama.infrastructure.imaging import saturation as saturating
 from chagama.infrastructure.imaging import stage as staging
+from chagama.infrastructure.imaging import trail as trailing
 
 from . import bridge, vitmatte
 
@@ -394,6 +395,60 @@ class YukariSaturation:
                 bridge.png_to_image(outline_png, "RGBA"))
 
 
+class YukariTrail:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE")
+    RETURN_NAMES = ("image", "backdrop", "front")
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "figure": ("IMAGE",),
+            "figure_mask": ("MASK",),
+            "outline": ("IMAGE",),
+            "outline_mask": ("MASK",),
+            "backdrop": ("IMAGE",),
+            "trail": ("STRING", {"default": ""}),
+        }, "optional": {
+            "back_box": ("STRING", {"default": ""}),
+        }}
+
+    def run(self, figure, figure_mask, outline, outline_mask, backdrop, trail, back_box=""):
+        spec = json.loads(trail)
+        picture, behind, front = trailing.trail_pngs(
+            bridge.loaded_rgba_png(figure, figure_mask),
+            bridge.loaded_rgba_png(outline, outline_mask),
+            bridge.image_to_png(backdrop),
+            trailing.Trail(points=tuple(tuple(p) for p in spec["points"]),
+                           front=tuple(spec["front"]), path=spec["path"], rule=spec["rule"],
+                           width=spec["width"], color=spec["color"], head=spec["head"],
+                           head_at_end=spec["head_at_end"], seed=spec["seed"]),
+            json.loads(back_box) if back_box else None)
+        return (bridge.png_to_image(picture), bridge.png_to_image(behind),
+                bridge.png_to_image(front, "RGBA"))
+
+
+class YukariOver:
+    CATEGORY = "yukari"
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("image",)
+    FUNCTION = "run"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {
+            "image": ("IMAGE",),
+            "layer": ("IMAGE",),
+            "layer_mask": ("MASK",),
+        }}
+
+    def run(self, image, layer, layer_mask):
+        data = trailing.over_png(bridge.image_to_png(image),
+                                 bridge.loaded_rgba_png(layer, layer_mask))
+        return (bridge.png_to_image(data, "RGBA" if image.shape[-1] == 4 else "RGB"),)
+
+
 class YukariRelight:
     CATEGORY = "yukari"
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "IMAGE")
@@ -588,6 +643,8 @@ NODE_CLASS_MAPPINGS = {
     "YukariPhotoStage": YukariPhotoStage,
     "YukariStage": YukariStage,
     "YukariRelight": YukariRelight,
+    "YukariTrail": YukariTrail,
+    "YukariOver": YukariOver,
     "YukariPhotoDepthOfField": YukariPhotoDepthOfField,
     "YukariPoseSkeleton": YukariPoseSkeleton,
     "YukariPoseOutline": YukariPoseOutline,
@@ -608,6 +665,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "YukariPhotoStage": "Yukari Photo Stage",
     "YukariStage": "Yukari Stage",
     "YukariRelight": "Yukari Relight",
+    "YukariTrail": "Yukari Trail",
+    "YukariOver": "Yukari Over",
     "YukariPhotoDepthOfField": "Yukari Photo Depth of Field",
     "YukariPoseSkeleton": "Yukari Pose Skeleton",
     "YukariPoseOutline": "Yukari Pose Outline",

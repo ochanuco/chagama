@@ -237,7 +237,7 @@ class CliTest(unittest.TestCase):
         self.assertEqual(
             work_services.kinds,
             ("generate", "redraw", "deliver", "dof", "lens", "photo", "stage",
-             "lighting", "saturation", "reference", "reference_render"))
+             "trail", "lighting", "saturation", "reference", "reference_render"))
         self.assertIs(
             work_services.stage_services.management, chimera_class.return_value)
         self.assertIs(
