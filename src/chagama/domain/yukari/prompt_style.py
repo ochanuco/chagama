@@ -10,8 +10,9 @@ CHARACTER_TAG = "yuzuki yukari, "
 SERIES_TAG = "vocaloid, voiceroid, "
 IDENTITY = ("light purple hair, short hair with long locks, very long "
             "sidelocks, (dark greyish purple eyes:1.4), (dark irises:1.2), "
-            "hair ornament, (pale pink pupils:1.05), (vertical oval pupils:1.0), "
-            "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
+            "hair ornament, (small red pupils:1.3), (tiny pupils:1.1), "
+            "(vertical oval pupils:1.0), (concentric iris rings:0.9), "
+            "(mechanical eyes:0.6), ")
 IDENTITY_TAG_NAMES = frozenset({
     "light purple hair", "short hair with long locks", "very long sidelocks",
     "dark greyish purple eyes", "hair ornament", "tareme", "jitome",
