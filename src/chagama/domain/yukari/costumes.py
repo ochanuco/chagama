@@ -22,7 +22,7 @@ COSTUMES = {
             "(short sleeves:1.3), (puffy short sleeves:1.2), "
             "(see-through sleeves:1.2), (grey striped sleeves:1.1), "
             "(high collar:1.1), (gold choker ornament:1.1), "
-            "(dark purple sash:1.25), (long sash tails:1.15), "
+            "(dark purple sash:1.25), (dark purple sash tails:1.15), "
             "(flared skirt:1.35), (a-line skirt:1.2), (knee-length skirt:1.5), "
             "(gradient skirt:1.3), (black to purple gradient:1.25), "
             "(sparkle print:1.1), (gold trim on hem:1.2), "
@@ -55,7 +55,8 @@ COSTUME_BAN = {
     "rei": ("(horizontal-striped legwear:1.3), (side slit:1.3), "
             "(front slit:1.3), (open skirt:1.3), (split skirt:1.3), "
             "(white petticoat:1.3), (long sleeves:1.3), (long skirt:1.3), "
-            "(pink cord:1.2), (coin:1.2), "
+            "(pink cord:1.2), (pink ribbon:1.2), (white frills:1.25), "
+            "(lace trim:1.2), (pencil skirt:1.25), (coat:1.2), (coin:1.2), "
             "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
             "(sneakers:1.3), "),
 }
