@@ -38,7 +38,7 @@ only when its plan finds a reason to (below).
     the zip as the GitHub Release `<version>` with the asset `chagama.zip`
     (`scripts/release/publish.sh`: draft, then publish; releases are
     immutable), or reuses a published release of the same commit. Then
-    `.github/actions/gpu-box-app` dispatches `gpu-box-app.yml` in
+    `actions/chabatake-dispatch` of ochanuco/.github dispatches `gpu-box-app.yml` in
     ochanuco/chabatake (`app=chagama`, `action=deploy`, the version) with a
     GitHub App token read from 1Password, and waits for it. Only a
     conclusion of `success` passes. Last, `scripts/release/prune.sh 3`

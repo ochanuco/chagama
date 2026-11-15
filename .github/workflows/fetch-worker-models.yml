@@ -24,12 +24,14 @@ jobs:
       group: gpu-box-chagama
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ochanuco/.github/actions/chabatake-dispatch@194995de7425c6457f8d802510787afd02ed9235 # v1.7.0
         with:
-          sparse-checkout: .github/actions
-          persist-credentials: false
-      - uses: ./.github/actions/gpu-box-app
-        with:
-          action: op
-          op: ${{ inputs.dry_run && 'fetch-models-dry-run' || 'fetch-models' }}
+          workflow: gpu-box-app.yml
+          inputs: >-
+            {"app": "chagama", "action": "op", "op": "${{ inputs.dry_run && 'fetch-models-dry-run' || 'fetch-models' }}"}
+          title: >-
+            gpu-box-app: op ${{ inputs.dry_run && 'fetch-models-dry-run' || 'fetch-models' }}
+          wait-minutes: "230"
+          poll-seconds: "30"
+          cancelled-message: superseded by a later call, did not run
           op-service-account-token: ${{ secrets.OP_SA_DEPLOY }}
