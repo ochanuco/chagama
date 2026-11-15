@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import io
 
 import numpy as np
@@ -501,12 +502,20 @@ def is_backdrop(value: str) -> bool:
     return True
 
 
+@functools.lru_cache(maxsize=64)
+def _thumbnail_pixels(name: str, palette: BackdropPalette) -> np.ndarray:
+    pixels = PATTERNS[name](delivery_style.BACKDROP_THUMBNAIL_HEIGHT,
+                            delivery_style.BACKDROP_THUMBNAIL_WIDTH, palette)
+    pixels.setflags(write=False)
+    return pixels
+
+
 def thumbnail(name: str, palette: BackdropPalette) -> bytes:
     """PNG bytes of the named pattern alone in `palette`, at the catalog's
     thumbnail size."""
-    width = delivery_style.BACKDROP_THUMBNAIL_WIDTH
-    height = delivery_style.BACKDROP_THUMBNAIL_HEIGHT
-    pixels = np.clip(_pattern(name)(height, width, palette), 0, 255).astype(np.uint8)
+    base = name.removesuffix(trail_style.NIGHT_SUFFIX)
+    day = _thumbnail_pixels(base, palette)
+    pixels = np.clip(night(day) if is_night(name) else day, 0, 255).astype(np.uint8)
     output = io.BytesIO()
     Image.fromarray(pixels, "RGB").save(output, "PNG")
     return output.getvalue()
