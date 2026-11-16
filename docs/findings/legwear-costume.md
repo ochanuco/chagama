@@ -93,3 +93,6 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   prompt: bans, colour-named parts and dropped tags (ornament, headphones,
   hair ornament, red pupils) all left one pink cord. Delivery's `magenta`
   eases it to purple, per costume (`MAGENTA_COSTUMES`). `[Anima]`
+- Headphones on Yukari without her hair ornament: the ornament comes back on
+  the ear cup whatever the prompt says (`no hair ornament`, its ban, a gold
+  ornament named). Drop the headphones; `NO_HAIR_ORNAMENT` then holds. `[Anima]`
