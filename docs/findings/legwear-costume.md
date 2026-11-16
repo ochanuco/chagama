@@ -89,3 +89,7 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
 - Underwear shown through a sheer top: `bra` turns into a bikini, a tube top
   reverts to the purple dress. Use a one-piece sheer garment. `[Anima]`
 - Empty discarded tights (`no humans`): the legs stay inside. `[Anima]`
+- Removing the pink accent the model adds to Yukari's costumes from the
+  prompt: bans, colour-named parts and dropped tags (ornament, headphones,
+  hair ornament, red pupils) all left one pink cord. Delivery's `magenta`
+  eases it to purple, per costume (`MAGENTA_COSTUMES`). `[Anima]`
