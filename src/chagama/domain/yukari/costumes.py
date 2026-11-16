@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from ..anima.character import Wardrobe
-from .prompt_style import GARMENT_BLACK_BAN, HOOD_BAN, SHEER_TONE_BAN
+from .prompt_style import (GARMENT_BLACK_BAN, HAIR_ORNAMENT_BAN, HOOD_BAN,
+                           NO_HAIR_ORNAMENT, SHEER_TONE_BAN)
 
 COSTUMES = {
     "roomwear": ("(oversized shirt:1.35), (sleeves past wrists:1.3), "
@@ -32,7 +33,6 @@ COSTUMES = {
             "(gold chain draped across skirt:1.15), "
             "(white shawl:1.3), (shawl draped over arms:1.2), "
             "(gold stripes on shawl:1.05), "
-            "(black headphones:1.45), (headphones on head:1.2), "
             "(gold trim:1.05), (black gloves:1.4), (wrist gloves with gold trim:1.2), "
             "(bare forearms:1.25), "
             "(limited palette:1.25), "
@@ -61,8 +61,8 @@ COSTUME_BAN = {
             "(white petticoat:1.3), (long sleeves:1.3), (long skirt:1.3), "
             "(white frills:1.25), "
             "(lace trim:1.2), (pencil skirt:1.25), (coat:1.2), (coin:1.2), "
-            "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
-            "(sneakers:1.3), (frilled gloves:1.2), "),
+            "(large stars:1.2), (star print:1.15), "
+            "(sneakers:1.3), (frilled gloves:1.2), " + HAIR_ORNAMENT_BAN),
 }
 
 # Footwear a costume puts in place of a pose's sneakers.
@@ -73,7 +73,8 @@ SHOES = {
 # A costume's own hair: (identity text, replacement) pairs.
 HAIR = {
     "rei": (("very long sidelocks, ",
-             "(single sidelock:1.4), very long sidelock, "),),
+             "(single sidelock:1.4), very long sidelock, "),
+            ("hair ornament, ", NO_HAIR_ORNAMENT)),
 }
 
 # The `opaque` legwear: each costume's own tights.
