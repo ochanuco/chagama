@@ -10,7 +10,12 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   pose and costume (`SHEER_LEGWEAR` in `yukari/costumes.py`); axes opaque /
   sheer-gloss / sheer (PR #230, #239). `[Anima]`
 - `thin translucent legwear` draws vertical stripes on the leg and no negative
-  removes them; the block uses `skin visible through legwear` (PR #253). `[Anima]`
+  removes them; the sheer-gloss block uses `skin visible through legwear`
+  instead (PR #253). In the `sheer` block the line is drawn by
+  `thin translucent legwear` together with `subtle sheen on legwear`:
+  dropping only the first left the streak, dropping both removed it on every
+  seed tried, prompt-only and under depth control alike; without the sheen
+  word the tights read slightly more matte. `[Anima]`
 - Gloss: `shiny pantyhose` 1.3 is the ceiling, and an IL redraw evens the
   gloss out. `[Anima]` On IL, unwanted gloss was held down by four shiny
   words in the negative; removing body-mass tags did nothing. `[IL]`
