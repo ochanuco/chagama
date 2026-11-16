@@ -33,7 +33,8 @@ COSTUMES = {
             "(white shawl:1.3), (shawl draped over arms:1.2), "
             "(gold stripes on shawl:1.05), "
             "(black headphones:1.45), (headphones on head:1.2), "
-            "(gold trim:1.05), (black wrist gloves:1.3), (bare forearms:1.25), "
+            "(gold trim:1.05), (black gloves:1.4), (wrist gloves with gold trim:1.2), "
+            "(bare forearms:1.25), "
             "(limited palette:1.25), "
             "(black white purple and gold color scheme:1.3), "),
 }
@@ -61,7 +62,8 @@ COSTUME_BAN = {
             "(white frills:1.25), "
             "(lace trim:1.2), (pencil skirt:1.25), (coat:1.2), (coin:1.2), "
             "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
-            "(sneakers:1.3), "),
+            "(sneakers:1.3), (hair tubes:1.4), (twin sidelocks:1.3), "
+            "(long sidelocks:1.3), (frilled gloves:1.2), "),
 }
 
 # Footwear a costume puts in place of a pose's sneakers.
@@ -69,13 +71,20 @@ SHOES = {
     "rei": "(black high heels:1.3), (gold-trimmed heels:1.1), ",
 }
 
+# A costume's own hair in place of the identity's sidelocks.
+HAIR = {
+    "rei": (("short hair with long locks, very long sidelocks, ",
+             "(bob cut:1.45), (short hair:1.3), (asymmetrical hair:1.1), "
+             "(side braid:1.15), (gold spiral hairclip:1.1), "),),
+}
+
 # The `opaque` legwear: each costume's own tights.
 LEGWEAR = {
     "roomwear": "",
     "outing": "(black pantyhose:1.5), (opaque pantyhose:1.4), ",
     "suspender": "(black pantyhose:1.5), (opaque pantyhose:1.4), ",
-    "rei": ("(purple pantyhose:1.45), (vertical-striped pantyhose:1.4), "
-            "(opaque pantyhose:1.3), "),
+    "rei": ("(black and purple vertical-striped pantyhose:1.55), "
+            "(black vertical stripes:1.35), (opaque pantyhose:1.3), "),
     "standard": ("(dark purple pantyhose:1.45), (opaque pantyhose:1.3), "
                  "(gradient legwear:1.2), (purple gradient:1.1), "),
 }
@@ -108,4 +117,5 @@ WARDROBE = Wardrobe(
     sheer_gloss=SHEER_GLOSS_LEGWEAR,
     sheer_tone_ban=SHEER_TONE_BAN,
     shoes=SHOES,
+    hair=HAIR,
 )

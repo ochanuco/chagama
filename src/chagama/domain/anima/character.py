@@ -32,6 +32,13 @@ class Wardrobe:
     sheer_tone_ban: str
     # A costume's own footwear, put in place of a pose's sneakers.
     shoes: Mapping[str, str] = field(default_factory=dict)
+    # A costume's own hair: (identity text, replacement) pairs.
+    hair: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
+
+    def identity_text(self, costume: str, identity: str) -> str:
+        for old, new in self.hair.get(costume, ()):
+            identity = identity.replace(old, new)
+        return identity
 
     def gesture_text(self, costume: str, gesture: str) -> str:
         shoes = self.shoes.get(costume)

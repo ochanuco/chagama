@@ -349,9 +349,12 @@ class PromptTest(unittest.TestCase):
     def test_rei_costume_is_a_black_gradient_dress_over_purple_striped_tights(self):
         text = positive("stand", costume="rei", legwear="opaque")
         self.assertIn(COSTUMES["rei"], text)
-        self.assertIn("(vertical-striped pantyhose:1.4), ", text)
+        self.assertIn("(black and purple vertical-striped pantyhose:1.55), ", text)
         self.assertIn("(black headphones:1.45), ", text)
         self.assertIn(SHOES["rei"], text)
+        self.assertIn("(bob cut:1.45), ", text)
+        self.assertNotIn("very long sidelocks", text)
+        self.assertIn("very long sidelocks", positive("stand", costume="standard"))
         self.assertNotIn("sneakers", text)
         self.assertIn("(white sneakers:1.2), ",
                       positive("stand", costume="standard"))

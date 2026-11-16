@@ -149,7 +149,8 @@ class Recipe:
             Component("character", Section.CHARACTER, M, ch.tag),
             Component("series", Section.SERIES, M, ch.series),
             Component("artist", Section.ARTIST, M, ARTIST_TAG),
-            Component("identity", G, L, _own(p.identity, ch.identity)),
+            Component("identity", G, L, ch.wardrobe.identity_text(
+                c, _own(p.identity, ch.identity))),
             Component("action", G, M, p.action),
             Component("mouth", G, M, e.mouth),
             Component("mood", G, M, p.mood),
