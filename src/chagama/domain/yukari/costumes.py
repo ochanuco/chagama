@@ -62,8 +62,7 @@ COSTUME_BAN = {
             "(white frills:1.25), "
             "(lace trim:1.2), (pencil skirt:1.25), (coat:1.2), (coin:1.2), "
             "(large stars:1.2), (star print:1.15), (earpiece:1.2), "
-            "(sneakers:1.3), (hair tubes:1.4), (twin sidelocks:1.3), "
-            "(long sidelocks:1.3), (frilled gloves:1.2), "),
+            "(sneakers:1.3), (frilled gloves:1.2), "),
 }
 
 # Footwear a costume puts in place of a pose's sneakers.
@@ -71,11 +70,10 @@ SHOES = {
     "rei": "(black high heels:1.3), (gold-trimmed heels:1.1), ",
 }
 
-# A costume's own hair in place of the identity's sidelocks.
+# A costume's own hair: (identity text, replacement) pairs.
 HAIR = {
-    "rei": (("short hair with long locks, very long sidelocks, ",
-             "(bob cut:1.45), (short hair:1.3), (asymmetrical hair:1.1), "
-             "(side braid:1.15), (gold spiral hairclip:1.1), "),),
+    "rei": (("very long sidelocks, ",
+             "(single sidelock:1.4), very long sidelock, "),),
 }
 
 # The `opaque` legwear: each costume's own tights.
@@ -84,7 +82,8 @@ LEGWEAR = {
     "outing": "(black pantyhose:1.5), (opaque pantyhose:1.4), ",
     "suspender": "(black pantyhose:1.5), (opaque pantyhose:1.4), ",
     "rei": ("(black and purple vertical-striped pantyhose:1.55), "
-            "(black vertical stripes:1.35), (opaque pantyhose:1.3), "),
+            "(purple pantyhose:1.1), (black vertical stripes:1.35), "
+            "(opaque pantyhose:1.3), "),
     "standard": ("(dark purple pantyhose:1.45), (opaque pantyhose:1.3), "
                  "(gradient legwear:1.2), (purple gradient:1.1), "),
 }
