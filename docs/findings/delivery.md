@@ -114,6 +114,11 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   pink blotches); skip it, do not shrink it. `[all]` (a5 §補正は)
 - Hue is circular: easing goes the short way (else purple → skin crosses green) and windows wrap at
   255/0 (else the mouth's red speckles); pink stops at 245 to keep that red. Skin restoration fires only where skin was painted. `[all]` (a5 §肌ピン自体)
+- The model adds a saturated pink accent to Yukari whatever the prompt
+  says (bans, colour-named parts and dropped tags all left it); for a
+  costume without one, `magenta` eases it to the purple hue at delivery.
+  It is per costume (`MAGENTA_COSTUMES`): the standard costume's pink lining
+  is meant. `[Anima]`
 - Despill on a yellow-green key pinks the skin at the excess-24 edge; limit
   it to the edge band. It projects onto the key's chroma, not a green cap:
   `(green background)` draws a teal, and a cap left a cyan rim. `[Anima]`

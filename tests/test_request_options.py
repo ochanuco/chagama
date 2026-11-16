@@ -93,6 +93,15 @@ class DeliverArgumentsTest(unittest.TestCase):
             with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "saturation"):
                 deliver_arguments({"saturation": bad})
 
+    def test_magenta_is_left_to_the_costume_unless_given_and_off_for_a_kept_scene(self):
+        self.assertNotIn("magenta", deliver_arguments({}))
+        self.assertNotIn("magenta", deliver_arguments({"magenta": None}))
+        self.assertEqual(deliver_arguments({"magenta": 0.4})["magenta"], 0.4)
+        self.assertEqual(deliver_arguments({"magenta": 1, "keep_scene": True})["magenta"], 0.0)
+        for bad in (-0.1, 1.5, True, "1"):
+            with self.subTest(bad=bad), self.assertRaisesRegex(ValueError, "magenta"):
+                deliver_arguments({"magenta": bad})
+
     def test_see_through_is_a_gain_from_one_to_five(self):
         self.assertEqual(deliver_arguments({"see_through": 3})["see_through"], 3.0)
         self.assertNotIn("see_through", deliver_arguments({"see_through": None}))

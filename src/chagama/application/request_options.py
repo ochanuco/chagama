@@ -31,6 +31,7 @@ from ..domain.yukari.delivery_style import (
     LIGHT_FROM_DEFAULT,
     LIGHT_SCENES,
     LIGHTING_STRENGTH,
+    MAGENTA_STRENGTH,
     SATURATION_STRENGTH,
     PHOTO_BOKEH,
     PHOTO_FOCAL_LENGTH,
@@ -54,7 +55,7 @@ from .redraw import HIRES_DENOISE
 
 _KNOWN_DELIVER_OPTIONS = frozenset({
     "keep_scene", "transparent", "backdrop", "stroke_light", "outlines", "light",
-    "see_through", "saturation",
+    "see_through", "saturation", "magenta",
 })
 # The see-through gain's range; 1 is the cut as solved.
 _SEE_THROUGH_RANGE = (1.0, 5.0)
@@ -372,6 +373,8 @@ def deliver_arguments(options: Mapping) -> dict:
         raise ValueError(f"see_through must be between {low:g} and {high:g}, got {see_through!r}")
 
     saturation = float(_ranged(options, "saturation", SATURATION_STRENGTH))
+    magenta = (None if options.get("magenta") is None
+               else _ranged(options, "magenta", MAGENTA_STRENGTH))
 
     return {
         "keep_scene": keep_scene,
@@ -381,6 +384,8 @@ def deliver_arguments(options: Mapping) -> dict:
         "outlines": outlines,
         "light": light,
         "saturation": 0.0 if keep_scene else saturation,
+        **({"magenta": 0.0 if keep_scene else magenta}
+           if magenta is not None else {}),
         **({"see_through": float(see_through)} if see_through != 1.0 else {}),
     }
 

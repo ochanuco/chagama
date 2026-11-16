@@ -313,6 +313,14 @@ REPIN_SKIN_CAP = (75.0, 0.3)
 REPIN_SKIN_CAP_V = 190.0
 # The window `skin_mask` reads skin from.
 REPIN_SKIN_WINDOW = "skin"
+# `magenta`: saturated, light pink (S and V each faded in over its
+# (start, width)) eased to the purple window's hue and compressed, even
+# where it is an accent. Off by default: the standard costume's pink lining
+# is meant; on for the costumes in MAGENTA_COSTUMES, whose pink the model
+# adds unasked.
+REPIN_MAGENTA = {"hue": (222.0, 250.0), "s": (95.0, 25.0), "v": (140.0, 30.0)}
+MAGENTA_STRENGTH = {"min": 0.0, "max": 1.0, "default": 0.0}
+MAGENTA_COSTUMES = frozenset({("yukari", "rei")})
 
 SKIN_SOURCE_S_MIN = 20.0
 SKIN_SOURCE_V_MIN = 110.0

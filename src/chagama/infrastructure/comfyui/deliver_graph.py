@@ -103,7 +103,8 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
                   stroke_light: str | None, outlines: list[dict],
                   light_scene: str | None, light_from: str | None,
                   see_through: float = 1.0, saturation: float = 0.0,
-                  backdrop_palette: BackdropPalette | None = None) -> dict:
+                  backdrop_palette: BackdropPalette | None = None,
+                  magenta: float = 0.0) -> dict:
     """The deliver graph over the uploaded `source_image`.
 
     `alpha_image` is the uploaded alpha cut asset to load instead of
@@ -113,6 +114,7 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
     key showing through see-through clothing after the colour is solved;
     the saved alpha stays unscaled. `saturation` is the strength the
     figure's saturation is compressed with before the outlines are drawn;
+    `magenta` is the strength its saturated pink is pulled to purple with;
     a kept scene is never compressed. A pattern `backdrop` is painted in
     `backdrop_palette`.
     """
@@ -156,5 +158,6 @@ def deliver_graph(source_image: str, matte_model: str, prefix: str, *,
         light_scene=light_scene, light_from=light_from,
         silhouette_ref=silhouette_ref,
         saturation=0.0 if keep_scene else saturation,
-        backdrop_palette=backdrop_palette)
+        backdrop_palette=backdrop_palette,
+        magenta=0.0 if keep_scene else magenta)
     return graph

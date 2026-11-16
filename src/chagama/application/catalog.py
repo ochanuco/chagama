@@ -63,6 +63,8 @@ from ..domain.yukari.delivery_style import (
     LIGHT_SCENES,
     OUTLINE_WIDTH_MAX_PCT,
     OUTLINES_MAX,
+    MAGENTA_COSTUMES,
+    MAGENTA_STRENGTH,
     SATURATION_STRENGTH,
     STROKE_CHOICES,
     STROKE_LIGHTS,
@@ -166,6 +168,13 @@ def _recipe(recipe_name: str, entry: RecipeEntry) -> dict:
                            "help": "the figure's saturation compressed on repin's curve "
                                    "before the outlines are drawn; the outlines keep "
                                    "their colours. 0 for none"},
+            "magenta": {**MAGENTA_STRENGTH,
+                        "costumes": sorted(costume for recipe, costume
+                                           in MAGENTA_COSTUMES
+                                           if recipe == recipe_name),
+                        "help": "saturated light pink in the figure pulled to "
+                                "purple; omitted, 1 for a picture drawn in one "
+                                "of `costumes`, else 0"},
             "backdrop_color": BACKDROP,
             "backdrops": _backdrops_block(entry.backdrop_palette),
         },

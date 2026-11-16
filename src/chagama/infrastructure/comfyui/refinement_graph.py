@@ -107,12 +107,13 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
                   light_scene: str | None, light_from: str | None,
                   silhouette_ref: list | None = None,
                   saturation: float = 0.0,
-                  backdrop_palette: BackdropPalette | None = None) -> list:
+                  backdrop_palette: BackdropPalette | None = None,
+                  magenta: float = 0.0) -> list:
     """Appends the composite stage onto `graph` (mutated), saving the
     delivered picture and its layers.
     `silhouette_ref` is the mask the bands follow when it is not the matte.
     `saturation` compresses the figure's saturation before the outlines are
-    drawn. `backdrop_palette`, when given, is what a pattern backdrop is
+    drawn; `magenta` pulls its saturated pink to purple. `backdrop_palette`, when given, is what a pattern backdrop is
     painted in (the node's default otherwise). Returns the delivered ref."""
     deliver_id = allocate()
     graph[deliver_id] = {"class_type": "YukariDeliver", "inputs": {
@@ -124,6 +125,7 @@ def delivery_tail(graph: dict, allocate: Callable[[], str], image_ref: list,
            if light_scene else {}),
         **({"silhouette": silhouette_ref} if silhouette_ref is not None else {}),
         **({"saturation": saturation} if saturation > 0.0 else {}),
+        **({"magenta": magenta} if magenta > 0.0 else {}),
         **({"backdrop_palette": json.dumps(backdrop_palette._asdict())}
            if backdrop_palette is not None else {})}}
     delivered_ref = [deliver_id, 0]

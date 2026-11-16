@@ -20,7 +20,8 @@ from ...domain.yukari.delivery_style import (
     ACCENT_KEEP, ACCENT_RAMP, ACCENT_VALUE_RAMP, BACKDROP_SPREAD_MAX, BG_SAT_MAX,
     FIGURE_LIGHT_SAT_TARGET, FIGURE_LIGHT_V, FIGURE_MIDTONE_V,
     FIGURE_SAT_MEAN_MAX, FIGURE_SAT_P90_MAX, PALETTE_WINDOWS, REPIN_CHROMA_WINDOWS,
-    REPIN_DARK, REPIN_DARK_EXEMPT, REPIN_LIGHT, REPIN_MID, REPIN_PINK_WINDOW,
+    REPIN_DARK, REPIN_DARK_EXEMPT, REPIN_LIGHT, REPIN_MAGENTA, REPIN_MID,
+    REPIN_PINK_WINDOW,
     REPIN_SAT_ONLY_V_MAX,
     REPIN_SAT_ONLY_WINDOWS, REPIN_SKIN_CAP, REPIN_SKIN_CAP_V,
     REPIN_SKIN_WINDOW,
@@ -60,7 +61,8 @@ def figure_mask(im: np.ndarray) -> np.ndarray:
 
 def repin(im: np.ndarray, protect: np.ndarray | None = None,
           figure: np.ndarray | None = None,
-          strength: float = 1.0) -> tuple[np.ndarray, list[str]]:
+          strength: float = 1.0,
+          magenta: float = 0.0) -> tuple[np.ndarray, list[str]]:
     """RGB array in, RGB array out, plus a report of what moved.
 
     Saturation is compressed per V band toward fixed knees rather than
@@ -69,7 +71,8 @@ def repin(im: np.ndarray, protect: np.ndarray | None = None,
     verbatim; the correction fades to zero over a feathered edge. `figure`
     is the boolean pixel range the curve applies to, estimated from the
     picture when None; `strength` scales the correction (0 leaves the
-    picture as it is).
+    picture as it is). `magenta` pulls saturated light pink to the purple
+    window, accents included (REPIN_MAGENTA).
     """
     hsv = np.array(Image.fromarray(im).convert("HSV")).astype(float)
     fig = figure_mask(im) if figure is None else figure
@@ -123,6 +126,20 @@ def repin(im: np.ndarray, protect: np.ndarray | None = None,
 
     new_S = S + s_delta + w_dark * (target_d - S)
     new_H = H * (1 - ease_sum) + ease_target
+    if magenta > 0.0:
+        s_start, s_width = REPIN_MAGENTA["s"]
+        v_start, v_width = REPIN_MAGENTA["v"]
+        w_mag = (window_w(H, *REPIN_MAGENTA["hue"], feather=5.0)
+                 * smoothstep((S - s_start) / s_width)
+                 * smoothstep((V - v_start) / v_width)
+                 * fig * (1 - keep) * magenta)
+        def plain(knee_ratio):
+            knee, ratio = knee_ratio
+            return np.where(S > knee, knee + (S - knee) * ratio, S)
+
+        target_m = wl * plain(REPIN_LIGHT) + (1 - wl) * plain(REPIN_MID)
+        new_H = new_H + w_mag * (palette_window("purple")["hue_target"] - new_H)
+        new_S = new_S + w_mag * (np.minimum(target_m, new_S) - new_S)
 
     moved = np.abs(new_S - S) > 2
     report = [f"compressed {moved.mean() * 100:.1f}% of frame "
