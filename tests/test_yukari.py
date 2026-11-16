@@ -352,7 +352,7 @@ class PromptTest(unittest.TestCase):
         self.assertIn("(black and purple vertical-striped pantyhose:1.55), ", text)
         self.assertIn("(black headphones:1.45), ", text)
         self.assertIn(SHOES["rei"], text)
-        self.assertIn("(bob cut:1.45), ", text)
+        self.assertIn("(single sidelock:1.4), very long sidelock, ", text)
         self.assertNotIn("very long sidelocks", text)
         self.assertIn("very long sidelocks", positive("stand", costume="standard"))
         self.assertNotIn("sneakers", text)
