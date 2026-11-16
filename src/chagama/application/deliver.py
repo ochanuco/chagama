@@ -99,7 +99,8 @@ def _request_parameters(generation_id: str, *,
                         keep_scene: bool, transparent: bool,
                         backdrop: str | None, stroke_light: str | None,
                         outlines: list[dict], light: Light | None,
-                        see_through: float = 1.0, saturation: float = 0.0) -> dict:
+                        see_through: float = 1.0, saturation: float = 0.0,
+                        magenta: float = 0.0) -> dict:
     return {
         "kind": "deliver",
         "base_generation": generation_id,
@@ -112,7 +113,29 @@ def _request_parameters(generation_id: str, *,
            if light is not None else {}),
         **({"see_through": see_through} if see_through != 1.0 else {}),
         **({"saturation": saturation} if saturation > 0.0 else {}),
+        **({"magenta": magenta} if magenta > 0.0 else {}),
     }
+
+
+def _drawn_costume(services: DeliverServices, context: dict) -> tuple[str | None, str | None]:
+    """The recipe and costume of the generate request a picture comes from,
+    followed down its `base_generation` chain."""
+    for _ in range(8):
+        request = context["request"]
+        parameters = request.get("parameters") or {}
+        base_id = parameters.get("base_generation")
+        if not parameters.get("kind") or not base_id:
+            return request.get("recipe"), parameters.get("costume")
+        context = services.management.request(
+            "GET", f"/api/v1/generations/{base_id}/context")
+    return None, None
+
+
+def default_magenta(services: DeliverServices, context: dict) -> float:
+    """The `magenta` a deliver uses when the request leaves it out."""
+    if _drawn_costume(services, context) in delivery_style.MAGENTA_COSTUMES:
+        return 1.0
+    return delivery_style.MAGENTA_STRENGTH["default"]
 
 
 def _drawing_under(generation_id: str, services: DeliverServices,
@@ -139,15 +162,18 @@ def deliver(generation_id: str, services: DeliverServices, *,
             outlines: list[dict] | None = None,
             light: Light | None = None, see_through: float = 1.0,
             saturation: float = delivery_style.DELIVER_DEFAULTS["saturation"],
+            magenta: float | None = None,
             key_prefix: str | None = None, request_id: str | None = None,
             context: dict | None = None) -> dict:
     """Cut the picture out, compress its figure's saturation and draw the
     outlines around it. A saturation of a drawing is delivered from that
-    drawing at the saturation's strength, whatever `saturation` says."""
+    drawing at the saturation's strength, whatever `saturation` says.
+    `magenta` None takes the drawn costume's default (`default_magenta`)."""
     return _deliver(generation_id, services, keep_scene=keep_scene,
                     transparent=transparent, backdrop=backdrop,
                     stroke_light=stroke_light, outlines=outlines, light=light,
                     see_through=see_through, saturation=saturation,
+                    magenta=magenta,
                     key_prefix=key_prefix, request_id=request_id,
                     context=context, as_saturation=False)
 
@@ -161,7 +187,7 @@ def saturate_drawing(generation_id: str, services: DeliverServices, *,
     that strength would, and record it as a saturation of the drawing."""
     return _deliver(generation_id, services, keep_scene=False, transparent=True,
                     backdrop=None, stroke_light=None, outlines=[], light=None,
-                    see_through=1.0, saturation=strength,
+                    see_through=1.0, saturation=strength, magenta=None,
                     key_prefix=key_prefix, request_id=request_id,
                     context=context, as_saturation=True)
 
@@ -170,7 +196,7 @@ def _deliver(generation_id: str, services: DeliverServices, *,
              keep_scene: bool, transparent: bool, backdrop: str | None,
              stroke_light: str | None | object, outlines: list[dict] | None,
              light: Light | None, see_through: float, saturation: float,
-             key_prefix: str | None, request_id: str | None,
+             magenta: float | None, key_prefix: str | None, request_id: str | None,
              context: dict | None, as_saturation: bool) -> dict:
     state_path = operation_state_path(
         services.output_root, "saturation" if as_saturation else "deliver", key_prefix)
@@ -202,8 +228,11 @@ def _deliver(generation_id: str, services: DeliverServices, *,
                         else delivery_style.DELIVER_DEFAULTS["stroke_light"])
     if outlines is None:
         outlines = deliver_outlines(drawing["request"].get("recipe"))
+    if magenta is None:
+        magenta = default_magenta(services, drawing)
     if keep_scene:
         saturation = 0.0
+        magenta = 0.0
 
     prefix = f"dlv-{generation_id}"
     current = current_cut()
@@ -229,7 +258,7 @@ def _deliver(generation_id: str, services: DeliverServices, *,
         outlines=outlines,
         light_scene=light.scene if light is not None else None,
         light_from=light.direction if light is not None else None,
-        see_through=see_through, saturation=saturation,
+        see_through=see_through, saturation=saturation, magenta=magenta,
         backdrop_palette=(None if transparent or keep_scene
                           else backdrop_palette(drawing["request"].get("recipe"))))
 
@@ -271,7 +300,8 @@ def _deliver(generation_id: str, services: DeliverServices, *,
     git = services.git_metadata()
     if as_saturation:
         parameters = {"kind": "saturation", "base_generation": generation_id,
-                      "strength": saturation}
+                      "strength": saturation,
+                      **({"magenta": magenta} if magenta > 0.0 else {})}
         raw_instruction, instruction = (f"{generation_id} の彩度を調整",
                                         "この絵の人物を切り抜いて彩度を調整する")
     else:
@@ -280,7 +310,7 @@ def _deliver(generation_id: str, services: DeliverServices, *,
             keep_scene=keep_scene, transparent=transparent,
             backdrop=backdrop, stroke_light=stroke_light,
             outlines=outlines, light=light, see_through=see_through,
-            saturation=saturation)
+            saturation=saturation, magenta=magenta)
         raw_instruction, instruction = f"{generation_id} を納品", "この絵の納品"
     request = open_request(
         management, request_id=request_id,
@@ -319,7 +349,7 @@ def _deliver(generation_id: str, services: DeliverServices, *,
         f"**chimera** {rendered['canonical_url']}", delivered_name, delivered)
     services.emit(f"request {request.get('short_id') or request['id']} done")
     result = {"generation_ids": [rendered["id"]], "saturation": saturation,
-              "outlines": outlines}
+              "magenta": magenta, "outlines": outlines}
     if state_path:
         state.update({"status": "completed", "result": result})
         services.state.save(state_path, state)

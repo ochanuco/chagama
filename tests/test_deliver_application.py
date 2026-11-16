@@ -691,6 +691,29 @@ class SaturationBeforeOutlinesTest(unittest.TestCase):
                 [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
                 self.assertEqual(delivered["inputs"].get("saturation"), strength or None)
 
+    def test_magenta_defaults_on_for_a_rei_drawing_followed_down_its_lineage(self):
+        for costume, expected in (("rei", 1.0), ("standard", None), (None, None)):
+            raw = context_of("generate", {"pose": "stand",
+                                          **({"costume": costume} if costume else {})})
+            management = ManagementFake(contexts={"src": DRAWING, "raw": raw})
+            with self.subTest(costume=costume), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                result = deliver("src", svc)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                self.assertEqual(delivered["inputs"].get("magenta"), expected)
+                self.assertEqual(result["magenta"], expected or 0.0)
+
+    def test_an_explicit_magenta_wins_and_a_kept_scene_has_none(self):
+        raw = context_of("generate", {"pose": "stand", "costume": "rei"})
+        for kwargs, expected in (({"magenta": 0.0}, None), ({"magenta": 0.5}, 0.5),
+                                 ({"keep_scene": True}, None)):
+            management = ManagementFake(contexts={"src": DRAWING, "raw": raw})
+            with self.subTest(kwargs=kwargs), tempfile.TemporaryDirectory() as directory:
+                svc = services(directory, management=management)
+                deliver("src", svc, **kwargs)
+                [(_, delivered)] = nodes_of(svc.comfyui.submitted[0], "YukariDeliver")
+                self.assertEqual(delivered["inputs"].get("magenta"), expected)
+
     def test_a_saturated_drawing_is_neither_compressed_again_nor_kept_in_its_scene(self):
         saturated = context_of("saturation", {"kind": "saturation",
                                               "base_generation": "drw", "strength": 0.6})

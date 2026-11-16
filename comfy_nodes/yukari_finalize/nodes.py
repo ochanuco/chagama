@@ -117,11 +117,12 @@ class YukariDeliver:
             "silhouette": ("MASK",),
             "saturation": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
             "backdrop_palette": ("STRING", {"default": ""}),
+            "magenta": ("FLOAT", {"default": 0.0, "min": 0.0, "max": 1.0, "step": 0.01}),
         }}
 
     def run(self, image, matte, keep_scene, transparent=False, stroke_light="",
             backdrop="", light_scene="", light_from="", matted=False, outlines="",
-            silhouette=None, saturation=0.0, backdrop_palette=""):
+            silhouette=None, saturation=0.0, backdrop_palette="", magenta=0.0):
         picture, figure, outline, backdrop_png, tag = delivery.deliver_pngs(
             bridge.image_to_png(image), bridge.mask_to_png(matte),
             keep_scene=keep_scene, transparent=transparent,
@@ -129,7 +130,7 @@ class YukariDeliver:
             scene=light_scene or None, light_from=light_from or None,
             matted=matted, outlines=json.loads(outlines) if outlines else None,
             silhouette=None if silhouette is None else bridge.mask_to_png(silhouette),
-            figure_colour=saturating.figure_colour(saturation),
+            figure_colour=saturating.figure_colour(saturation, magenta),
             backdrop_palette=_palette(backdrop_palette))
         mode = "RGBA" if (transparent and not keep_scene) else "RGB"
         # A transparent delivery has no backdrop layer; this output is never saved.

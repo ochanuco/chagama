@@ -164,9 +164,11 @@ def _execute_deliver(services: WorkServices, row: Mapping) -> dict:
     outlines = result.pop("outlines", arguments["outlines"])
     if outlines is None:
         outlines = deliver_outlines(recipe)
+    magenta = result.pop("magenta", arguments.get("magenta"))
     result["resolved_options"] = {**options, "outlines": outlines,
                                   "saturation": result.pop("saturation",
-                                                           arguments["saturation"])}
+                                                           arguments["saturation"]),
+                                  **({"magenta": magenta} if magenta is not None else {})}
     return result
 
 

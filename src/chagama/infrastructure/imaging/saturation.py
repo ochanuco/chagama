@@ -27,31 +27,32 @@ def _png(array: np.ndarray, mode: str) -> bytes:
     return output.getvalue()
 
 
-def saturate_layer(layer: np.ndarray, strength: float) -> np.ndarray:
+def saturate_layer(layer: np.ndarray, strength: float,
+                   magenta: float = 0.0) -> np.ndarray:
     """A straight HxWx4 0..255 `layer` with `repin`'s curve applied where
     its alpha is above 0; its alpha is untouched."""
     covered = layer[..., 3] > 0
-    if strength <= 0.0 or not covered.any():
+    if (strength <= 0.0 and magenta <= 0.0) or not covered.any():
         return layer.copy()
     rgb, _ = repin(np.clip(np.rint(layer[..., :3]), 0, 255).astype(np.uint8),
-                   figure=covered, strength=strength)
+                   figure=covered, strength=strength, magenta=magenta)
     out = layer.copy()
     out[..., :3] = np.where(covered[..., None], rgb, layer[..., :3])
     return out
 
 
-def figure_colour(strength: float) -> FigureColour | None:
+def figure_colour(strength: float, magenta: float = 0.0) -> FigureColour | None:
     """The deliver's figure recolouring for `strength`: the curve over the
     figure as its layer is saved, so it matches `saturate_layer` on that
     layer; None when there is nothing to do."""
-    if strength <= 0.0:
+    if strength <= 0.0 and magenta <= 0.0:
         return None
 
     def recolour(px: np.ndarray, coverage: np.ndarray) -> np.ndarray:
         layer = np.dstack([np.clip(np.rint(px), 0, 255),
                            np.clip(np.rint(coverage * 255.0), 0, 255)]).astype(np.float32)
         covered = layer[..., 3] > 0
-        return np.where(covered[..., None], saturate_layer(layer, strength)[..., :3], px)
+        return np.where(covered[..., None], saturate_layer(layer, strength, magenta)[..., :3], px)
 
     return recolour
 
