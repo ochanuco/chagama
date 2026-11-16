@@ -97,12 +97,12 @@ SHEER_GLOSS_LEGWEAR = (
     "(anime coloring:1.2), ")
 
 # The `sheer` legwear: one flat black-purple tone for every costume, no
-# gradient direction words; paired with SHEER_TONE_BAN.
+# gradient direction words; paired with SHEER_TONE_BAN. No thin-translucent
+# or sheen words: together they draw a vertical line down the leg.
 SHEER_LEGWEAR = (
     "(sheer dark purple pantyhose:1.5), (see-through black tights:1.2), "
     "(skin clearly visible through pantyhose:1.4), "
-    "(thin translucent legwear:1.3), (pantyhose:1.4), "
-    "(subtle sheen on legwear:1.15), ")
+    "(pantyhose:1.4), ")
 
 WARDROBE = Wardrobe(
     costumes=COSTUMES,
