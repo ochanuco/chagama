@@ -21,6 +21,13 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   words in the negative; removing body-mass tags did nothing. `[IL]`
 - Costume is the official one by default; garment colours move by the black
   ban in the negative, and delivery repins them back to black. `[Anima]`
+- Her wrist ring is on her right arm only (`standard`). The model draws a
+  ring on both sleeve cuffs by itself; naming the one she wears
+  (`single bracelet`, `bracelet on right wrist`) draws a bangle on both
+  wrists, and `wrist ring` draws finger rings. Name the bare left side
+  instead (`plain left sleeve cuff`, `bare left wrist`, `asymmetrical
+  sleeves`) and ban `bracelets` / `symmetrical` / `ring`; the remaining ring
+  lands on her right wrist. `[Anima]`
 
 ## Holds
 
