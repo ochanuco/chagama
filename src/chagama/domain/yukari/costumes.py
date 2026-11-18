@@ -15,7 +15,11 @@ COSTUMES = {
                  "open cardigan, "
                  "(rabbit hood:1.3), long sleeves, drawstring, "
                  "(purple dress:1.25), frills, (sleeves past wrists:1.15), "
-                 "hood down, (criss-cross halter:1.2), halterneck, "),
+                 "hood down, (criss-cross halter:1.2), halterneck, "
+                 # Her wrist ring is on her right arm only. Naming a bracelet
+                 # or ring draws a pair or finger rings; leave the left bare.
+                 "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+                 "(bare left wrist:1.35), "),
     "suspender": ("(muted orange t-shirt:1.2), (plain t-shirt:1.15), "
                   "(suspender skirt:1.4), (navy blue skirt:1.3), "
                   "(knee-length skirt:1.8), (pleated skirt:1.1), "),
@@ -54,6 +58,9 @@ BEHIND_COSTUME_BAN = {
 
 # Negative tags a costume adds on top of the recipe's shared bans.
 COSTUME_BAN = {
+    "standard": ("(symmetrical:1.3), (matching bracelets:1.45), "
+                 "(two bracelets:1.45), (bracelets:1.35), (bangles:1.35), "
+                 "(wristbands:1.3), (finger ring:1.4), (ring:1.3), "),
     "suspender": ("(text:1.3), (print:1.2), (logo:1.2), (number:1.2), "
                   "(bright orange:1.2), "),
     "rei": ("(horizontal-striped legwear:1.3), (side slit:1.3), "

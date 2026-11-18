@@ -60,11 +60,16 @@ def _current_defaults(fixture):
         .replace("(dark irises:1.2), hair ornament, ", "(dark irises:1.2), hair ornament, "
                  "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), "
                  "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
-        .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "))
+        .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "
+                 "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+                 "(bare left wrist:1.35), "))
     out["negative"] = fixture["negative"].replace(
         "(aged down:1.2)", "(aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
         "(english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
-        "(mechanical parts:1.2), (android joints:1.2)", 1)
+        "(mechanical parts:1.2), (android joints:1.2)", 1).replace(
+        "(black hoodie:1.35), ", "(black hoodie:1.35), (symmetrical:1.3), "
+        "(matching bracelets:1.45), (two bracelets:1.45), (bracelets:1.35), "
+        "(bangles:1.35), (wristbands:1.3), (finger ring:1.4), (ring:1.3), ", 1)
     return out
 
 
@@ -216,6 +221,8 @@ BUST_POSITIVE = (
     "(dark violet hoodie:1.25), open cardigan, (rabbit hood:1.3), long sleeves, "
     "drawstring, (purple dress:1.25), frills, (sleeves past wrists:1.15), "
     "hood down, (criss-cross halter:1.2), halterneck, "
+    "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+    "(bare left wrist:1.35), "
     "simple background, (green background:1.3), "
     "(large eyes:1.2), (round face:1.3), (tareme:1.2), (thick eyelashes:1.3), "
     "(long eyelashes:1.15), "
@@ -238,7 +245,8 @@ BUST_NEGATIVE_TAG_SOURCE = (
     "lines:1.4), (emphasis lines:1.4), (light purple eyes:1.3), (bright eyes:1.2), (pink eyes:1.2), (magenta:1.45), (pink legwear:1.45), "
     "(bright purple:1.35), (vivid colors:1.3), (neon:1.3), (red:1.3), "
     "(maroon:1.35), (wine red:1.3), (black jacket:1.35), (black clothes:1.3),"
-    " (black hoodie:1.35), score_1, score_2, score_3, (fat:1.35),"
+    " (black hoodie:1.35), (symmetrical:1.3), (matching bracelets:1.45), (two bracelets:1.45), (bracelets:1.35), (bangles:1.35), (wristbands:1.3), (finger ring:1.4), (ring:1.3),"
+    " score_1, score_2, score_3, (fat:1.35),"
     " (chubby:1.35), (short legs:1.35), (muscular:1.3), (toned:1.2), "
     "(child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3),"
     " (english text:1.2), signature, watermark, (robot:1.3), (cyborg:1.3), "
@@ -262,6 +270,8 @@ GAO_POSITIVE = (
     "hoodie:1.25), open cardigan, (rabbit hood:1.3), long sleeves, "
     "drawstring, (purple dress:1.25), frills, (sleeves past wrists:1.15), "
     "hood down, (criss-cross halter:1.2), halterneck, "
+    "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+    "(bare left wrist:1.35), "
     "simple background, (green background:1.3), (large "
     "eyes:1.15), (mature face:1.2), (tareme:1.2), "
     "(thick eyelashes:1.3), (long eyelashes:1.15), (flat color:1.3), "
@@ -282,7 +292,9 @@ GAO_NEGATIVE = (
     "eyes:1.3), (bright eyes:1.2), (pink eyes:1.2), (magenta:1.45), (pink "
     "legwear:1.45), (bright purple:1.35), (vivid colors:1.3), (neon:1.3), "
     "(red:1.3), (maroon:1.35), (wine red:1.3), (black jacket:1.35), (black "
-    "clothes:1.3), (black hoodie:1.35), score_1, score_2, score_3, "
+    "clothes:1.3), (black hoodie:1.35), "
+    "(symmetrical:1.3), (matching bracelets:1.45), (two bracelets:1.45), (bracelets:1.35), (bangles:1.35), (wristbands:1.3), (finger ring:1.4), (ring:1.3), "
+    "score_1, score_2, score_3, "
     "(fat:1.35), (chubby:1.35), (short legs:1.35), (muscular:1.3), "
     "(toned:1.2), (child:1.3), (loli:1.3), (chibi:1.3), (aged down:1.2), "
     "(text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), (english "
