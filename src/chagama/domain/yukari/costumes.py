@@ -18,7 +18,7 @@ COSTUMES = {
                  "hood down, (criss-cross halter:1.2), halterneck, "
                  # Her wrist ring is on her right arm only. Naming a bracelet
                  # or ring draws a pair or finger rings; leave the left bare.
-                 "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+                 "(plain left sleeve cuff:1.4), "
                  "(bare left wrist:1.35), "),
     "suspender": ("(muted orange t-shirt:1.2), (plain t-shirt:1.15), "
                   "(suspender skirt:1.4), (navy blue skirt:1.3), "
