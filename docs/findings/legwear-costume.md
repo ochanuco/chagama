@@ -25,9 +25,9 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   ring on both sleeve cuffs by itself; naming the one she wears
   (`single bracelet`, `bracelet on right wrist`) draws a bangle on both
   wrists, and `wrist ring` draws finger rings. Name the bare left side
-  instead (`plain left sleeve cuff`, `bare left wrist`, `asymmetrical
-  sleeves`) and ban `bracelets` / `symmetrical` / `ring`; the remaining ring
-  lands on her right wrist. `[Anima]`
+  instead (`plain left sleeve cuff`, `bare left wrist`) and ban
+  `bracelets` / `symmetrical` / `ring`; the remaining ring lands on her
+  right wrist. `[Anima]`
 
 ## Holds
 
@@ -105,6 +105,11 @@ Tags and `a<n> §` pointers: see [`docs/README.md`](../README.md).
   prompt: bans, colour-named parts and dropped tags (ornament, headphones,
   hair ornament, red pupils) all left one pink cord. Delivery's `magenta`
   eases it to purple, per costume (`MAGENTA_COSTUMES`). `[Anima]`
+- `asymmetrical sleeves` to single out the wrist ring: the word is read as
+  two different sleeves and surfaces the arm cover she wears under the
+  parka — a whole sleeve turns light, or an extra light sleeve hangs
+  beside the arm. The bare-left-side words above hold the ring on their
+  own, across poses, with no surfacing. `[Anima]`
 - Headphones on Yukari without her hair ornament: the ornament comes back on
   the ear cup whatever the prompt says (`no hair ornament`, its ban, a gold
   ornament named). Drop the headphones; `NO_HAIR_ORNAMENT` then holds. `[Anima]`

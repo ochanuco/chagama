@@ -61,7 +61,7 @@ def _current_defaults(fixture):
                  "(small red pupils:1.3), (tiny pupils:1.1), (vertical oval pupils:1.0), "
                  "(concentric iris rings:0.9), (mechanical eyes:0.6), ")
         .replace("hood down, ", "hood down, (criss-cross halter:1.2), halterneck, "
-                 "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+                 "(plain left sleeve cuff:1.4), "
                  "(bare left wrist:1.35), "))
     out["negative"] = fixture["negative"].replace(
         "(aged down:1.2)", "(aged down:1.2), (text:1.3), (speech bubble:1.3), (onomatopoeia:1.3), "
@@ -221,7 +221,7 @@ BUST_POSITIVE = (
     "(dark violet hoodie:1.25), open cardigan, (rabbit hood:1.3), long sleeves, "
     "drawstring, (purple dress:1.25), frills, (sleeves past wrists:1.15), "
     "hood down, (criss-cross halter:1.2), halterneck, "
-    "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+    "(plain left sleeve cuff:1.4), "
     "(bare left wrist:1.35), "
     "simple background, (green background:1.3), "
     "(large eyes:1.2), (round face:1.3), (tareme:1.2), (thick eyelashes:1.3), "
@@ -270,7 +270,7 @@ GAO_POSITIVE = (
     "hoodie:1.25), open cardigan, (rabbit hood:1.3), long sleeves, "
     "drawstring, (purple dress:1.25), frills, (sleeves past wrists:1.15), "
     "hood down, (criss-cross halter:1.2), halterneck, "
-    "(asymmetrical sleeves:1.35), (plain left sleeve cuff:1.4), "
+    "(plain left sleeve cuff:1.4), "
     "(bare left wrist:1.35), "
     "simple background, (green background:1.3), (large "
     "eyes:1.15), (mature face:1.2), (tareme:1.2), "
