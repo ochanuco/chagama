@@ -30,6 +30,17 @@ def current_cut() -> dict:
             "translucent_min_key_share": delivery_style.TRANSLUCENT_MIN_KEY_SHARE,
             "translucent_min_area": delivery_style.TRANSLUCENT_MIN_AREA,
             "white_backdrop_min": delivery_style.WHITE_BACKDROP_MIN,
+            "white_drawn": {
+                "paper_deficit": delivery_style.WHITE_PAPER_DEFICIT,
+                "paper_max_matte": delivery_style.WHITE_PAPER_MAX_MATTE,
+                "paper_free_matte": delivery_style.WHITE_PAPER_FREE_MATTE,
+                "faint_deficit": delivery_style.WHITE_FAINT_DEFICIT,
+                "faint_chroma": delivery_style.WHITE_FAINT_CHROMA,
+                "near_ink_px": delivery_style.WHITE_NEAR_INK_PX,
+                "ramp_steps": delivery_style.WHITE_RAMP_STEPS,
+                "ramp_rise": delivery_style.WHITE_RAMP_RISE,
+                "far_px": delivery_style.WHITE_FAR_PX,
+            },
             "chroma_edge": {
                 "band_px": delivery_style.CHROMA_BAND_PX,
                 "noise": delivery_style.CHROMA_NOISE,

@@ -304,33 +304,75 @@ class ChromaEdgeTest(unittest.TestCase):
 
 
 class WhiteBackdropTest(unittest.TestCase):
+    INK = (40.0, 30.0, 50.0)
+    HAIR = (232.0, 220.0, 250.0)
+
     def scene(self):
-        px = np.full((64, 64, 3), 254.0)
-        px[16:48, 16:48] = (60.0, 40.0, 70.0)
-        px[16:48, 48] = (150.0, 140.0, 155.0)
-        soft = np.zeros((64, 64), dtype=np.uint8)
-        soft[16:48, 16:48] = 255
-        soft[16:48, 48] = 120
+        """Pale hair outlined in ink on white, a two-step antialias outside
+        the line, and a matte that leaves most of the hair out."""
+        px = np.full((64, 64, 3), 255.0)
+        px[16:48, 16:48] = self.INK
+        px[18:46, 18:46] = self.HAIR
+        ink = np.array(self.INK)
+        px[16:48, 48] = 0.5 * ink + 0.5 * 255.0
+        px[16:48, 49] = 0.3 * ink + 0.7 * 255.0
+        soft = np.zeros((64, 64))
+        soft[16:48, 16:50] = 1.0
+        soft[22:42, 22:42] = 0.2
         return px, soft
 
-    def test_the_matte_models_soft_output_is_the_alpha(self):
+    def test_the_drawing_inside_its_line_is_opaque(self):
+        px, soft = self.scene()
+        alpha = matting.drawn_alpha(px, soft)
+        self.assertTrue((alpha[18:46, 18:46] == 1.0).all())
+        self.assertEqual(alpha[32, 47], 1.0)
+
+    def test_paper_is_cleared_and_the_antialias_takes_its_ink_share(self):
+        px, soft = self.scene()
+        alpha = matting.drawn_alpha(px, soft)
+        self.assertEqual(alpha[32, 60], 0.0)
+        self.assertAlmostEqual(alpha[32, 48], 0.5, places=2)
+        self.assertAlmostEqual(alpha[32, 49], 0.3, places=2)
+
+    def test_the_antialias_carries_the_ink_and_reproduces_the_drawing_on_white(self):
+        px, soft = self.scene()
+        alpha = matting.drawn_alpha(px, soft)
+
+        def foreground(rgb, alpha):
+            raise AssertionError("a white backdrop needs no foreground estimate")
+
+        colour = matting.figure_colour(px, alpha, foreground)
+        np.testing.assert_allclose(colour[32, 48], self.INK)
+        np.testing.assert_allclose(colour[32, 30], self.HAIR)
+        over_white = alpha[..., None] * colour + (1 - alpha[..., None]) * 255.0
+        np.testing.assert_allclose(over_white[alpha > 0], px[alpha > 0], atol=1.0)
+
+    def test_faint_grey_the_matte_leaves_out_beside_paper_is_cleared(self):
+        px, soft = self.scene()
+        px[16:48, 52] = 220.0
+        alpha = matting.drawn_alpha(px, soft)
+        self.assertTrue((alpha[16:48, 52] == 0.0).all())
+
+    def test_a_white_pocket_the_matte_half_calls_backdrop_is_cleared_whole(self):
+        px, soft = self.scene()
+        px[28:36, 28:36] = 255.0
+        px[27, 27:37] = px[36, 27:37] = self.INK
+        px[27:37, 27] = px[27:37, 36] = self.INK
+        soft[28:36, 28:36] = 1.0
+        soft[30, 30] = 0.1
+        alpha = matting.drawn_alpha(px, soft)
+        self.assertTrue((alpha[28:36, 28:36] == 0.0).all())
+
+    def test_alpha_png_solves_a_white_picture_without_the_matting_model(self):
         px, soft = self.scene()
 
         def predict(rgb, known):
             raise AssertionError("a white backdrop is not matted")
 
         alpha = np.array(Image.open(io.BytesIO(matting.alpha_png(
-            rgb_png(px), rgb_png(soft), predict))))
-        np.testing.assert_array_equal(alpha, soft)
-
-    def test_the_colour_is_the_drawing_itself(self):
-        px, soft = self.scene()
-
-        def foreground(rgb, alpha):
-            raise AssertionError("a white backdrop needs no foreground estimate")
-
-        colour = matting.figure_colour(px, soft / 255.0, foreground)
-        np.testing.assert_array_equal(colour, px)
+            rgb_png(px), rgb_png(np.rint(soft * 255).astype(np.uint8)), predict))))
+        self.assertEqual(alpha[32, 30], 255)
+        self.assertEqual(alpha[32, 60], 0)
 
 
 class OwnAlphaTest(unittest.TestCase):

@@ -193,6 +193,99 @@ def white_backdrop(px: np.ndarray) -> bool:
     return bool(delivery._corner_seed(px).min() >= delivery_style.WHITE_BACKDROP_MIN)
 
 
+_NEIGHBOURS = [(dy, dx) for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx]
+_PAPER = 255.0
+
+
+def _shifted(array: np.ndarray, dy: int, dx: int, fill: float) -> np.ndarray:
+    """`array` seen from each pixel's (dy, dx) neighbour; `fill` off the edge."""
+    out = np.full_like(array, fill)
+    height, width = array.shape[:2]
+    out[max(-dy, 0):height - max(dy, 0), max(-dx, 0):width - max(dx, 0)] = (
+        array[max(dy, 0):height - max(-dy, 0), max(dx, 0):width - max(-dx, 0)])
+    return out
+
+
+def _uphill(deficit: np.ndarray, open_: np.ndarray) -> np.ndarray:
+    """Per pixel, the largest `deficit` among its 8 neighbours in `open_`."""
+    masked = np.where(open_, deficit, -1.0)
+    return np.max([_shifted(masked, dy, dx, -1.0) for dy, dx in _NEIGHBOURS], axis=0)
+
+
+def drawn_alpha(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
+    """The alpha of a picture drawn on white: opaque but for the paper that
+    reaches the backdrop and the antialias ramp from it up to the first ink
+    ridge, whose alpha is its share of that ink (`WHITE_*`). `soft` is the
+    matte model's output in 0..1."""
+    deficit = (_PAPER - px).max(axis=2)
+    whiteish = deficit < delivery_style.WHITE_PAPER_DEFICIT
+    figure = soft >= 0.5
+    labels, _ = ndimage.label(whiteish & (soft < delivery_style.WHITE_PAPER_MAX_MATTE))
+    ids = np.unique(labels[~figure & whiteish])
+    open_white = np.isin(labels, ids[ids > 0])
+    labels, _ = ndimage.label(whiteish)
+    outer = np.unique(labels[soft <= 0])
+    seen = np.unique(labels[~figure & whiteish])
+    pockets = np.setdiff1d(seen[seen > 0], outer)
+    pocket = np.isin(labels, pockets)
+    open_white |= pocket
+    near_ink = ndimage.binary_dilation(
+        ~whiteish, _EIGHT, iterations=delivery_style.WHITE_NEAR_INK_PX)
+    free = delivery_style.WHITE_PAPER_FREE_MATTE
+    paper = open_white & (near_ink | (soft < free))
+    faint = ((deficit < delivery_style.WHITE_FAINT_DEFICIT)
+             & (np.ptp(px, axis=2) < delivery_style.WHITE_FAINT_CHROMA)
+             & ((soft < free) | ndimage.binary_dilation(pocket, iterations=2)))
+    labels, _ = ndimage.label(paper | faint)
+    ids = np.unique(labels[paper])
+    paper = np.isin(labels, ids[ids > 0])
+    alpha = np.ones(soft.shape)
+    alpha[paper] = 0.0
+    white_on_white = open_white & ~paper
+    alpha[white_on_white] = np.clip(
+        (soft[white_on_white] - free) / (1.0 - 2.0 * free), 0.0, 1.0)
+    reached = paper.copy()
+    ramp = np.zeros(soft.shape, dtype=bool)
+    for _ in range(delivery_style.WHITE_RAMP_STEPS):
+        front = ndimage.binary_dilation(reached) & ~reached & ~whiteish
+        lowest = np.min([_shifted(np.where(reached, deficit, np.inf), dy, dx, np.inf)
+                         for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1))], axis=0)
+        step = (front & (deficit > lowest)
+                & (_uphill(deficit, ~reached) - deficit > delivery_style.WHITE_RAMP_RISE))
+        ramp |= step
+        reached |= step
+    ink = ridge_colour(px, ramp)
+    toward = _PAPER - ink
+    share = ((_PAPER - px) * toward).sum(axis=2) / np.maximum(
+        (toward * toward).sum(axis=2), 1e-6)
+    alpha[ramp] = np.clip(share[ramp], 0.0, 1.0)
+    far = (ndimage.distance_transform_edt(~ndimage.binary_fill_holes(figure))
+           > delivery_style.WHITE_FAR_PX)
+    return np.where(far, np.minimum(alpha, soft), alpha)
+
+
+def ridge_colour(px: np.ndarray, ramp: np.ndarray) -> np.ndarray:
+    """`px`, with each `ramp` pixel taking the colour of the ink ridge it
+    climbs to: up the steepest neighbour for at most `WHITE_RAMP_STEPS` + 1
+    steps."""
+    deficit = (_PAPER - px).max(axis=2)
+    height, width = deficit.shape
+    ys, xs = np.nonzero(ramp)
+    for _ in range(delivery_style.WHITE_RAMP_STEPS + 1):
+        best_y, best_x, best = ys.copy(), xs.copy(), deficit[ys, xs]
+        for dy, dx in _NEIGHBOURS:
+            ny = np.clip(ys + dy, 0, height - 1)
+            nx = np.clip(xs + dx, 0, width - 1)
+            higher = deficit[ny, nx] > best
+            best_y = np.where(higher, ny, best_y)
+            best_x = np.where(higher, nx, best_x)
+            best = np.where(higher, deficit[ny, nx], best)
+        ys, xs = best_y, best_x
+    colour = px.copy()
+    colour[ramp] = px[ys, xs]
+    return colour
+
+
 def key_split(px: np.ndarray, key: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Each pixel's share of the key along the key's own chroma (1 on the
     key, 0 on a grey or a colour across it), and what is left once that
@@ -278,9 +371,12 @@ def figure_colour(px: np.ndarray, alpha: np.ndarray,
     from the key where it shows through) and despilled of the raw key on the
     soft edge, the raw pixel where alpha is 0. On a green key a soft pixel's
     colour is what taking its key share out leaves; on white it is the raw
-    pixel everywhere."""
+    pixel, but on the antialias ramp (`drawn_alpha`) the ink it climbs to."""
     if white_backdrop(px):
-        return px.copy()
+        deficit = (_PAPER - px).max(axis=2)
+        ramp = ((alpha > 0) & (alpha < 1)
+                & (deficit >= delivery_style.WHITE_PAPER_DEFICIT))
+        return ridge_colour(px, ramp)
     colour = np.clip(foreground(px / 255.0, alpha), 0.0, 1.0) * 255.0
     solved = unmixed(px, alpha)
     colour = np.where(np.isnan(solved), colour, solved)
@@ -335,12 +431,12 @@ def known_regions(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
 
 def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     """The alpha (L PNG) of the figure in `data`, from the matte model's soft
-    output `matte`: that output itself on a white backdrop, keyed on its
+    output `matte`: the drawing on a white backdrop (`drawn_alpha`), keyed on its
     edge (`chroma_edge`) on a green key, matted by `predict` otherwise."""
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
     if white_backdrop(px):
-        return _png(soft.astype(float), "L")
+        return _png(drawn_alpha(px, soft / 255.0) * 255, "L")
     key = green_key(px)
     if key is not None:
         figure = delivery.cut_figure(px, soft)

@@ -48,11 +48,11 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   shadow falls straight away from the light in that band's shape, the same
   way it is extruded. `stroke_light` `even` is a uniform band; no bands
   (`outlines: []`) is no rim and no shadow. `[all]` (a6 §Hand-cut sticker rim)
-- Renders are on white: hires paints a rim against whatever it draws on,
-  and on green that rim is darkened key no cut tells from ink (cutting it
-  whitened lines). On white the drawing is used as drawn out to the white
-  band's edge; BiRefNet-general's soft matte only places the bands. Older
-  green pictures are keyed on the ±12 px edge (`chroma_edge`).
+- Renders are on white: on green, hires's rim is darkened key no cut tells
+  from ink (cutting it whitened lines). On white the drawing is used as
+  drawn out to the white band's edge; BiRefNet-general's matte only places
+  the bands; with no band the alpha is the drawing's own (`drawn_alpha`),
+  not the matte's soft edge (paper white, half-clear pale hair). Older green pictures are keyed on the ±12 px edge (`chroma_edge`).
   A key pocket the figure encloses is cut where it is the key, its shade
   (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a
   dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE`), and held known backdrop in the
