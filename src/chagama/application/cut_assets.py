@@ -31,6 +31,8 @@ def current_cut() -> dict:
             "translucent_min_area": delivery_style.TRANSLUCENT_MIN_AREA,
             "edge_shadow_min_key_share": delivery_style.EDGE_SHADOW_MIN_KEY_SHARE,
             "edge_shadow_core_alpha": delivery_style.EDGE_SHADOW_CORE_ALPHA,
+            "edge_shadow_ramp_sigma": delivery_style.EDGE_SHADOW_RAMP_SIGMA,
+            "edge_shadow_ramp_px": delivery_style.EDGE_SHADOW_RAMP_PX,
         },
         "depth": {"ckpt": DEPTH_CKPT, "max_pixels": DEPTH_MAX_PIXELS,
                   "size": "native"},

@@ -124,12 +124,14 @@ def see_through(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndar
 
 
 def edge_shadow(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndarray:
-    """`alpha` with the key in shadow on the soft edge cut to 0: unknown-band
+    """`alpha` with the key in shadow on the soft edge cut: unknown-band
     pixels holding at least `EDGE_SHADOW_MIN_KEY_SHARE` of the key and no
     brighter than it, not touching the solved figure (alpha at least
     `EDGE_SHADOW_CORE_ALPHA`), and reaching the backdrop through each other.
-    A figure colour over the key that is brighter than the key stays.
-    Untouched off a green key."""
+    Within `EDGE_SHADOW_RAMP_PX` of the cut, the soft edge is capped at a
+    `EDGE_SHADOW_RAMP_SIGMA` ramp of what remains, so the line keeps an
+    antialiased edge. A figure colour over the key that is brighter than the
+    key stays. Untouched off a green key."""
     key = green_key(px)
     if key is None:
         return alpha
@@ -141,7 +143,15 @@ def edge_shadow(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndar
               & (px.mean(axis=2) <= key.mean()))
     backdrop = alpha <= 0
     reaching = ndimage.binary_propagation(backdrop, eight, mask=backdrop | shadow)
-    return np.where(shadow & reaching, 0.0, alpha)
+    cut = shadow & reaching
+    if not cut.any():
+        return alpha
+    kept = np.where(cut, 0.0, alpha)
+    ramp = ndimage.gaussian_filter(
+        (kept >= 0.5).astype(float), delivery_style.EDGE_SHADOW_RAMP_SIGMA)
+    near = (ndimage.binary_dilation(cut, iterations=delivery_style.EDGE_SHADOW_RAMP_PX)
+            & (alpha > 0) & (alpha < 1))
+    return np.where(near, np.minimum(alpha, ramp), kept)
 
 
 def pocket_key(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:

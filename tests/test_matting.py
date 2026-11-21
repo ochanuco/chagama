@@ -274,8 +274,14 @@ class EdgeShadowTest(unittest.TestCase):
     def test_the_key_in_shadow_on_the_soft_edge_is_backdrop(self):
         px, alpha, known = shadow_scene()
         cut = matting.edge_shadow(px, alpha, known)
-        np.testing.assert_array_equal(cut[32, 49:52], 0.0)
+        self.assertLess(cut[32, 50:52].max(), 0.01)
         self.assertEqual(cut[32, 30], 1.0)
+
+    def test_the_cut_edge_ramps_off_instead_of_stopping_dead(self):
+        px, alpha, known = shadow_scene()
+        cut = matting.edge_shadow(px, alpha, known)
+        self.assertGreater(cut[32, 49], 0.05)
+        self.assertLess(cut[32, 49], cut[32, 48])
 
     def test_the_pixel_touching_the_solved_figure_keeps_its_alpha(self):
         px, alpha, known = shadow_scene()
