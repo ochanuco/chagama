@@ -627,10 +627,9 @@ def band_alphas(figure: np.ndarray, outlines=None, light: str | None = None,
     for a hand-cut rather than die-cut edge; 0 reproduces the smooth-ramp
     geometry. `light`, one of `delivery_style.STROKE_LIGHTS`' keys, shades
     the outermost band's width by direction; `STROKE_EVEN` (or None) keeps
-    it uniform. The innermost band also runs under the figure out to
-    `MATTING_TRIMAP_PX` inside its edge, so a soft matting alpha there --
-    including a fringe the threshold split off the figure -- blends into
-    the band, not the backdrop.
+    it uniform. The innermost band also runs under the figure's own edge
+    pixels, so a soft matting alpha there blends into the band, not the
+    backdrop.
     """
     height, width = figure.shape
     widths = _band_widths(height, width, outlines)
@@ -673,10 +672,8 @@ def band_alphas(figure: np.ndarray, outlines=None, light: str | None = None,
         inner = alpha >= 0.5
     if not alphas:
         return alphas
-    # Matting leaves partial alpha only this deep; deeper is translucency.
-    deep = ndimage.distance_transform_edt(figure) > delivery_style.MATTING_TRIMAP_PX
     first = np.where(figure, 1.0, alphas[0])
-    return ([np.where(deep, 0.0, first)]
+    return ([np.where(ndimage.binary_erosion(figure), 0.0, first)]
             + [np.where(figure, 0.0, alpha) for alpha in alphas[1:]])
 
 

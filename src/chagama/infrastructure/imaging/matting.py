@@ -123,37 +123,6 @@ def see_through(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndar
     return np.where(region, np.minimum(alpha, cap), alpha)
 
 
-def edge_shadow(px: np.ndarray, alpha: np.ndarray, known: np.ndarray) -> np.ndarray:
-    """`alpha` with the key in shadow on the soft edge cut: unknown-band
-    pixels holding at least `EDGE_SHADOW_MIN_KEY_SHARE` of the key and no
-    brighter than it, not touching the solved figure (alpha at least
-    `EDGE_SHADOW_CORE_ALPHA`), and reaching the backdrop through each other.
-    Within `EDGE_SHADOW_RAMP_PX` of the cut, the soft edge is capped at a
-    `EDGE_SHADOW_RAMP_SIGMA` ramp of what remains, so the line keeps an
-    antialiased edge. A figure colour over the key that is brighter than the
-    key stays. Untouched off a green key."""
-    key = green_key(px)
-    if key is None:
-        return alpha
-    eight = ndimage.generate_binary_structure(2, 2)
-    core = ndimage.binary_dilation(
-        alpha >= delivery_style.EDGE_SHADOW_CORE_ALPHA, eight)
-    shadow = ((known == UNKNOWN) & (alpha > 0) & ~core
-              & (key_share(px, key) >= delivery_style.EDGE_SHADOW_MIN_KEY_SHARE)
-              & (px.mean(axis=2) <= key.mean()))
-    backdrop = alpha <= 0
-    reaching = ndimage.binary_propagation(backdrop, eight, mask=backdrop | shadow)
-    cut = shadow & reaching
-    if not cut.any():
-        return alpha
-    kept = np.where(cut, 0.0, alpha)
-    ramp = ndimage.gaussian_filter(
-        (kept >= 0.5).astype(float), delivery_style.EDGE_SHADOW_RAMP_SIGMA)
-    near = (ndimage.binary_dilation(cut, iterations=delivery_style.EDGE_SHADOW_RAMP_PX)
-            & (alpha > 0) & (alpha < 1))
-    return np.where(near, np.minimum(alpha, ramp), kept)
-
-
 def pocket_key(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:
     """`alpha` capped in the pockets the figure encloses that the binary
     cut kept: there the key diluted through a dark layer (its share under
@@ -277,8 +246,8 @@ def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     alpha = tiled(predict, px.astype(np.uint8), known,
                   delivery_style.MATTING_TILE_PX,
                   delivery_style.MATTING_TILE_OVERLAP_PX)
-    alpha = edge_shadow(px, settle(alpha, known), known)
-    return _png(pocket_key(px, see_through(px, alpha, known)) * 255, "L")
+    return _png(pocket_key(px, see_through(px, settle(alpha, known), known))
+                * 255, "L")
 
 
 def clearer_png(data: bytes, alpha: bytes, gain: float) -> bytes:

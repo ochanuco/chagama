@@ -459,16 +459,6 @@ MATTING_TRIMAP_PX = 12
 # over a whole 2048-px picture does not fit the worker's GPU.
 MATTING_TILE_PX = 512
 MATTING_TILE_OVERLAP_PX = 64
-# The model draws a shadow on the key around the figure, and the matte reads
-# it as part figure: a soft-edge pixel with at least MIN_KEY_SHARE of the
-# key's green excess and no brighter than the key is backdrop, unless it
-# touches a pixel solved to at least CORE_ALPHA (a line's own antialiasing).
-# Within RAMP_PX of the cut the edge is a RAMP_SIGMA ramp of what remains:
-# the cut alone leaves a one-pixel staircase.
-EDGE_SHADOW_MIN_KEY_SHARE = 0.15
-EDGE_SHADOW_CORE_ALPHA = 0.9
-EDGE_SHADOW_RAMP_SIGMA = 0.6
-EDGE_SHADOW_RAMP_PX = 2
 # See-through clothing on a green key: a figure pixel whose green excess is
 # at least MIN_KEY_SHARE of the key's own is a non-green material over the
 # key, its alpha capped at 1 - that share and its colour unmixed from the
