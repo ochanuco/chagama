@@ -459,6 +459,11 @@ MATTING_TRIMAP_PX = 12
 # over a whole 2048-px picture does not fit the worker's GPU.
 MATTING_TILE_PX = 512
 MATTING_TILE_OVERLAP_PX = 64
+# A picture drawn on white is not keyed or matted: the matte model's soft
+# output is its alpha and its colour is the drawing itself, since the edge
+# the redraw paints against white is the edge the white band shows. White is
+# a corner patch no channel of which is below WHITE_BACKDROP_MIN.
+WHITE_BACKDROP_MIN = 240
 # On a green key the soft edge (CHROMA_BAND_PX either side of the cut
 # silhouette) is keyed, not matted: alpha is 1 - the key's share along its
 # chroma, less CHROMA_NOISE of grain. The darkness left after the nearest

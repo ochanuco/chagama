@@ -14,7 +14,7 @@ COUNT_TAG = "1girl, solo, "
 QUALITY = QUALITY_TAG + COUNT_TAG
 
 ARTIST_TAG = "(@oshiki hitoshi:1.3), (@yoshikawa hideaki:0.5), "
-BACKGROUND = "simple background, (green background:1.3), "
+BACKGROUND = "simple background, (white background:1.3), "
 STYLE = "(flat color:1.3), (sketch:1.3), (traditional media:1.2)"
 
 DIGIT_BAN = "(extra digits:1.5), bad anatomy, bad hands, "

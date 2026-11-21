@@ -188,6 +188,11 @@ def unmixed(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:
 _EIGHT = ndimage.generate_binary_structure(2, 2)
 
 
+def white_backdrop(px: np.ndarray) -> bool:
+    """Whether the raw backdrop is white (`WHITE_BACKDROP_MIN`)."""
+    return bool(delivery._corner_seed(px).min() >= delivery_style.WHITE_BACKDROP_MIN)
+
+
 def key_split(px: np.ndarray, key: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Each pixel's share of the key along the key's own chroma (1 on the
     key, 0 on a grey or a colour across it), and what is left once that
@@ -272,7 +277,10 @@ def figure_colour(px: np.ndarray, alpha: np.ndarray,
     """The figure's colour under `alpha`: estimated where alpha > 0 (unmixed
     from the key where it shows through) and despilled of the raw key on the
     soft edge, the raw pixel where alpha is 0. On a green key a soft pixel's
-    colour is what taking its key share out leaves."""
+    colour is what taking its key share out leaves; on white it is the raw
+    pixel everywhere."""
+    if white_backdrop(px):
+        return px.copy()
     colour = np.clip(foreground(px / 255.0, alpha), 0.0, 1.0) * 255.0
     solved = unmixed(px, alpha)
     colour = np.where(np.isnan(solved), colour, solved)
@@ -327,10 +335,12 @@ def known_regions(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
 
 def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     """The alpha (L PNG) of the figure in `data`, from the matte model's soft
-    output `matte`: keyed on its edge (`chroma_edge`) on a green key,
-    matted by `predict` otherwise."""
+    output `matte`: that output itself on a white backdrop, keyed on its
+    edge (`chroma_edge`) on a green key, matted by `predict` otherwise."""
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
+    if white_backdrop(px):
+        return _png(soft.astype(float), "L")
     key = green_key(px)
     if key is not None:
         figure = delivery.cut_figure(px, soft)

@@ -196,7 +196,7 @@ class CanvasResolutionTest(unittest.TestCase):
 
 
 class NoPlaceTagsTest(unittest.TestCase):
-    """Cut-out delivery needs an empty green background; a location tag
+    """Cut-out delivery needs an empty white background; a location tag
     invites furniture or a backdrop the matte then has to cut around."""
 
     LOCATION_WORDS = ("street", "outdoors", "movie theater", "theater lobby",

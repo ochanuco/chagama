@@ -1205,6 +1205,17 @@ class OutlinesTest(unittest.TestCase):
         np.testing.assert_array_equal(white[edge], 1.0)
         self.assertEqual(purple[figure].max(), 0.0)
 
+    def test_a_line_drawn_on_white_keeps_its_own_colour_at_its_soft_edge(self):
+        px = np.full((200, 200, 3), 254, dtype=np.uint8)
+        px[60:140, 60:140] = (60, 40, 70)
+        px[60:140, 140] = (20, 20, 20)
+        soft = np.zeros((200, 200), dtype=np.uint8)
+        soft[60:140, 60:140] = 255
+        soft[60:140, 140] = 150
+        picture = decode(transparent(png(px), png(soft), matted=True,
+                                     outlines=WHITE_PURPLE)[0])
+        np.testing.assert_array_equal(picture[100, 140], (20, 20, 20, 255))
+
     def test_the_light_extrudes_only_the_outermost_band(self):
         figure = self.square(400)
         even = band_alphas(figure, WHITE_PURPLE, light="even")
