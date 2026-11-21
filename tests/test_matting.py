@@ -303,6 +303,36 @@ class ChromaEdgeTest(unittest.TestCase):
         self.assertEqual(alpha[32, 80], 0)
 
 
+class WhiteBackdropTest(unittest.TestCase):
+    def scene(self):
+        px = np.full((64, 64, 3), 254.0)
+        px[16:48, 16:48] = (60.0, 40.0, 70.0)
+        px[16:48, 48] = (150.0, 140.0, 155.0)
+        soft = np.zeros((64, 64), dtype=np.uint8)
+        soft[16:48, 16:48] = 255
+        soft[16:48, 48] = 120
+        return px, soft
+
+    def test_the_matte_models_soft_output_is_the_alpha(self):
+        px, soft = self.scene()
+
+        def predict(rgb, known):
+            raise AssertionError("a white backdrop is not matted")
+
+        alpha = np.array(Image.open(io.BytesIO(matting.alpha_png(
+            rgb_png(px), rgb_png(soft), predict))))
+        np.testing.assert_array_equal(alpha, soft)
+
+    def test_the_colour_is_the_drawing_itself(self):
+        px, soft = self.scene()
+
+        def foreground(rgb, alpha):
+            raise AssertionError("a white backdrop needs no foreground estimate")
+
+        colour = matting.figure_colour(px, soft / 255.0, foreground)
+        np.testing.assert_array_equal(colour, px)
+
+
 class OwnAlphaTest(unittest.TestCase):
     def test_an_alpha_carrying_png_gives_its_alpha_at_its_own_size(self):
         pixels = np.zeros((8, 8, 4), dtype=np.uint8)

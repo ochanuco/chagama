@@ -32,9 +32,9 @@ the exact prompt can be inspected with `get_catalog_pose` on the MCP or
    tags set the face and line.
 2. **Deliver cuts and decorates the raw pick.** `deliver` cuts a matte,
    composites the backdrop and the outline bands
-   onto the Anima pick itself -- no redraw. The raw is drawn on a green key;
-   ViTMatte cuts it out, and the bands (`outlines`: a white band, then the
-   purple stroke) sit right outside it. It is the recipe default
+   onto the Anima pick itself -- no redraw. The raw is drawn on white; the
+   matte only places the bands (`outlines`: a white band, then the purple
+   stroke), and inside the white band the drawing is used as drawn. It is the recipe default
    (`yukari/delivery_style.py`): the WebUI button and an
    option-less `deliver_generation` both deliver this way.
 
@@ -235,7 +235,7 @@ derive_request        from a rated generation: same recipe, parameters and
                       raw render it came from. Semantic summary is required.
                       → human rates on chimera →
 redraw_generation     optional: the pick re-rendered larger (`hires`); a new
-                      picture on the green key.
+                      picture on white.
 deliver_generation    the pick, delivered: one ComfyUI graph that cuts a matte
                       and composites the backdrop and outline bands; recorded
                       as a request that refines the source, with its layers

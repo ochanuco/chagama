@@ -29,6 +29,7 @@ def current_cut() -> dict:
             "enclosed_key_min_shade": delivery_style.ENCLOSED_KEY_MIN_SHADE,
             "translucent_min_key_share": delivery_style.TRANSLUCENT_MIN_KEY_SHARE,
             "translucent_min_area": delivery_style.TRANSLUCENT_MIN_AREA,
+            "white_backdrop_min": delivery_style.WHITE_BACKDROP_MIN,
             "chroma_edge": {
                 "band_px": delivery_style.CHROMA_BAND_PX,
                 "noise": delivery_style.CHROMA_NOISE,

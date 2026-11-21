@@ -867,7 +867,7 @@ def clean_layers(data: bytes, matte: bytes, light: str | None = None,
     raw = px
     if matted:
         outline_drawn = np.zeros(figure.shape, dtype=bool)
-        coverage = soft / 255.0
+        coverage = _drawn_on_white(px, figure, soft / 255.0, outlines)
     else:
         outline_drawn = drawn_outline(px, figure, band, key, inner)
         local = local_backdrop(px, figure, band, region=window)
@@ -915,6 +915,19 @@ def clean_background(data: bytes, matte: bytes, light: str | None = None,
             layers.tag)
 
 
+def _drawn_on_white(px: np.ndarray, figure: np.ndarray, coverage: np.ndarray,
+                    outlines) -> np.ndarray:
+    """On a picture drawn on white, the drawing itself out to the innermost
+    band's edge: its edge pixels already hold the white they were drawn
+    against, so laying them over the band at the matte's soft alpha would
+    whiten the line twice. Elsewhere `coverage` unchanged."""
+    bands = _outlines(outlines)
+    if (not bands or _corner_seed(px).min() < delivery_style.WHITE_BACKDROP_MIN):
+        return coverage
+    [first] = band_alphas(figure, bands[:1])
+    return np.maximum(figure.astype(float), first)
+
+
 def _matted_figure(soft: np.ndarray, silhouette: bytes | None) -> np.ndarray:
     if silhouette is None:
         return soft >= 128
@@ -937,9 +950,10 @@ def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
     height, width = px.shape[:2]
     if matted:
-        return _transparent_over_bands(px, _matted_figure(soft, silhouette),
-                                       soft / 255.0, light, "-matted", outlines,
-                                       figure_colour)
+        figure = _matted_figure(soft, silhouette)
+        return _transparent_over_bands(
+            px, figure, _drawn_on_white(px, figure, soft / 255.0, outlines),
+            light, "-matted", outlines, figure_colour)
     band = int(max(height, width) * delivery_style.MATTE_EDGE_BAND_PCT / 100)
     soft = fill_unkeyed_holes(px.astype(float), soft)
     figure = refine_matte(

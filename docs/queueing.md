@@ -29,7 +29,7 @@ Options, defaults and ranges live here:
 | Kind | Payload | Does |
 |---|---|---|
 | `generate` | a request.json body | render the recipe with its parameters and patches |
-| `redraw` | `{generation_id, options}` | one pixel-changing `method` (`hires`) on a picture Generation; uploads one green-background picture |
+| `redraw` | `{generation_id, options}` | one pixel-changing `method` (`hires`) on a picture Generation; uploads one white-background picture |
 | `deliver` | `{generation_id, options}` | cut and decorate a picture Generation: backdrop, outline bands; never redraws |
 | `saturation` | `{generation_id, options}` | on a drawing: cut the figure out with no outline and compress its saturation, for a later `deliver` to outline; on a delivery: compress its figure and outline layers and recompose the picture |
 | `stage` | `{generation_id, options}` | set a delivery's figure and outline layers on a backdrop pattern, in a frame or in a photo, unblurred |
@@ -42,7 +42,7 @@ Options, defaults and ranges live here:
 | `reference_render` | `{reference_request_id, pose, seed?, applied, pose_follow?}` | queue one `generate` that draws the tags picked from a done `reference` on `yukari_persona`, the layers with no pose (`pose` is always `yukari_persona`); `pose_follow` is `off` (the tags only), `loose` (the default: the skeleton) or `firm` (the depth, smoothed of hems and folds, with the head and the chest left to the tags; the skeleton for a reference read before depth was kept); when the reference crops the head, either follow grows the frame past it so the head is drawn whole and drops `head out of frame` and `close-up`; no GPU |
 
 A `finalize`, `repair` or `masked_redraw` row is refused. They stack as
-separate requests in the workbench's order: `redraw` (green key),
+separate requests in the workbench's order: `redraw` (white background),
 `saturation` (on the drawing), `deliver` (transparent; with no `saturation`
 before it, it compresses the figure itself), `stage`, `trail`, `lighting`, `dof`,
 then `lens`. A cut `redraw` (`cut: true`, with `cutout` and `alpha`) and a
@@ -66,7 +66,7 @@ outlines. `photo` is the older one-step stage-and-blur.
 
 - `options` is required and names a `method`; any key the method does not
   take is an error. One request changes the picture once and uploads one
-  picture Generation (green background, no delivery) that refines the source,
+  picture Generation (white background, no delivery) that refines the source,
   saved under `rdw-<generation id>`. Its `parameters` are `kind: "redraw"`,
   `method`, `base_generation` and the resolved options; `seed` is the sampler seed.
 - `hires` takes `hires` (the long side in px of the area a 1024x1640 canvas
