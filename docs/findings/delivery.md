@@ -51,7 +51,11 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
 - Matte: RMBG BiRefNet-general, retraced (`soft_clamped` + `shadow_cut` +
   `enclosed_cut`), then ViTMatte (`YukariMatting`) on a ±12 px trimap of it,
   in 512 px tiles; foreground colour by pymatting's estimate, despilled on
-  the soft edge only. The ViTMatte alpha is the saved `alpha` asset. Every
+  the soft edge only. The shadow the model draws on the key around the
+  figure, which ViTMatte keeps as part figure (a grey rim after the cut), is
+  cut to backdrop on the soft edge (`edge_shadow`); the pixel touching the
+  solved figure keeps its alpha as the line's antialiasing. The ViTMatte
+  alpha is the saved `alpha` asset. Every
   pose renders on green (grey sat too close to the pale skin at the edge).
   A key pocket the figure encloses is cut where it is the key, its shade
   (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a

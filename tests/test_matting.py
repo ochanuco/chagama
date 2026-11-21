@@ -253,6 +253,52 @@ class PocketKeyTest(unittest.TestCase):
         np.testing.assert_array_equal(matting.pocket_key(px, alpha), alpha)
 
 
+SHADOW_KEY = np.array((98.0, 214.0, 105.0))
+
+
+def shadow_scene():
+    """A black-lined figure on the key with a drawn shadow, the key at 45%,
+    four pixels wide right of it; the matte read the shadow as half figure."""
+    px = np.zeros((64, 64, 3))
+    px[...] = SHADOW_KEY
+    px[16:48, 16:48] = (20.0, 20.0, 20.0)
+    px[16:48, 48:52] = 0.45 * SHADOW_KEY
+    alpha = np.zeros((64, 64))
+    alpha[16:48, 16:48] = 1.0
+    alpha[16:48, 48:52] = 0.5
+    known = matting.trimap(figure_mask(), 4)
+    return px, alpha, known
+
+
+class EdgeShadowTest(unittest.TestCase):
+    def test_the_key_in_shadow_on_the_soft_edge_is_backdrop(self):
+        px, alpha, known = shadow_scene()
+        cut = matting.edge_shadow(px, alpha, known)
+        np.testing.assert_array_equal(cut[32, 49:52], 0.0)
+        self.assertEqual(cut[32, 30], 1.0)
+
+    def test_the_pixel_touching_the_solved_figure_keeps_its_alpha(self):
+        px, alpha, known = shadow_scene()
+        self.assertEqual(matting.edge_shadow(px, alpha, known)[32, 48], 0.5)
+
+    def test_a_pale_strand_over_the_key_keeps_its_alpha(self):
+        px, alpha, known = shadow_scene()
+        px[16:48, 48:52] = 0.5 * np.array((220.0, 210.0, 240.0)) + 0.5 * SHADOW_KEY
+        np.testing.assert_array_equal(matting.edge_shadow(px, alpha, known), alpha)
+
+    def test_a_shade_the_backdrop_does_not_reach_keeps_its_alpha(self):
+        px, alpha, known = shadow_scene()
+        px[16:48, 48:52] = 0.5 * np.array((220.0, 210.0, 240.0)) + 0.5 * SHADOW_KEY
+        px[20:44, 49:51] = 0.45 * SHADOW_KEY
+        np.testing.assert_array_equal(matting.edge_shadow(px, alpha, known), alpha)
+
+    def test_off_a_green_key_the_alpha_is_untouched(self):
+        px, alpha, known = shadow_scene()
+        px[px[..., 1] == SHADOW_KEY[1]] = (200.0, 200.0, 200.0)
+        px[16:48, 48:52] = (90.0, 90.0, 90.0)
+        np.testing.assert_array_equal(matting.edge_shadow(px, alpha, known), alpha)
+
+
 class OwnAlphaTest(unittest.TestCase):
     def test_an_alpha_carrying_png_gives_its_alpha_at_its_own_size(self):
         pixels = np.zeros((8, 8, 4), dtype=np.uint8)
