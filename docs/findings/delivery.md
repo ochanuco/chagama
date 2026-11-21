@@ -49,10 +49,10 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   way it is extruded. `stroke_light` `even` is a uniform band; no bands
   (`outlines: []`) is no rim and no shadow. `[all]` (a6 §Hand-cut sticker rim)
 - Matte: RMBG BiRefNet-general, retraced (`soft_clamped` + `shadow_cut` +
-  `enclosed_cut`), then ViTMatte (`YukariMatting`) on a ±12 px trimap of it,
-  in 512 px tiles; foreground colour by pymatting's estimate, despilled on
-  the soft edge only. The ViTMatte alpha is the saved `alpha` asset. Every
-  pose renders on green (grey sat too close to the pale skin at the edge).
+  `enclosed_cut`). On green the ±12 px edge is keyed (`chroma_edge`), not
+  ViTMatte'd: a hires rim is darkened key, no colour tells it from ink, and
+  matting it whitened lines. Off green, ViTMatte. The alpha is the saved
+  `alpha` asset. Renders are on green (grey sat too close to pale skin).
   A key pocket the figure encloses is cut where it is the key, its shade
   (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a
   dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE`), and held known backdrop in the

@@ -185,17 +185,105 @@ def unmixed(px: np.ndarray, alpha: np.ndarray) -> np.ndarray:
     return np.where(region[..., None], colour, solved)
 
 
+_EIGHT = ndimage.generate_binary_structure(2, 2)
+
+
+def key_split(px: np.ndarray, key: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Each pixel's share of the key along the key's own chroma (1 on the
+    key, 0 on a grey or a colour across it), and what is left once that
+    share of the key is taken out (premultiplied)."""
+    direction = key - key.mean()
+    direction = direction / max(float(np.linalg.norm(direction)), 1e-6)
+    along = ((px - px.mean(axis=2, keepdims=True)) * direction).sum(axis=2)
+    share = np.clip(along / max(float((key - key.mean()) @ direction), 1e-6), 0.0, 1.0)
+    return share, np.clip(px - share[..., None] * key, 0.0, 255.0)
+
+
+def free_lines(px: np.ndarray, key: np.ndarray) -> np.ndarray:
+    """Thin dark marks drawn on the open key: the key darkened, with the
+    clean key `CHROMA_LINE_SIDE_PX` across the mark on both sides. A rim
+    with the figure on one side is not one."""
+    shade = (px * key).sum(axis=2) / max(float((key * key).sum()), 1.0)
+    clamped = np.clip(shade, 0.0, 1.0)
+    residual = np.abs(px - clamped[..., None] * key).max(axis=2)
+    keyish = ((residual <= delivery_style.MATTE_EDGE_TOLERANCE)
+              & (shade >= delivery_style.CHROMA_DARK_LINE))
+    v = ndimage.gaussian_filter(1 - clamped, 1.0)
+    vyy = np.gradient(np.gradient(v, axis=0), axis=0)
+    vxx = np.gradient(np.gradient(v, axis=1), axis=1)
+    vxy = np.gradient(np.gradient(v, axis=0), axis=1)
+    theta = 0.5 * np.arctan2(2 * vxy, vxx - vyy)
+    across = (vxx + vyy) / 2 - np.sqrt(((vxx - vyy) / 2) ** 2 + vxy ** 2)
+    nx, ny = -np.sin(theta), np.cos(theta)
+    clean = ((residual <= delivery_style.MATTE_EDGE_TOLERANCE)
+             & (shade >= delivery_style.CHROMA_LINE_CLEAN_SHADE)).astype(float)
+    yy, xx = np.mgrid[0:shade.shape[0], 0:shade.shape[1]].astype(float)
+    both = np.ones(shade.shape, dtype=bool)
+    for sign in (1, -1):
+        for step in delivery_style.CHROMA_LINE_SIDE_PX:
+            both &= ndimage.map_coordinates(
+                clean, [yy + sign * step * ny, xx + sign * step * nx],
+                order=1, mode="nearest") >= 0.99
+    line = (keyish & (shade <= delivery_style.CHROMA_LINE_MAX_SHADE)
+            & (across < 0) & both)
+    line = ndimage.binary_dilation(line, _EIGHT) & keyish & (shade <= 0.95)
+    labels, count = ndimage.label(line, _EIGHT)
+    if not count:
+        return line
+    keep = [index + 1 for index, box in enumerate(ndimage.find_objects(labels))
+            if max(box[0].stop - box[0].start, box[1].stop - box[1].start)
+            >= delivery_style.CHROMA_LINE_MIN_LENGTH]
+    return np.isin(labels, keep)
+
+
+def chroma_edge(px: np.ndarray, figure: np.ndarray, key: np.ndarray) -> np.ndarray:
+    """`figure` with its soft edge keyed against the green `key` (see
+    `delivery_style.CHROMA_BAND_PX`): no matting model and no pixel forced
+    to 0, so the key between a line and its rim fades instead of holing."""
+    share, rest = key_split(px, key)
+    total = 1.0 - share
+    shade = (px * key).sum(axis=2) / max(float((key * key).sum()), 1.0)
+    reference = figure & (share <= 0.02) & (rest.max(axis=2) >= delivery_style.CHROMA_REF_MIN)
+    if reference.any():
+        index = ndimage.distance_transform_edt(
+            ~reference, return_distances=False, return_indices=True)
+        nearest = px[index[0], index[1]]
+        coloured = np.clip((rest * nearest).sum(axis=2)
+                           / np.maximum((nearest * nearest).sum(axis=2), 1.0), 0.0, total)
+        dark = total - coloured
+        core = (coloured >= 0.5) | ((shade <= delivery_style.CHROMA_DARK_LINE) & (share <= 0.5))
+        near, far = delivery_style.CHROMA_INK_PX
+        ink = np.clip((far - ndimage.distance_transform_edt(~core)) / (far - near), 0.0, 1.0)
+        ink = np.maximum(ink, ndimage.binary_dilation(
+            free_lines(px, key), _EIGHT, iterations=2))
+        cover = coloured + ink * dark
+    else:
+        cover = total
+    noise = delivery_style.CHROMA_NOISE
+    cover = np.clip((cover - noise) / (1.0 - noise), 0.0, 1.0)
+    width = delivery_style.CHROMA_BAND_PX
+    band = (ndimage.binary_dilation(figure, iterations=width)
+            & ~ndimage.binary_erosion(figure, iterations=width))
+    return np.where(band, cover, figure.astype(float))
+
+
 def figure_colour(px: np.ndarray, alpha: np.ndarray,
                   foreground: Foreground) -> np.ndarray:
     """The figure's colour under `alpha`: estimated where alpha > 0 (unmixed
     from the key where it shows through) and despilled of the raw key on the
-    soft edge, the raw pixel where alpha is 0."""
+    soft edge, the raw pixel where alpha is 0. On a green key a soft pixel's
+    colour is what taking its key share out leaves."""
     colour = np.clip(foreground(px / 255.0, alpha), 0.0, 1.0) * 255.0
     solved = unmixed(px, alpha)
     colour = np.where(np.isnan(solved), colour, solved)
     edge = (alpha > 0) & ~ndimage.binary_erosion(alpha >= 1.0)
     colour = delivery.despill(colour, ndimage.binary_dilation(edge, iterations=2),
                               delivery._corner_seed(px))
+    key = green_key(px)
+    if key is not None:
+        _, rest = key_split(px, key)
+        keyed = np.clip(rest / np.maximum(alpha, 0.05)[..., None], 0.0, 255.0)
+        colour = np.where(((alpha > 0) & (alpha < 1))[..., None], keyed, colour)
     return np.where((alpha > 0)[..., None], colour, px)
 
 
@@ -239,9 +327,15 @@ def known_regions(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
 
 def alpha_png(data: bytes, matte: bytes, predict: Predict) -> bytes:
     """The alpha (L PNG) of the figure in `data`, from the matte model's soft
-    output `matte`."""
+    output `matte`: keyed on its edge (`chroma_edge`) on a green key,
+    matted by `predict` otherwise."""
     px = np.array(Image.open(io.BytesIO(data)).convert("RGB")).astype(float)
     soft = np.array(Image.open(io.BytesIO(matte)).convert("L"))
+    key = green_key(px)
+    if key is not None:
+        figure = delivery.cut_figure(px, soft)
+        known = trimap(figure, delivery_style.MATTING_TRIMAP_PX)
+        return _png(see_through(px, chroma_edge(px, figure, key), known) * 255, "L")
     known = known_regions(px, soft)
     alpha = tiled(predict, px.astype(np.uint8), known,
                   delivery_style.MATTING_TILE_PX,
