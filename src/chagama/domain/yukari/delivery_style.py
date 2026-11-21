@@ -459,11 +459,23 @@ MATTING_TRIMAP_PX = 12
 # over a whole 2048-px picture does not fit the worker's GPU.
 MATTING_TILE_PX = 512
 MATTING_TILE_OVERLAP_PX = 64
-# A picture drawn on white is not keyed or matted: the matte model's soft
-# output is its alpha and its colour is the drawing itself, since the edge
-# the redraw paints against white is the edge the white band shows. White is
-# a corner patch no channel of which is below WHITE_BACKDROP_MIN.
+# White is a corner patch with no channel below WHITE_BACKDROP_MIN; such a
+# picture is not keyed or matted. It is opaque but for paper (white within
+# PAPER_DEFICIT that reaches the backdrop, or a pocket the matte calls
+# backdrop anywhere), neutral faint marks beside it the matte leaves out,
+# and the antialias up to the first ink ridge (RAMP_STEPS px, each RAMP_RISE
+# deeper), which takes alpha from that ink. White against white, and marks
+# beyond FAR_PX of the filled silhouette, follow the matte.
 WHITE_BACKDROP_MIN = 240
+WHITE_PAPER_DEFICIT = 8
+WHITE_PAPER_MAX_MATTE = 0.9
+WHITE_PAPER_FREE_MATTE = 0.3
+WHITE_FAINT_DEFICIT = 64
+WHITE_FAINT_CHROMA = 10
+WHITE_NEAR_INK_PX = 3
+WHITE_RAMP_STEPS = 3
+WHITE_RAMP_RISE = 6
+WHITE_FAR_PX = 6
 # On a green key the soft edge (CHROMA_BAND_PX either side of the cut
 # silhouette) is keyed, not matted: alpha is 1 - the key's share along its
 # chroma, less CHROMA_NOISE of grain. The darkness left after the nearest
