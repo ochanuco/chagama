@@ -51,17 +51,14 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
 - Matte: RMBG BiRefNet-general, retraced (`soft_clamped` + `shadow_cut` +
   `enclosed_cut`), then ViTMatte (`YukariMatting`) on a ±12 px trimap of it,
   in 512 px tiles; foreground colour by pymatting's estimate, despilled on
-  the soft edge only. The shadow the model draws on the key around the
-  figure, which ViTMatte keeps as part figure (a grey rim after the cut), is
-  cut to backdrop on the soft edge (`edge_shadow`); the pixel touching the
-  solved figure keeps its alpha as the line's antialiasing. The ViTMatte
-  alpha is the saved `alpha` asset. Every
-  pose renders on green (grey sat too close to the pale skin at the edge).
+  the soft edge only. The key's drawn shadow on the soft edge, a grey rim if
+  kept, is backdrop (`edge_shadow`) except next to the solved figure. The
+  ViTMatte alpha is the saved `alpha` asset. Every pose renders on green
+  (grey sat too close to the pale skin at the edge).
   A key pocket the figure encloses is cut where it is the key, its shade
   (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a
   dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE`), and held known backdrop in the
-  trimap, so a narrow pocket is not handed back to ViTMatte as
-  figure. A pocket the cut kept whole is not left opaque either: its
+  trimap, so a narrow pocket is not handed back to ViTMatte as figure. A pocket the cut kept whole is not left opaque either: its
   diluted share caps the solved alpha at 1 − share / `POCKET_KEY_FULL_SHARE`
   (interior components only), so a weaker web fades, not a solid wedge.
   See-through clothing over the
@@ -102,7 +99,6 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
   figure; per-render tolerance, not a new default. `[all]` (a4 §`deliver.py --enclosed-tolerance`)
 - Seat layered delivery: backdrop → seat → frame → figure, re-running
   `clean_background` with the seat pasted into the backdrop. `[Anima]`
-
 - The green key is read from the top-left 8x8 patch only; covered by steam
   or figure, it is None and `see_through` stops too. Free steam is cut. `[Anima]`
 
