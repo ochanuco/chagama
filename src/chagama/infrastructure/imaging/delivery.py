@@ -867,7 +867,7 @@ def clean_layers(data: bytes, matte: bytes, light: str | None = None,
     raw = px
     if matted:
         outline_drawn = np.zeros(figure.shape, dtype=bool)
-        coverage = _drawn_on_white(px, figure, soft / 255.0, outlines)
+        px, coverage = _drawn_on_white(px, figure, soft / 255.0, outlines)
     else:
         outline_drawn = drawn_outline(px, figure, band, key, inner)
         local = local_backdrop(px, figure, band, region=window)
@@ -916,16 +916,18 @@ def clean_background(data: bytes, matte: bytes, light: str | None = None,
 
 
 def _drawn_on_white(px: np.ndarray, figure: np.ndarray, coverage: np.ndarray,
-                    outlines) -> np.ndarray:
+                    outlines) -> tuple[np.ndarray, np.ndarray]:
     """On a picture drawn on white, the drawing itself out to the innermost
-    band's edge: its edge pixels already hold the white they were drawn
-    against, so laying them over the band at the matte's soft alpha would
-    whiten the line twice. Elsewhere `coverage` unchanged."""
+    band's edge, as (colour, coverage): the figure's colour under `coverage`
+    is laid back on white and shown opaque there, so a soft edge is neither
+    whitened twice over the band nor left as unmixed ink. Elsewhere both
+    unchanged."""
     bands = _outlines(outlines)
     if (not bands or _corner_seed(px).min() < delivery_style.WHITE_BACKDROP_MIN):
-        return coverage
+        return px, coverage
     [first] = band_alphas(figure, bands[:1])
-    return np.maximum(figure.astype(float), first)
+    on_white = coverage[..., None] * px + (1.0 - coverage[..., None]) * 255.0
+    return on_white, np.maximum(figure.astype(float), first)
 
 
 def _matted_figure(soft: np.ndarray, silhouette: bytes | None) -> np.ndarray:
@@ -951,9 +953,10 @@ def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
     height, width = px.shape[:2]
     if matted:
         figure = _matted_figure(soft, silhouette)
+        drawn, coverage = _drawn_on_white(
+            px.astype(float), figure, soft / 255.0, outlines)
         return _transparent_over_bands(
-            px, figure, _drawn_on_white(px, figure, soft / 255.0, outlines),
-            light, "-matted", outlines, figure_colour)
+            drawn, figure, coverage, light, "-matted", outlines, figure_colour)
     band = int(max(height, width) * delivery_style.MATTE_EDGE_BAND_PCT / 100)
     soft = fill_unkeyed_holes(px.astype(float), soft)
     figure = refine_matte(
