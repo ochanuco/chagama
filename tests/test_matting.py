@@ -253,6 +253,56 @@ class PocketKeyTest(unittest.TestCase):
         np.testing.assert_array_equal(matting.pocket_key(px, alpha), alpha)
 
 
+GREEN = np.array((98.0, 214.0, 105.0))
+TIGHTS = np.array((60.0, 40.0, 70.0))
+
+
+def keyed_scene():
+    """A dark purple figure with a black line on the green key; right of it
+    a rim of the key in shade fades out over eight pixels."""
+    px = np.zeros((64, 96, 3))
+    px[...] = GREEN
+    px[8:56, 8:40] = TIGHTS
+    px[8:56, 40:42] = (5.0, 5.0, 5.0)
+    for step, column in enumerate(range(42, 50)):
+        px[8:56, column] = (0.45 + 0.06 * step) * GREEN
+    figure = np.zeros((64, 96), dtype=bool)
+    figure[8:56, 8:46] = True
+    return px, figure
+
+
+class ChromaEdgeTest(unittest.TestCase):
+    def test_the_line_stays_and_the_rim_beyond_it_fades(self):
+        px, figure = keyed_scene()
+        alpha = matting.chroma_edge(px, figure, GREEN)
+        np.testing.assert_allclose(alpha[32, 40:42], 1.0)
+        self.assertEqual(alpha[32, 20], 1.0)
+        self.assertLess(alpha[32, 46:50].max(), 0.05)
+        self.assertEqual(alpha[32, 70], 0.0)
+
+    def test_no_edge_pixel_next_to_the_figure_is_forced_to_zero(self):
+        px, figure = keyed_scene()
+        alpha = matting.chroma_edge(px, figure, GREEN)
+        self.assertGreater(alpha[32, 42], 0.3)
+
+    def test_a_pale_strand_over_the_key_keeps_part_coverage(self):
+        px, figure = keyed_scene()
+        px[30:33, 42:60] = 0.5 * np.array((220.0, 210.0, 240.0)) + 0.5 * GREEN
+        alpha = matting.chroma_edge(px, figure, GREEN)
+        self.assertGreater(alpha[31, 50], 0.3)
+
+    def test_alpha_png_keys_a_green_picture_without_the_matting_model(self):
+        px, figure = keyed_scene()
+
+        def predict(rgb, known):
+            raise AssertionError("a green key is keyed, not matted")
+
+        alpha = np.array(Image.open(io.BytesIO(matting.alpha_png(
+            rgb_png(px), rgb_png(figure.astype(np.uint8) * 255), predict))))
+        self.assertEqual(alpha[32, 20], 255)
+        self.assertEqual(alpha[32, 80], 0)
+
+
 class OwnAlphaTest(unittest.TestCase):
     def test_an_alpha_carrying_png_gives_its_alpha_at_its_own_size(self):
         pixels = np.zeros((8, 8, 4), dtype=np.uint8)

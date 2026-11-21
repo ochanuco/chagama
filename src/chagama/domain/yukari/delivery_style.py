@@ -459,6 +459,22 @@ MATTING_TRIMAP_PX = 12
 # over a whole 2048-px picture does not fit the worker's GPU.
 MATTING_TILE_PX = 512
 MATTING_TILE_OVERLAP_PX = 64
+# On a green key the soft edge (CHROMA_BAND_PX either side of the cut
+# silhouette) is keyed, not matted: alpha is 1 - the key's share along its
+# chroma, less CHROMA_NOISE of grain. The darkness left after the nearest
+# figure colour (at least REF_MIN bright) is ink within INK_PX of the line
+# core and the key in shade past it, so a redraw's rim fades while its lines
+# stay; a thin dark mark with the clean key LINE_SIDE_PX away on both sides
+# is ink anywhere.
+CHROMA_BAND_PX = 12
+CHROMA_NOISE = 0.07
+CHROMA_REF_MIN = 40.0
+CHROMA_DARK_LINE = 0.3
+CHROMA_INK_PX = (1.5, 3.0)
+CHROMA_LINE_SIDE_PX = (4, 5)
+CHROMA_LINE_CLEAN_SHADE = 0.9
+CHROMA_LINE_MAX_SHADE = 0.85
+CHROMA_LINE_MIN_LENGTH = 6
 # See-through clothing on a green key: a figure pixel whose green excess is
 # at least MIN_KEY_SHARE of the key's own is a non-green material over the
 # key, its alpha capped at 1 - that share and its colour unmixed from the
