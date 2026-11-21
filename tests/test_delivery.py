@@ -730,7 +730,8 @@ class DeliveryTest(unittest.TestCase):
                 self.assertEqual(purple[100, 150], 0.0)
         [purple] = band_alphas(figure)
         np.testing.assert_array_equal(purple[edge], 1.0)
-        self.assertEqual(purple[ndimage.binary_erosion(figure)].max(), 0.0)
+        deep = ndimage.distance_transform_edt(figure) > delivery_style.MATTING_TRIMAP_PX
+        self.assertEqual(purple[deep].max(), 0.0)
 
     def test_band_alphas_without_outlines_is_empty(self):
         figure = np.zeros((200, 200), dtype=bool)
@@ -1204,6 +1205,21 @@ class OutlinesTest(unittest.TestCase):
         white, purple = band_alphas(figure, WHITE_PURPLE)
         np.testing.assert_array_equal(white[edge], 1.0)
         self.assertEqual(purple[figure].max(), 0.0)
+
+    def test_the_innermost_band_runs_under_a_fringe_split_off_the_figure(self):
+        # A matte whose edge alpha hovers at the threshold splits a strip
+        # off the figure; the strip's middle row is "interior" to the mask.
+        figure = self.square()
+        figure[140:150, 60:140] = False
+        figure[142:145, 60:140] = True
+        white, _ = band_alphas(figure, WHITE_PURPLE)
+        np.testing.assert_array_equal(white[143, 70:130], 1.0)
+
+    def test_the_innermost_band_stays_out_of_the_figure_past_the_trimap(self):
+        figure = self.square()
+        depth = ndimage.distance_transform_edt(figure)
+        white, _ = band_alphas(figure, WHITE_PURPLE)
+        self.assertEqual(white[depth > delivery_style.MATTING_TRIMAP_PX].max(), 0.0)
 
     def test_the_light_extrudes_only_the_outermost_band(self):
         figure = self.square(400)
