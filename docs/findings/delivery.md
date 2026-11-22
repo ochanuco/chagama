@@ -51,8 +51,9 @@ colours in `domain/recipes.py`, all fingerprinted by `scripts/delivery_check.py`
 - Renders are on white: on green, hires's rim is darkened key no cut tells
   from ink (cutting it whitened lines). On white the drawing is used as
   drawn out to the white band's edge; BiRefNet-general's matte only places
-  the bands; with no band the alpha is the drawing's own (`drawn_alpha`),
-  not the matte's soft edge (paper white, half-clear pale hair). Older green pictures are keyed on the ±12 px edge (`chroma_edge`).
+  the bands. A transparent figure with no bands still wears
+  `WHITE_LAYER_BAND`: paper and drawn white share a colour, so no cut finds
+  that edge. Older green pictures are keyed on the ±12 px edge (`chroma_edge`).
   A key pocket the figure encloses is cut where it is the key, its shade
   (down to `ENCLOSED_KEY_MIN_SHADE`), or the key seen diluted through a
   dark layer (excess ≤ `ENCLOSED_KEY_DILUTED_RATIO` of its shade, ≥ `ENCLOSED_KEY_MIN_DILUTED_SHARE`), and held known backdrop in the

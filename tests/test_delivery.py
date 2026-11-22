@@ -1217,6 +1217,20 @@ class OutlinesTest(unittest.TestCase):
         np.testing.assert_allclose(picture[100, 140], (114, 114, 114, 255), atol=2)
         np.testing.assert_array_equal(picture[100, 100], (60, 40, 70, 255))
 
+    def test_a_figure_drawn_on_white_keeps_a_white_band_with_no_outlines(self):
+        px = np.full((1000, 1000, 3), 254, dtype=np.uint8)
+        px[300:700, 300:700] = (60, 40, 70)
+        soft = np.zeros((1000, 1000), dtype=np.uint8)
+        soft[300:700, 300:700] = 255
+        picture = decode(transparent(png(px), png(soft), matted=True, outlines=[])[0])
+        np.testing.assert_array_equal(picture[500, 701], (255, 255, 255, 255))
+        self.assertEqual(picture[500, 720, 3], 0)
+        keyed = px.copy()
+        keyed[:] = (0, 200, 0)
+        keyed[300:700, 300:700] = (60, 40, 70)
+        bare = decode(transparent(png(keyed), png(soft), matted=True, outlines=[])[0])
+        self.assertEqual(bare[500, 701, 3], 0)
+
     def test_the_light_extrudes_only_the_outermost_band(self):
         figure = self.square(400)
         even = band_alphas(figure, WHITE_PURPLE, light="even")
