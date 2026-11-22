@@ -84,6 +84,62 @@ class AdapterTest(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         sleep.assert_called_once_with(2)
 
+    @staticmethod
+    def _overloaded(retry_after="30"):
+        return urllib.error.HTTPError(
+            "https://example.invalid", 503, "Service Unavailable",
+            {"Retry-After": retry_after},
+            io.BytesIO(b'{"error": {"code": "d1_overloaded"}}'))
+
+    @staticmethod
+    def _json_response(body=b'{"ok": true}'):
+        response = MagicMock()
+        response.read.return_value = body
+        response.status = 200
+        response.headers = {"Content-Type": "application/json"}
+        response.__enter__.return_value = response
+        return response
+
+    def test_chimera_waits_out_d1_overload_beyond_the_attempt_budget(self):
+        client = ChimeraClient(Path("."), base_url="https://example.invalid")
+        client._credentials = {}
+        side = [self._overloaded() for _ in range(4)] + [self._json_response()]
+        with patch("urllib.request.urlopen", side_effect=side) as urlopen, \
+                patch("time.sleep") as sleep:
+            self.assertEqual(client.request("GET", "/test"), {"ok": True})
+        self.assertEqual(urlopen.call_count, 5)
+        self.assertEqual(sleep.call_args_list, [call(30.0)] * 4)
+
+    def test_chimera_gives_up_on_d1_overload_after_the_budget(self):
+        client = ChimeraClient(Path("."), base_url="https://example.invalid")
+        client._credentials = {}
+        side = [self._overloaded("60") for _ in range(10)]
+        with patch("urllib.request.urlopen", side_effect=side), \
+                patch("time.sleep") as sleep, self.assertRaises(SystemExit):
+            client.request("PUT", "/test", {"a": 1})
+        waited = sum(c.args[0] for c in sleep.call_args_list)
+        self.assertLessEqual(waited, 180 + 2 + 4)
+
+    def test_chimera_does_not_wait_out_overload_for_a_non_idempotent_post(self):
+        client = ChimeraClient(Path("."), base_url="https://example.invalid")
+        client._credentials = {}
+        with patch("urllib.request.urlopen", side_effect=[self._overloaded()]) as urlopen, \
+                patch("time.sleep") as sleep, self.assertRaises(SystemExit):
+            client.request("POST", "/api/v1/requests/claim", {"worker_id": "w"})
+        self.assertEqual(urlopen.call_count, 1)
+        sleep.assert_not_called()
+
+    def test_chimera_image_fetch_waits_out_d1_overload(self):
+        client = ChimeraClient(Path("."), base_url="https://example.invalid")
+        client._credentials = {}
+        image = MagicMock()
+        image.read.return_value = b"png"
+        image.__enter__.return_value = image
+        with patch("urllib.request.urlopen", side_effect=[self._overloaded(), image]), \
+                patch("time.sleep") as sleep:
+            self.assertEqual(client.fetch_generation_image("g1"), b"png")
+        sleep.assert_called_once_with(30.0)
+
     def test_chimera_request_returns_none_on_204(self):
         client = ChimeraClient(Path("."), base_url="https://example.invalid")
         client._credentials = {}

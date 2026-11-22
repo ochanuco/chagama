@@ -16,6 +16,24 @@ from ..locations import config_dir
 
 USER_AGENT = "chagama-generate/1.0 (+local)"
 OP_ITEM = "yml6r5qgx3zt57pryokgi3xdqy"
+# chimera answers 503 d1_overloaded while its D1 is unavailable, which lasts a minute or two.
+OVERLOAD_BUDGET_SECONDS = 180
+
+
+def overload_wait(error: urllib.error.HTTPError, detail: bytes) -> float | None:
+    """Seconds chimera asked to wait when its database was briefly unavailable."""
+    if error.code != 503:
+        return None
+    try:
+        code = (json.loads(detail).get("error") or {}).get("code")
+    except (ValueError, AttributeError):
+        return None
+    if code != "d1_overloaded":
+        return None
+    try:
+        return max(1.0, float(error.headers.get("Retry-After") or 30))
+    except ValueError:
+        return 30.0
 
 
 class ChimeraClient:
@@ -86,8 +104,11 @@ class ChimeraClient:
             headers["Content-Type"] = "application/json"
         else:
             body = None
-        attempts = 3 if self._retryable(method, payload, multipart) else 1
-        for attempt in range(attempts):
+        retryable = self._retryable(method, payload, multipart)
+        attempts = 3 if retryable else 1
+        overload_waited = 0.0
+        attempt = 0
+        while attempt < attempts:
             request = urllib.request.Request(
                 self.base_url + path, data=body, headers=headers, method=method)
             try:
@@ -106,10 +127,16 @@ class ChimeraClient:
                     raise SystemExit(
                         f"{method} {path}: HTTP {error.code} {detail!r}")
                 last = f"HTTP {error.code} {detail!r}"
+                wait = overload_wait(error, detail) if retryable else None
+                if wait is not None and overload_waited + wait <= OVERLOAD_BUDGET_SECONDS:
+                    time.sleep(wait)
+                    overload_waited += wait
+                    continue
             except urllib.error.URLError as error:
                 last = str(error)
-            if attempt + 1 < attempts:
-                time.sleep(2 ** (attempt + 1))
+            attempt += 1
+            if attempt < attempts:
+                time.sleep(2 ** attempt)
         raise SystemExit(f"{method} {path}: giving up after retries ({last})")
 
     def fetch_generation_image(self, generation_id: str) -> bytes:
@@ -118,13 +145,26 @@ class ChimeraClient:
     def fetch_generation_preview(self, generation_id: str) -> bytes:
         return self._fetch_generation_bytes(generation_id, "preview")
 
+    def _read_waiting_out_overload(self, url: str) -> bytes:
+        """GET `url`, waiting while chimera's database is briefly unavailable."""
+        waited = 0.0
+        while True:
+            request = urllib.request.Request(
+                url, headers={**self.credentials(), "User-Agent": USER_AGENT})
+            try:
+                with urllib.request.urlopen(request, timeout=120) as response:
+                    return response.read()
+            except urllib.error.HTTPError as error:
+                detail = error.read()[:300]
+                wait = overload_wait(error, detail)
+                if wait is None or waited + wait > OVERLOAD_BUDGET_SECONDS:
+                    raise
+                time.sleep(wait)
+                waited += wait
+
     def _fetch_generation_bytes(self, generation_id: str, kind: str) -> bytes:
-        request = urllib.request.Request(
-            f"{self.base_url}/g/{generation_id}/{kind}",
-            headers={**self.credentials(), "User-Agent": USER_AGENT},
-        )
-        with urllib.request.urlopen(request, timeout=120) as response:
-            return response.read()
+        return self._read_waiting_out_overload(
+            f"{self.base_url}/g/{generation_id}/{kind}")
 
     def _reference_image_request(self, request_id: str, method: str
                                  ) -> urllib.request.Request:
@@ -152,13 +192,9 @@ class ChimeraClient:
 
     def fetch_asset(self, generation_id: str, role: str) -> bytes | None:
         """The stored bytes of the generation's asset, or None when it has none."""
-        request = urllib.request.Request(
-            f"{self.base_url}/g/{generation_id}/assets/{urllib.parse.quote(role, safe='')}",
-            headers={**self.credentials(), "User-Agent": USER_AGENT},
-        )
         try:
-            with urllib.request.urlopen(request, timeout=120) as response:
-                return response.read()
+            return self._read_waiting_out_overload(
+                f"{self.base_url}/g/{generation_id}/assets/{urllib.parse.quote(role, safe='')}")
         except urllib.error.HTTPError as error:
             if error.code == 404:
                 return None
