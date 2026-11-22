@@ -467,7 +467,9 @@ def clearer_png(data: bytes, alpha: bytes, gain: float) -> bytes:
 
 def cutout_png(foreground: bytes, alpha: bytes) -> bytes:
     """The figure's colour (RGB PNG) with the alpha (L PNG) as a straight
-    RGBA PNG."""
+    RGBA PNG; drawn on white, over `WHITE_LAYER_BAND`."""
+    if white_backdrop(np.array(Image.open(io.BytesIO(foreground)).convert("RGB"))):
+        return delivery.transparent(foreground, alpha, matted=True, outlines=[])[0]
     rgba = Image.open(io.BytesIO(foreground)).convert("RGB")
     rgba.putalpha(Image.open(io.BytesIO(alpha)).convert("L"))
     output = io.BytesIO()

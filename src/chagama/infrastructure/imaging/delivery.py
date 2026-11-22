@@ -915,6 +915,10 @@ def clean_background(data: bytes, matte: bytes, light: str | None = None,
             layers.tag)
 
 
+def _on_white(px: np.ndarray) -> bool:
+    return bool(_corner_seed(px).min() >= delivery_style.WHITE_BACKDROP_MIN)
+
+
 def _drawn_on_white(px: np.ndarray, figure: np.ndarray, coverage: np.ndarray,
                     outlines) -> tuple[np.ndarray, np.ndarray]:
     """On a picture drawn on white, the drawing itself out to the innermost
@@ -923,7 +927,7 @@ def _drawn_on_white(px: np.ndarray, figure: np.ndarray, coverage: np.ndarray,
     whitened twice over the band nor left as unmixed ink. Elsewhere both
     unchanged."""
     bands = _outlines(outlines)
-    if (not bands or _corner_seed(px).min() < delivery_style.WHITE_BACKDROP_MIN):
+    if not bands or not _on_white(px):
         return px, coverage
     [first] = band_alphas(figure, bands[:1])
     on_white = coverage[..., None] * px + (1.0 - coverage[..., None]) * 255.0
@@ -953,6 +957,8 @@ def transparent_layers(data: bytes, matte: bytes, light: str | None = None,
     height, width = px.shape[:2]
     if matted:
         figure = _matted_figure(soft, silhouette)
+        if outlines is not None and not list(outlines) and _on_white(px):
+            outlines, light = [delivery_style.WHITE_LAYER_BAND], None
         drawn, coverage = _drawn_on_white(
             px.astype(float), figure, soft / 255.0, outlines)
         return _transparent_over_bands(

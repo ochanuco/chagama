@@ -22,6 +22,9 @@ BACKDROP = "#ffffff"
 OUTLINES = ({"color": "#ffffff", "width": 0.8},
             {"color": "#7e6988", "width": 1.04})
 OUTLINES_MAX = 6
+# A transparent figure drawn on white with no bands still wears this one:
+# paper and drawn white share a colour, so no cut finds the edge without it.
+WHITE_LAYER_BAND = {"color": "#ffffff", "width": 0.3}
 OUTLINE_WIDTH_MAX_PCT = 5
 
 # Douglas-Peucker epsilon for the band outlines' outer edge, as a percent of
