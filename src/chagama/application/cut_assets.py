@@ -40,6 +40,8 @@ def current_cut() -> dict:
                 "ramp_steps": delivery_style.WHITE_RAMP_STEPS,
                 "ramp_rise": delivery_style.WHITE_RAMP_RISE,
                 "far_px": delivery_style.WHITE_FAR_PX,
+                "pocket_max_deficit": delivery_style.WHITE_POCKET_MAX_DEFICIT,
+                "paper_seed": "edge",
             },
             "chroma_edge": {
                 "band_px": delivery_style.CHROMA_BAND_PX,

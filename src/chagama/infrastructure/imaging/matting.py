@@ -212,6 +212,13 @@ def _uphill(deficit: np.ndarray, open_: np.ndarray) -> np.ndarray:
     return np.max([_shifted(masked, dy, dx, -1.0) for dy, dx in _NEIGHBOURS], axis=0)
 
 
+def _border_labels(labels: np.ndarray) -> np.ndarray:
+    """The nonzero labels that touch the picture's edge."""
+    edge = np.unique(np.concatenate(
+        (labels[0], labels[-1], labels[:, 0], labels[:, -1])))
+    return edge[edge > 0]
+
+
 def drawn_alpha(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
     """The alpha of a picture drawn on white: opaque but for the paper that
     reaches the backdrop and the antialias ramp from it up to the first ink
@@ -221,12 +228,13 @@ def drawn_alpha(px: np.ndarray, soft: np.ndarray) -> np.ndarray:
     whiteish = deficit < delivery_style.WHITE_PAPER_DEFICIT
     figure = soft >= 0.5
     labels, _ = ndimage.label(whiteish & (soft < delivery_style.WHITE_PAPER_MAX_MATTE))
-    ids = np.unique(labels[~figure & whiteish])
-    open_white = np.isin(labels, ids[ids > 0])
+    open_white = np.isin(labels, _border_labels(labels))
     labels, _ = ndimage.label(whiteish)
-    outer = np.unique(labels[soft <= 0])
     seen = np.unique(labels[~figure & whiteish])
-    pockets = np.setdiff1d(seen[seen > 0], outer)
+    pockets = np.setdiff1d(seen[seen > 0], _border_labels(labels))
+    if pockets.size:
+        mean = ndimage.mean(deficit, labels, pockets)
+        pockets = pockets[np.asarray(mean) <= delivery_style.WHITE_POCKET_MAX_DEFICIT]
     pocket = np.isin(labels, pockets)
     open_white |= pocket
     near_ink = ndimage.binary_dilation(
