@@ -44,9 +44,6 @@ class ManagementFake:
             return {"id": "job-id"}
         return {}
 
-    def resolve_character(self, name):
-        return "character-id"
-
     def put_semantic(self, generation_id, semantic):
         self.calls.append(("semantic", generation_id, semantic))
         return {}

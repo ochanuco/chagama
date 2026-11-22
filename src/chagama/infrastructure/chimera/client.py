@@ -265,12 +265,3 @@ class ChimeraClient:
             self._preset_cache[key] = self.request(
                 "GET", f"/api/v1/presets/{segments}")
         return self._preset_cache[key]
-
-    def resolve_character(self, name: str) -> str:
-        listing = self.request("GET", "/api/v1/characters")
-        items = listing.get("items", listing if isinstance(listing, list) else [])
-        for item in items:
-            if item.get("name") == name or name in (item.get("aliases") or []):
-                return item["id"]
-        return self.request(
-            "POST", "/api/v1/characters", {"name": name, "aliases": []})["id"]
