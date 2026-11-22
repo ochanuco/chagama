@@ -35,8 +35,6 @@ class Management(Protocol):
     def request(self, method: str, path: str, payload: dict | None = None,
                 multipart: tuple[dict, str, str, bytes, str] | None = None) -> dict: ...
 
-    def resolve_character(self, name: str) -> str: ...
-
     def put_semantic(self, generation_id: str, semantic: dict) -> dict: ...
 
 
@@ -64,7 +62,7 @@ GraphBuilder = Callable[[dict, int, str], dict]
 ConflictFinder = Callable[[str, str], list[tuple[str, str, str]]]
 
 KNOWN_PARAMETERS = frozenset(
-    {"pose", "costume", "hires", "denoise", "character", "character_id",
+    {"pose", "costume", "hires", "denoise",
      "arm", "expression", "legwear", "legwear_state", "angle", "framing"})
 
 # Read by validate_request and by the published catalog.
@@ -619,9 +617,6 @@ def generate(request_path: Path, services: GenerateServices, *,
     output_dir = _output_directory(services.output_root, short)
     output_dir.mkdir(parents=True, exist_ok=True)
     params = generation.get("parameters", {})
-    character_id = params.get("character_id")
-    if not character_id and params.get("character"):
-        character_id = services.management.resolve_character(params["character"])
 
     failures: list[str] = []
     for index, seed in enumerate(state["seeds"]):
@@ -712,8 +707,6 @@ def generate(request_path: Path, services: GenerateServices, *,
                 meta = {"seed": seed, "original_filename": image["filename"],
                         "comfy_output_index": output_index,
                         "idempotency_key": output["idempotency_key"]}
-                if character_id:
-                    meta["character_id"] = character_id
                 rendered = services.management.request(
                     "POST", f"/api/v1/jobs/{job['job_id']}/generations",
                     multipart=(meta, "image", image["filename"], data, "image/png"),

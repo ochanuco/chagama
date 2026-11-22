@@ -55,8 +55,8 @@ def _request(recipe: str, parameters: dict) -> dict:
 # One legal dummy value per KNOWN_PARAMETERS key, used to probe whether
 # validate_request accepts or rejects it for a given recipe.
 _DUMMY_VALUES = {
-    "hires": 1024, "denoise": 0.5, "costume": "default", "character": "yukari",
-    "character_id": "char-1", "arm": "a", "expression": "doya",
+    "hires": 1024, "denoise": 0.5, "costume": "default",
+    "arm": "a", "expression": "doya",
     "legwear": "sheer-gloss", "legwear_state": "removing",
     "angle": "from_below,dutch", "framing": "full",
 }

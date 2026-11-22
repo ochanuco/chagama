@@ -78,9 +78,7 @@ uv run chagama generate --request request.json --dry-run   # validate a request 
 `generation.recipe` must be `yukari`; `generation.parameters` carries
 the builder arguments (`pose` required; `costume`, `hires`, `denoise`
 optional); `generation.prompt` / `negative_prompt`, when set, replace the
-built node text wholesale. For attribution, `parameters.character` takes a
-character *name* and resolves it against the API (creating it if new), while
-`parameters.character_id` passes a known UUID straight through.
+built node text wholesale.
 
 Authentication is a Cloudflare Access service token, read from
 `$CHIMERA_CF_CLIENT_ID` / `$CHIMERA_CF_CLIENT_SECRET`, then from the untracked
