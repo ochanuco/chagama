@@ -35,7 +35,6 @@ class Management(Protocol):
     def request(self, method: str, path: str, payload: dict | None = None,
                 multipart: tuple[dict, str, str, bytes, str] | None = None) -> dict: ...
 
-
     def put_semantic(self, generation_id: str, semantic: dict) -> dict: ...
 
 
