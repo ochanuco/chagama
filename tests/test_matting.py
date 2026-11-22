@@ -363,6 +363,14 @@ class WhiteBackdropTest(unittest.TestCase):
         alpha = matting.drawn_alpha(px, soft)
         self.assertTrue((alpha[28:36, 28:36] == 0.0).all())
 
+    def test_a_drawn_highlight_inside_the_line_stays_opaque_where_the_matte_misses_it(self):
+        px, soft = self.scene()
+        px[24:40, 40:46] = (246.0, 242.0, 250.0)
+        px[30:34, 42:44] = 250.0
+        soft[24:40, 40:46] = 0.1
+        alpha = matting.drawn_alpha(px, soft)
+        self.assertTrue((alpha[24:40, 40:46] == 1.0).all())
+
     def test_alpha_png_solves_a_white_picture_without_the_matting_model(self):
         px, soft = self.scene()
 

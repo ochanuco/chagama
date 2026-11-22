@@ -461,8 +461,9 @@ MATTING_TILE_PX = 512
 MATTING_TILE_OVERLAP_PX = 64
 # White is a corner patch with no channel below WHITE_BACKDROP_MIN; such a
 # picture is not keyed or matted. It is opaque but for paper (white within
-# PAPER_DEFICIT that reaches the backdrop, or a pocket the matte calls
-# backdrop anywhere), neutral faint marks beside it the matte leaves out,
+# PAPER_DEFICIT reaching the edge of the picture, or an enclosed pocket the
+# matte calls backdrop anywhere whose mean deficit is within
+# POCKET_MAX_DEFICIT), neutral faint marks beside it the matte leaves out,
 # and the antialias up to the first ink ridge (RAMP_STEPS px, each RAMP_RISE
 # deeper), which takes alpha from that ink. White against white, and marks
 # beyond FAR_PX of the filled silhouette, follow the matte.
@@ -476,6 +477,7 @@ WHITE_NEAR_INK_PX = 3
 WHITE_RAMP_STEPS = 3
 WHITE_RAMP_RISE = 6
 WHITE_FAR_PX = 6
+WHITE_POCKET_MAX_DEFICIT = 2
 # On a green key the soft edge (CHROMA_BAND_PX either side of the cut
 # silhouette) is keyed, not matted: alpha is 1 - the key's share along its
 # chroma, less CHROMA_NOISE of grain. The darkness left after the nearest
